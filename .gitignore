@@ -1,0 +1,5 @@
+/.vscode
+/poetry.lock
+/poly.js
+/pyproject.toml
+/test.py
