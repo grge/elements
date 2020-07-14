@@ -3,7 +3,7 @@
 
 /* Monomials are represented by an array of exponents. */
 
-function m_repr(a, vars) {
+export function m_repr(a, vars) {
   if (typeof vars === 'undefined') {
     vars = 'abcdefghijklmnopqrstuvwxyz';
   }
@@ -19,7 +19,7 @@ function m_repr(a, vars) {
   return reprs.join(' * ')
 }
 
-function m_eq(a, b) {
+export function m_eq(a, b) {
   if (a.length != b.length) {
     return false;
   }
@@ -31,7 +31,7 @@ function m_eq(a, b) {
   return  true;
 }
 
-function m_mul(a, b) {
+export function m_mul(a, b) {
   var out = Array(a.length);
   for (var i = 0; i < a.length; i++) {
     out[i] = a[i] + b[i];
@@ -39,7 +39,7 @@ function m_mul(a, b) {
   return out
 };
 
-function m_div(a, b) {
+export function m_div(a, b) {
   // divides a by b
   var out = Array(a.length);
   for (var i = 0; i < a.length; i++) {
@@ -51,7 +51,7 @@ function m_div(a, b) {
   return out
 };
 
-function m_divides(a, b) {
+export function m_divides(a, b) {
   for (var i = 0; i < a.length; i++) {
     if (b[i] < a[i]) {
       return false;
@@ -60,11 +60,11 @@ function m_divides(a, b) {
   return true;
 }
 
-function m_degree(a) {
+export function m_degree(a) {
   return a.reduce((pv, cv) => (pv + cv));
 }
 
-function m_cmp_lex(a, b) {
+export function m_cmp_lex(a, b) {
   for (var i = 0; i < a.length; i++) {
     if (a[i] < b[i]) {
       return -1;
@@ -76,7 +76,7 @@ function m_cmp_lex(a, b) {
   return 0
 }
 
-function m_cmp_grlex(a, b) {
+export function m_cmp_grlex(a, b) {
   const a_deg = m_degree(a);
   const b_deg = m_degree(b);
   if (a_deg < b_deg) {
@@ -91,7 +91,7 @@ function m_cmp_grlex(a, b) {
   }
 }
 
-function m_cmp_grevlex(a, b) {
+export function m_cmp_grevlex(a, b) {
   const a_deg = m_degree(a);
   const b_deg = m_degree(b);
   if (a_deg < b_deg) {
@@ -115,7 +115,7 @@ function m_cmp_grevlex(a, b) {
   }
 }
 
-function m_conform_vars(a, old_vars, new_vars) {
+export function m_conform_vars(a, old_vars, new_vars) {
   if (typeof old_vars === "string") {
     old_vars = old_vars.split('')
   }
@@ -133,4 +133,20 @@ function m_conform_vars(a, old_vars, new_vars) {
     }
   }
   return out
+}
+
+export function get_m_cmp(sorter) {
+  if (typeof sorter === 'string') {
+    return {
+      'lex': m_cmp_lex,
+      'grlex': m_cmp_grlex,
+      'grevlex': m_cmp_grevlex
+    }[sorter]
+  }
+  else if (typeof sorter === 'function') {
+    return sorter
+  }
+  else {
+    return m_cmp_lex
+  }
 }
