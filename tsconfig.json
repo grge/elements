@@ -1,0 +1,18 @@
+{
+    "compilerOptions": {
+        "target": "ES5",
+        "module": "commonjs",
+        "lib": [
+            "dom",
+            "es2015",
+            "es6",
+            "es5"
+        ]
+
+    },
+    "files": [
+        "monomial.ts",
+        "term.ts",
+        "polynomial.ts"
+    ]
+}
