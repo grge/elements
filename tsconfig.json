@@ -4,11 +4,10 @@
         "module": "commonjs",
         "lib": [
             "dom",
-            "es2015",
+            "es2019",
             "es6",
             "es5"
         ]
-
     },
     "files": [
         "monomial.ts",

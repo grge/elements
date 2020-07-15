@@ -4,7 +4,6 @@ export interface MonomialOrder {
     (a: Monomial, b: Monomial): number
 }
 
-
 export function m_repr(a: Monomial,  vars="abcdefghijklmnopqrstuvwxyz"):string {
     let out = [];
     for (var i = 0; i < a.length; i++) {

@@ -45,7 +45,7 @@ export function p_smul(a:number, p:Poly):Poly {
 }
 
 export function p_tmul(t:Term, p:Poly):Poly {
-    return p.map((u) => ({coef: u.coef*t.coef, m:m_mul(u.m, u.m)}))
+    return p.map((u) => ({coef: u.coef*t.coef, m:m_mul(u.m, t.m)}))
 }
 
 export function p_mul(p:Poly, q:Poly):Poly {
@@ -54,9 +54,10 @@ export function p_mul(p:Poly, q:Poly):Poly {
 
 
 var a = [
-  {m:[1, 0, 2], coef:4},
-  {m:[0, 1, 0], coef:2}
+  {m:[1, 0, 0], coef:1},
+  {m:[0, 1, 0], coef:1},
 ]
+
 
 var b = [
   {m:[1, 1, 0], coef:4},
@@ -64,7 +65,7 @@ var b = [
   {m:[0, 1, 0], coef:3}
 ]
 
-console.log(p_repr(p_smul(10, a)))
+console.log(p_mul(b, b))
 
 /*
 

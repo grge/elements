@@ -16,6 +16,8 @@
   },
   "homepage": "https://github.com/grge/euclid#readme",
   "dependencies": {
-    "nvm": "0.0.4"
+    "nvm": "0.0.4",
+    "tsc": "^1.20150623.0",
+    "typescript": "^3.9.6"
   }
 }
