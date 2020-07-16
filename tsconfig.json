@@ -1,6 +1,8 @@
 {
     "compilerOptions": {
         "target": "ES5",
+        "outDir": "build",
+        "sourceMap": true,
         "module": "commonjs",
         "lib": [
             "dom",
@@ -9,9 +11,7 @@
             "es5"
         ]
     },
-    "files": [
-        "monomial.ts",
-        "term.ts",
-        "polynomial.ts"
+    "include": [
+        "src/**/*.ts",
     ]
 }

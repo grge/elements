@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "ava"
   },
   "repository": {
     "type": "git",
@@ -16,8 +16,23 @@
   },
   "homepage": "https://github.com/grge/euclid#readme",
   "dependencies": {
-    "nvm": "0.0.4",
+    "nvm": "0.0.4"
+  },
+  "devDependencies": {
+    "@ava/typescript": "^1.1.1",
+    "ava": "^3.10.1",
+    "ts-node": "^8.10.2",
     "tsc": "^1.20150623.0",
     "typescript": "^3.9.6"
+  },
+  "ava": {
+    "typescript": {
+      "extensions": [
+        "ts"
+      ],
+      "rewritePaths": {
+        "src/": "build/"
+      }
+    }
   }
 }

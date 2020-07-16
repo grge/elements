@@ -30,6 +30,7 @@ export function m_eq(a: Monomial, b:Monomial):boolean {
 }
 
 export function m_mul(a: Monomial, b: Monomial):Monomial {
+    if (a.length != b.length) { throw new TypeError("Incompatible monomials") }
     var out = Array(a.length);
     for (var i = 0; i < a.length; i++) {
         out[i] = a[i] + b[i];
@@ -42,7 +43,7 @@ export function m_div(a: Monomial, b: Monomial):Monomial {
     var out = Array(a.length);
     for (var i = 0; i < a.length; i++) {
         if (a[i] < b[i]) {
-            throw "Cannot divide monomials"
+            throw TypeError("Cannot divide monomials")
         }
         out[i] = a[i] - b[i];
     }
@@ -50,6 +51,7 @@ export function m_div(a: Monomial, b: Monomial):Monomial {
 }
 
 export function m_divides(a:Monomial, b:Monomial):boolean {
+    // returns true if b = a*c for some monomial c
     for (var i = 0; i < a.length; i++) {
         if (b[i] < a[i]) {
             return false;
@@ -65,10 +67,10 @@ export function m_degree(a:Monomial):number {
 export function m_cmp_lex(a:Monomial, b:Monomial):number {
     for (var i = 0; i < a.length; i++) {
         if (a[i] < b[i]) {
-            return -1;
+            return 1;
         }
         else if (a[i] > b[i]) {
-            return 1
+            return -1
         }
     }
     return 0

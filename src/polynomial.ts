@@ -1,5 +1,7 @@
-import { MonomialOrder, get_m_cmp, m_eq, m_mul } from './monomial';
-import { Term, t_repr, t_add } from './term';
+import { Monomial, get_m_cmp, m_eq, m_mul } from './monomial';
+import { Term, t_repr, t_add, t_eq, t_divides, t_div } from './term';
+
+const epsilon = 1e-21;
 
 export interface Poly extends Array<Term>{};
 
@@ -8,8 +10,20 @@ export function p_repr(p:Poly, vars?:string):string {
 }
 
 export function p_sort(p:Poly, sort_name?:string):Poly {
-    let f = get_m_cmp(sort_name)
+    let f = get_m_cmp(sort_name);
     return [...p].sort((a, b) => (f(a.m, b.m)));
+}
+
+export function p_lt(p:Poly, sort_name?:string):Term {
+    return p_norm(p, sort_name)[0];
+}
+
+export function p_lc(p:Poly, sort_name?:string):number {
+    return p_lt(p, sort_name).coef;
+}
+
+export function p_lm(p:Poly, sort_name?:string):Monomial {
+    return p_lt(p, sort_name).m;
 }
 
 export function p_norm(p:Poly, sort_name?:string):Poly {
@@ -29,15 +43,23 @@ export function p_norm(p:Poly, sort_name?:string):Poly {
         return acc;
     }, [])
 
-    return normed;
+    return normed.filter((t) => (Math.abs(t.coef) > epsilon));
 }
 
-export function p_add(p:Poly, q:Poly, sort_name?:string):Poly {
-    return p_norm([...p, ...q], sort_name);
+export function p_eq(p:Poly, q:Poly, sort_name?:string):boolean {
+    const zip = (a, b) => (a.map((k, i) => [k, b[i]]));
+    let pn = p_norm(p, sort_name);
+    let qn = p_norm(q, sort_name)
+    if (pn.length != qn.length) { return false }
+    return zip(pn, qn).every(([a, b]) => (t_eq(a, b)))
 }
 
-export function p_minus(p:Poly, q:Poly, sort_name?:string):Poly {
-    return p_add(p, p_smul(-1, q), sort_name)
+export function p_add(p:Poly, q:Poly):Poly {
+    return [...p, ...q];
+}
+
+export function p_minus(p:Poly, q:Poly):Poly {
+    return p_add(p, p_smul(-1, q))
 }
 
 export function p_smul(a:number, p:Poly):Poly {
@@ -52,20 +74,62 @@ export function p_mul(p:Poly, q:Poly):Poly {
     return p.map((t) => (p_tmul(t, q))).flat()
 }
 
+export function p_reduce(f:Poly, G:Array<Poly>, sort_name?:string):[Array<Poly>, Poly] {
+    let zero = []; // sloppy way to create a zero polynomial
+    let r = zero;
+    let p = p_norm(f, sort_name);
+    let Q = Array(G.length).fill(zero);
+
+    let lt_G = G.map((g) => (p_lt(g)));
+
+
+    while (! p_eq(p, zero)) {
+        let lt_p = p_lt(p);
+        var i = 0;
+        var division_occured = false;
+        while ((i < Q.length) && (~division_occured)) {
+            if (t_divides(lt_G[i], lt_p)) {
+                let factored = [t_div(lt_p, lt_G[i])]
+                Q[i] = p_norm(p_add(Q[i], factored), sort_name);
+                p = p_norm(p_minus(p, p_mul(factored, G[i])), sort_name);
+                lt_p = p_lt(p)
+                division_occured = true;
+            }
+            else {
+                i += 1
+            }
+        }
+        if (!division_occured) {
+            r = p_norm(p_add(r, [lt_p]), sort_name)
+            p = p_norm(p_minus(p, [lt_p]), sort_name)
+        }
+    }
+    return [Q, r]
+}
+
 
 var a = [
-  {m:[1, 0, 0], coef:1},
+  {m:[1, 0, 1], coef:2},
   {m:[0, 1, 0], coef:1},
 ]
 
 
 var b = [
-  {m:[1, 1, 0], coef:4},
-  {m:[0, 2, 1], coef:1},
-  {m:[0, 1, 0], coef:3}
+  {m:[1, 0, 0], coef:1},
+  {m:[0, 1, 0], coef:1},
 ]
 
-console.log(p_mul(b, b))
+var c = [
+  {m:[1, 0, 0], coef:1},
+  {m:[0, 0, 1], coef:1},
+]
+
+let divisor = [{m:[1], coef:1}, {m:[0], coef:-3}]
+let dividend = [{m:[3], coef:1}, {m:[2], coef:-2}, {m:[0], coef:-4}]
+let [Q, r] = p_reduce(dividend, [divisor])
+console.log(Q[0])
+console.log(r)
+
 
 /*
 
