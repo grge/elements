@@ -6,7 +6,54 @@ const epsilon = 1e-21;
 export interface Poly extends Array<Term>{};
 
 export function p_repr(p:Poly, vars?:string):string {
-    return p.map((t) => (t_repr(t, vars))).join(' + ');
+    let out = p.map((t) => (t_repr(t, vars))).join(' + ');
+    return out.replace(/ \+ -1?/gi, ' - ').replace(/ \* /gi, '')
+}
+
+export function p_parse(p:string):[Poly, Array<string>] {
+    let all_vars = new Set();
+    let terms = p.split('+').map((t) => {
+        let vars = t.split('*').map((v) => {
+            if (!isNaN(v)) {
+                return {var: null, val: +v}
+            }
+            else {
+                let x = v.split('^');
+                if (x.length == 1) {
+                    all_vars.add(v.trim())
+                    return {var: v.trim(), val: 1}
+                }
+                else if (x.length == 2) {
+                    all_vars.add(x[0].trim())
+                    return {var: x[0].trim(), val: +x[1]}
+                }
+                else {
+                    throw TypeError("Couldn't parse string to polynomial")
+                }
+            }
+        })
+        return vars
+    })
+
+    let sorted_vars = Array.from(all_vars)
+    sorted_vars.sort()
+
+    let poly = terms.map((t) => {
+        let m = Array(t.length).fill(0);
+        let coef = 1;
+        t.forEach((v) => {
+            if (v.var === null) {
+                coef = v.val;
+            }
+            else {
+                let ix = sorted_vars.findIndex((x) => (x == v.var));
+                m[ix] = v.val
+            }
+        })
+        return {m: m, coef:coef}
+    });
+
+    return [poly, sorted_vars]
 }
 
 export function p_sort(p:Poly, sort_name?:string):Poly {
@@ -82,12 +129,11 @@ export function p_reduce(f:Poly, G:Array<Poly>, sort_name?:string):[Array<Poly>,
 
     let lt_G = G.map((g) => (p_lt(g)));
 
-
     while (! p_eq(p, zero)) {
         let lt_p = p_lt(p);
-        var i = 0;
-        var division_occured = false;
-        while ((i < Q.length) && (~division_occured)) {
+        let i = 0;
+        let division_occured = false;
+        while ((i < Q.length) && (!division_occured)) {
             if (t_divides(lt_G[i], lt_p)) {
                 let factored = [t_div(lt_p, lt_G[i])]
                 Q[i] = p_norm(p_add(Q[i], factored), sort_name);
@@ -107,93 +153,140 @@ export function p_reduce(f:Poly, G:Array<Poly>, sort_name?:string):[Array<Poly>,
     return [Q, r]
 }
 
+export function p_lcm(f:Poly, g:Poly, sort_name?:string):Monomial {
+    const zip = (a, b) => (a.map((k, i) => [k, b[i]]));
+    return zip(p_lm(f, sort_name), p_lm(g, sort_name)).map(([a, b]) => (Math.max(a, b)));
+}
 
-var a = [
-  {m:[1, 0, 1], coef:2},
-  {m:[0, 1, 0], coef:1},
-]
+export function p_spoly(f:Poly, g:Poly, sort_name?:string):Poly {
+    let t_lcm = {m: p_lcm(f, g, sort_name), coef: 1};
+    return p_norm(p_minus(
+        p_mul([t_div(t_lcm, p_lt(f, sort_name))], f),
+        p_mul([t_div(t_lcm, p_lt(g, sort_name))], g)
+    ))
+}
 
-
-var b = [
-  {m:[1, 0, 0], coef:1},
-  {m:[0, 1, 0], coef:1},
-]
-
-var c = [
-  {m:[1, 0, 0], coef:1},
-  {m:[0, 0, 1], coef:1},
-]
-
-let divisor = [{m:[1], coef:1}, {m:[0], coef:-3}]
-let dividend = [{m:[3], coef:1}, {m:[2], coef:-2}, {m:[0], coef:-4}]
-let [Q, r] = p_reduce(dividend, [divisor])
-console.log(Q[0])
-console.log(r)
-
-
-/*
-
-function p_mul(p, q) {
-
-};
-
-function p_div(p, q) {
-
-};
-
-function p_lt(f, order) {
-
-};
-
-function p_lc(f, order) {
-
-};
-
-function p_lm(f, order) {
-
-};
-
-function p_reduce(f, G, order) {
-    /* Generalised polynomial division algorithm.
-    Given a polynomial f and a basis {g_1, ..., g_k}, computes the representation
-    f = q_1 * g_1 + ... q_k * g_k + r
-
-    Inputs
-      f : a Polynomial in k[x_1, ..., x_n]
-      G : A collection of polynomials in k[x_1, ..., x_n]
-      order : (optional) a monomial order function. Lexicographic order is used by default
-
-    Returns
-      Q : An array of the coefficients q_1, ..., q_k
-      r : The remainder term
-
-
-    var r = 0;
-    var p = f;
-    var q = Array(G.length).fill(0);
-
-    var lt_G = G.map((g) => (leading_term(g)));
-    var lt_p = leading_term(p);
-
-    while (p != 0) {
-        var i = 0;
-        var division_occured = false;
-        while (i < s && ~division_occred) {
-            if (divides(lt_g_i, lt_p)) {
-                var factored = poly_div(lt_p, lt_G[i])
-                q[i] = poly_add(q[i], factored);
-                p = poly_sub(p, poly_mul(favtored, G[i]));
-                lt_p = leading_term(p)
-                division_occured = true;
+export function buchberger(F:Array<Poly>, sort_name?:string):Array<Poly> {
+    let G = [...F];
+    let Gp = [];
+    while (G != Gp) {
+        Gp = G;
+        for (let i = 0; i < Gp.length; i++) {
+            for (let j = i; j < Gp.length; j++) {
+                if (i != j) {
+                    let S = p_spoly(Gp[i], Gp[j], sort_name)
+                    let [Q, r] = p_reduce(S, Gp, sort_name)
+                    if (!p_eq([], r)) {
+                        G = [...G, r];
+                    }
+                }
             }
-            else {
-                i += 1
-            }
-        }
-        if (~division_occured) {
-            r = poly_add(r, lt_p)
-            p = poly_minus(p, lt_p)
         }
     }
-};
-*/
+    return G
+}
+
+export function groebner_reduce(G:Array<Poly>, sort_name?:string):Array<Poly> {
+    let G_out = [...G]
+    for (let i = 0; i < G_out.length; i++) {
+        let g = G_out[i];
+        let G_minus_g = G_out.filter((v, ix) => ((!p_eq(v, [])) && ix != i))
+        let [Q, g_prime] = p_reduce(g, G_minus_g, sort_name);
+        G_out[i] = g_prime;
+    }
+    return G_out.filter((p) => (!p_eq(p, [])));
+}
+
+// let F:Array<Poly> = [
+//     [{m:[3, 0], coef:1}, {m:[1, 1], coef:-2}],
+//     [{m:[2, 1], coef:1}, {m:[0, 2], coef:-2}, {m:[1, 0], coef:1}]
+// ]
+
+// let F:Array<Poly> = [
+//     [{m:[2, 0, 0], coef:1}, {m:[0, 2, 0], coef:1}, {m:[0, 0, 2], coef:1}, {m:[0, 0, 0], coef:-1}],
+//     [{m:[2, 0, 0], coef:1}, {m:[0, 2, 0], coef:1}, {m:[0, 0, 1], coef:-1}],
+//     [{m:[1, 0, 0], coef:1}, {m:[0, 0, 1], coef:-1}]
+// ]
+
+
+// let G = buchberger(F, 'lex')
+// console.log(G.map((g) => (p_repr(g))))
+// let G_p = groebner_reduce(G, 'lex')
+// console.log(G_p.map((g) => (p_repr(g))))
+
+// G = buchberger(G_p, 'lex')
+// console.log(G.map((g) => (p_repr(g))))
+
+/*
+we have
+ circle A B C
+ circle B A C
+
+which is 
+ distance A B = distance A C
+ distance B A = distance B C
+
+which is
+ (Ax - Bx)^2 + (Ay - By)^2 = (Ax - Cx)^2 + (Ay - Cy)^2
+ (Bx - Ax)^2 + (By - Ay)^2 = (Bx - Cx)^2 + (By - Cy)^2
+
+which is
+ Ax^2 - 2 * Ax * Bx + Bx^2 + Ay^2 - 2*Ay*By + By^2 = (Ax - Cx)^2 + (Ay - Cy)^2
+ (Bx - Ax)^2 + (By - Ay)^2 = (Bx - Cx)^2 + (By - Cy)^2
+
+ */
+
+// let p1 = [
+//      // Distance from A to B
+//      {m:[2, 0, 0, 0, 0, 0], coef:1},
+//      {m:[1, 0, 1, 0, 0, 0], coef:-2},
+//      {m:[0, 0, 2, 0, 0, 0], coef:1},
+//      {m:[0, 2, 0, 0, 0, 0], coef:1},
+//      {m:[0, 1, 0, 1, 0, 0], coef:-2},
+//      {m:[0, 0, 0, 2, 0, 0], coef:1},
+
+//      // Minus the distance from A to C
+//      {m:[2, 0, 0, 0, 0, 0], coef:-1},
+//      {m:[1, 0, 0, 0, 1, 0], coef:2},
+//      {m:[0, 0, 0, 0, 2, 0], coef:-1},
+//      {m:[0, 2, 0, 0, 0, 0], coef:-1},
+//      {m:[0, 1, 0, 0, 0, 1], coef:2},
+//      {m:[0, 0, 0, 0, 0, 2], coef:-1},
+// ];
+
+// let p2 = [
+//      // Distance from B to A
+//      {m:[0, 0, 2, 0, 0, 0], coef:1},
+//      {m:[1, 0, 1, 0, 0, 0], coef:-2},
+//      {m:[2, 0, 0, 0, 0, 0], coef:1},
+//      {m:[0, 0, 0, 2, 0, 0], coef:1},
+//      {m:[0, 1, 0, 1, 0, 0], coef:-2},
+//      {m:[0, 2, 0, 0, 0, 0], coef:1},
+
+//      // Minus the distance from B to C
+//      {m:[0, 0, 2, 0, 0, 0], coef:-1},
+//      {m:[0, 0, 1, 0, 1, 0], coef:2},
+//      {m:[0, 0, 0, 0, 2, 0], coef:-1},
+//      {m:[0, 0, 0, 2, 0, 0], coef:-1},
+//      {m:[0, 0, 0, 1, 0, 1], coef:2},
+//      {m:[0, 0, 0, 0, 0, 2], coef:-1},
+// ];
+
+// let F = [p1, p2];
+
+// console.log(F.map((p) => (p_repr(p))))
+
+// console.log(F.map((p) => (p_repr(p_norm(p)))))
+
+// let G = groebner_reduce(buchberger(F, 'grevlex'), 'grevlex')
+
+// console.log(G.map((p) => (p_repr(p))))
+
+// // let G = [[{"m":[3,0],"coef":1},{"m":[1,1],"coef":-2}],[{"m":[2,1],"coef":1},{"m":[0,2],"coef":-2},{"m":[1,0],"coef":1}],[{"m":[2,0],"coef":-1}],[{"coef":-2,"m":[1,1]}],[{"coef":-2,"m":[0,2]},{"coef":1,"m":[1,0]}]]
+
+// // let s = p_spoly(G[1], G[4], 'grlex')
+
+// // console.log(p_repr(s))
+// // let [Q, r] = p_reduce(s, G, 'grlex')
+// // console.log(Q.map((p) => (p_repr(p))))
+// // console.log(G.map((p) => (p_repr(p))))

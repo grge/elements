@@ -4,7 +4,10 @@ export interface MonomialOrder {
     (a: Monomial, b: Monomial): number
 }
 
-export function m_repr(a: Monomial,  vars="abcdefghijklmnopqrstuvwxyz"):string {
+export function m_repr(a: Monomial, vars?:string):string {
+    if (typeof vars === 'undefined') {
+        vars = "abcdefghijklmnopqrstuvwxyz"
+    }
     let out = [];
     for (var i = 0; i < a.length; i++) {
         if (a[i] >= 2) {
@@ -80,10 +83,10 @@ export function m_cmp_grlex(a:Monomial, b:Monomial):number {
     const a_deg = m_degree(a);
     const b_deg = m_degree(b);
     if (a_deg < b_deg) {
-        return -1
+        return 1
     }
     else if (a_deg > b_deg) {
-        return 1
+        return -1
 
     }
     else {
@@ -95,18 +98,18 @@ export function m_cmp_grevlex(a:Monomial, b:Monomial):number {
     const a_deg = m_degree(a);
     const b_deg = m_degree(b);
     if (a_deg < b_deg) {
-        return -1;
+        return 1;
     }
     else if (a_deg > b_deg) {
-        return 1
+        return -1
     }
     else {
         for (var i = a.length - 1; i >= 0; i--) {
             if (a[i] < b[i]) {
-                return 1;
+                return -1;
             }
             else if (a[i] > b[i]) {
-                return -1;
+                return 1;
             }
             else {
                 return 0

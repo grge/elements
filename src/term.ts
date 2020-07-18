@@ -6,7 +6,15 @@ export interface Term {
 }
 
 export function t_repr(t:Term, vars:string):string { 
-    return t.coef + " * " + m_repr(t.m, vars);
+    if (t.m.every((n) => (n==0)) {
+        return t.coef.toString()
+    }
+    else if (t.coef == 1) {
+        return m_repr(t.m, vars)
+    }
+    else {
+        return t.coef + " * " + m_repr(t.m, vars);
+    }
 }
 
 export function t_eq(t:Term, u:Term):boolean {
