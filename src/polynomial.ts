@@ -10,52 +10,6 @@ export function p_repr(p:Poly, vars?:string):string {
     return out.replace(/ \+ -1?/gi, ' - ').replace(/ \* /gi, '')
 }
 
-export function p_parse(p:string):[Poly, Array<string>] {
-    let all_vars = new Set();
-    let terms = p.split('+').map((t) => {
-        let vars = t.split('*').map((v) => {
-            if (!isNaN(v)) {
-                return {var: null, val: +v}
-            }
-            else {
-                let x = v.split('^');
-                if (x.length == 1) {
-                    all_vars.add(v.trim())
-                    return {var: v.trim(), val: 1}
-                }
-                else if (x.length == 2) {
-                    all_vars.add(x[0].trim())
-                    return {var: x[0].trim(), val: +x[1]}
-                }
-                else {
-                    throw TypeError("Couldn't parse string to polynomial")
-                }
-            }
-        })
-        return vars
-    })
-
-    let sorted_vars = Array.from(all_vars)
-    sorted_vars.sort()
-
-    let poly = terms.map((t) => {
-        let m = Array(t.length).fill(0);
-        let coef = 1;
-        t.forEach((v) => {
-            if (v.var === null) {
-                coef = v.val;
-            }
-            else {
-                let ix = sorted_vars.findIndex((x) => (x == v.var));
-                m[ix] = v.val
-            }
-        })
-        return {m: m, coef:coef}
-    });
-
-    return [poly, sorted_vars]
-}
-
 export function p_sort(p:Poly, sort_name?:string):Poly {
     let f = get_m_cmp(sort_name);
     return [...p].sort((a, b) => (f(a.m, b.m)));
@@ -122,14 +76,13 @@ export function p_mul(p:Poly, q:Poly):Poly {
 }
 
 export function p_reduce(f:Poly, G:Array<Poly>, sort_name?:string):[Array<Poly>, Poly] {
-    let zero = []; // sloppy way to create a zero polynomial
-    let r = zero;
+    let r = [];
     let p = p_norm(f, sort_name);
-    let Q = Array(G.length).fill(zero);
+    let Q = Array(G.length).fill([]);
 
     let lt_G = G.map((g) => (p_lt(g)));
 
-    while (! p_eq(p, zero)) {
+    while (! p_eq(p, [])) {
         let lt_p = p_lt(p);
         let i = 0;
         let division_occured = false;
