@@ -189,51 +189,51 @@ which is
 
  */
 
-// let p1 = [
-//      // Distance from A to B
-//      {m:[2, 0, 0, 0, 0, 0], coef:1},
-//      {m:[1, 0, 1, 0, 0, 0], coef:-2},
-//      {m:[0, 0, 2, 0, 0, 0], coef:1},
-//      {m:[0, 2, 0, 0, 0, 0], coef:1},
-//      {m:[0, 1, 0, 1, 0, 0], coef:-2},
-//      {m:[0, 0, 0, 2, 0, 0], coef:1},
+let p1 = [
+     // Distance from A to B
+     {m:[2, 0, 0, 0, 0, 0], coef:1},
+     {m:[1, 0, 1, 0, 0, 0], coef:-2},
+     {m:[0, 0, 2, 0, 0, 0], coef:1},
+     {m:[0, 2, 0, 0, 0, 0], coef:1},
+     {m:[0, 1, 0, 1, 0, 0], coef:-2},
+     {m:[0, 0, 0, 2, 0, 0], coef:1},
 
-//      // Minus the distance from A to C
-//      {m:[2, 0, 0, 0, 0, 0], coef:-1},
-//      {m:[1, 0, 0, 0, 1, 0], coef:2},
-//      {m:[0, 0, 0, 0, 2, 0], coef:-1},
-//      {m:[0, 2, 0, 0, 0, 0], coef:-1},
-//      {m:[0, 1, 0, 0, 0, 1], coef:2},
-//      {m:[0, 0, 0, 0, 0, 2], coef:-1},
-// ];
+     // Minus the distance from A to C
+     {m:[2, 0, 0, 0, 0, 0], coef:-1},
+     {m:[1, 0, 0, 0, 1, 0], coef:2},
+     {m:[0, 0, 0, 0, 2, 0], coef:-1},
+     {m:[0, 2, 0, 0, 0, 0], coef:-1},
+     {m:[0, 1, 0, 0, 0, 1], coef:2},
+     {m:[0, 0, 0, 0, 0, 2], coef:-1},
+];
 
-// let p2 = [
-//      // Distance from B to A
-//      {m:[0, 0, 2, 0, 0, 0], coef:1},
-//      {m:[1, 0, 1, 0, 0, 0], coef:-2},
-//      {m:[2, 0, 0, 0, 0, 0], coef:1},
-//      {m:[0, 0, 0, 2, 0, 0], coef:1},
-//      {m:[0, 1, 0, 1, 0, 0], coef:-2},
-//      {m:[0, 2, 0, 0, 0, 0], coef:1},
+let p2 = [
+     // Distance from B to A
+     {m:[0, 0, 2, 0, 0, 0], coef:1},
+     {m:[1, 0, 1, 0, 0, 0], coef:-2},
+     {m:[2, 0, 0, 0, 0, 0], coef:1},
+     {m:[0, 0, 0, 2, 0, 0], coef:1},
+     {m:[0, 1, 0, 1, 0, 0], coef:-2},
+     {m:[0, 2, 0, 0, 0, 0], coef:1},
 
-//      // Minus the distance from B to C
-//      {m:[0, 0, 2, 0, 0, 0], coef:-1},
-//      {m:[0, 0, 1, 0, 1, 0], coef:2},
-//      {m:[0, 0, 0, 0, 2, 0], coef:-1},
-//      {m:[0, 0, 0, 2, 0, 0], coef:-1},
-//      {m:[0, 0, 0, 1, 0, 1], coef:2},
-//      {m:[0, 0, 0, 0, 0, 2], coef:-1},
-// ];
+     // Minus the distance from B to C
+     {m:[0, 0, 2, 0, 0, 0], coef:-1},
+     {m:[0, 0, 1, 0, 1, 0], coef:2},
+     {m:[0, 0, 0, 0, 2, 0], coef:-1},
+     {m:[0, 0, 0, 2, 0, 0], coef:-1},
+     {m:[0, 0, 0, 1, 0, 1], coef:2},
+     {m:[0, 0, 0, 0, 0, 2], coef:-1},
+];
 
-// let F = [p1, p2];
+let F = [p1, p2];
 
 // console.log(F.map((p) => (p_repr(p))))
 
 // console.log(F.map((p) => (p_repr(p_norm(p)))))
 
-// let G = groebner_reduce(buchberger(F, 'grevlex'), 'grevlex')
+let G = groebner_reduce(buchberger(F, 'grevlex'), 'grevlex')
 
-// console.log(G.map((p) => (p_repr(p))))
+console.log(G.map((p) => (p_repr(p))))
 
 // // let G = [[{"m":[3,0],"coef":1},{"m":[1,1],"coef":-2}],[{"m":[2,1],"coef":1},{"m":[0,2],"coef":-2},{"m":[1,0],"coef":1}],[{"m":[2,0],"coef":-1}],[{"coef":-2,"m":[1,1]}],[{"coef":-2,"m":[0,2]},{"coef":1,"m":[1,0]}]]
 

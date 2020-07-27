@@ -6,7 +6,7 @@ export interface Term {
 }
 
 export function t_repr(t:Term, vars:string):string { 
-    if (t.m.every((n) => (n==0)) {
+    if (t.m.every((n) => (n==0))) {
         return t.coef.toString()
     }
     else if (t.coef == 1) {

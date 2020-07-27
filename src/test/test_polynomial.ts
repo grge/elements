@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { p_eq, p_add, p_norm, p_reduce, p_spoly } from '../polynomial'
+import { p_eq, p_add, p_norm, p_reduce, p_spoly } from '../poly/polynomial'
 
 test('Zero polynomials are equal', t => {
     t.true(p_eq([], []));

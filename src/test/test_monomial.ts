@@ -1,6 +1,6 @@
 import test from 'ava';
 
-import { m_eq, m_mul, m_degree, m_cmp_lex, m_cmp_grlex, m_cmp_grevlex } from '../monomial';
+import { m_eq, m_mul, m_degree, m_cmp_lex, m_cmp_grlex, m_cmp_grevlex } from '../poly/monomial';
 
 test('Empty monomials are equal', t => {
     t.true(m_eq([], []));
