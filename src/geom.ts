@@ -7,7 +7,10 @@ circle A B C
 circle B A C
 `
 
-console.log(parse(tokenize(test)))
+let ast = parse(test)
+let tokens = tokenize(test);
+console.log(tokens)
+console.log(JSON.stringify(ast, null, 2))
 
 
 /* Gemetric processing

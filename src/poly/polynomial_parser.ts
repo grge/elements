@@ -1,10 +1,10 @@
 import { Poly } from "./polynomial"
 
 export function p_parse(p:string):[Poly, Array<string>] {
-    let all_vars = new Set();
+    let all_vars = new Set<string>();
     let terms = p.split('+').map((t) => {
         let vars = t.split('*').map((v) => {
-            if (!isNaN(v)) {
+            if (!isNaN(Number(v))) {
                 return {var: null, val: +v}
             }
             else {
@@ -25,7 +25,7 @@ export function p_parse(p:string):[Poly, Array<string>] {
         return vars
     })
 
-    let sorted_vars = Array.from(all_vars)
+    let sorted_vars:Array<string> = Array.from(all_vars)
     sorted_vars.sort()
 
     let poly = terms.map((t) => {

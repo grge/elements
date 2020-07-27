@@ -75,6 +75,8 @@ let emit_indent_or_dedent:Action = (input, data) => {
 }
 
 let rules:Array<Rule> = [
+    {start: State.Start, parser: parsers.Endline, end: State.Start, 
+        actions: []},
 
     {start: State.Start, parser: parsers.Letter, end: State.Term, 
         actions: [reset_current_term, build_term, reset_indent, emit_indent_or_dedent]},
@@ -119,7 +121,8 @@ function get_rule(rules:Array<Rule>, input:string, state:State):Rule {
             return rules[i];
         }
     }
-    throw Error("Parse error at '" + input + "'")
+    console.log(state, input)
+    throw "Parse error at " + input;
 }
 
 export function tokenize(input:string) {

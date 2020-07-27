@@ -1,4 +1,4 @@
-import { Token } from './tokens'
+import { Token, tokenize } from './tokens'
 
 export interface Definition {
     name: string,
@@ -20,16 +20,15 @@ export interface Variable {
     name: string
 }
 
-
-function parse_variable(tokens:Array<Token>):Variable {
+export function parse_variable(tokens:Array<Token>):Variable {
     let token = tokens.shift()
-    token = tokens.shift();
-    if (token.type == "term") {
+    // token = tokens.shift();
+    if (token.type == "Term") {
         return {name: token.name};
     }
 }
 
-function parse_relation_or_definition(tokens:Array<Token>):Relation|Definition {
+export function parse_relation_or_definition(tokens:Array<Token>):Relation|Definition {
     let token = tokens.shift();
 
     switch(token.type) {
@@ -51,7 +50,7 @@ function parse_relation_or_definition(tokens:Array<Token>):Relation|Definition {
                     };
                     let conj = parse_conjunction(tokens);
                     token = tokens.shift();
-                    if (token.type != "eof" && token.type != "dedent") {
+                    if (token.type != "EOF" && token.type != "Dedent") {
                         throw "Parse error: Expected dedent, got " + token.type
                     };
                     return {name: name, vars: vars, conj: conj}
@@ -66,13 +65,12 @@ function parse_relation_or_definition(tokens:Array<Token>):Relation|Definition {
     }
 }
 
-
-function parse_conjunction(tokens:Array<Token>):Conjunction {
+export function parse_conjunction(tokens:Array<Token>):Conjunction {
     let rels:Array<Relation> = [];
     let defs:Array<Definition> = [];
 
     while (tokens.length && tokens[0].type != "EOF" && tokens[0].type != "Dedent") {
-        if (tokens[0] == 'indent') { tokens.pop() }
+        if (tokens[0].type == 'Indent') { tokens.pop() }
         var x = parse_relation_or_definition(tokens);
 
         if((x as Definition).conj) {
@@ -84,4 +82,6 @@ function parse_conjunction(tokens:Array<Token>):Conjunction {
     return {rels: rels, defs: defs}
 }
 
-export let parse:((tokens:Array<Token>) => Conjunction) = parse_conjunction;
+export function parse(source:string):Conjunction {
+    return parse_conjunction(tokenize(source))
+}
