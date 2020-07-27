@@ -2,6 +2,71 @@
 import { parse } from  './parser/parser'
 import { tokenize } from  './parser/tokens'
 
+interface Point {
+    x: number,
+    y: number
+}
+
+interface Line {
+    Ax: number,
+    Ay: number,
+    Bx: number,
+    By: number,
+}
+
+interface Circle {
+    Cx: number,
+    Cy: number,
+    r: number
+}
+
+function cstr_point(x:number, y:number):Point {
+    return {x:x, y:y}
+}
+
+function cstr_line_from_two_points(p1:Point, p2:Point):Line {
+    return {Ax:p1.x, Ay:p1.y, Bx:p2.x, By:p2.y}
+}
+
+function cstr_circle_from_center_and_radius(c:Point, r:number):Circle {
+    return {Cx:c.x, Cy:c.y, r:r}
+}
+
+function cstr_circle_from_two_points(c:Point, p:Point):Circle {
+    let r = Math.sqrt((p.x - c.x)^2 + (p.y - c.y)^2)
+    return {Cx:c.x, Cy:c.y, r:r}
+}
+
+function cstr_point_from_circle_center(c:Circle):Point {
+    return {x:c.Cx, y:c.Cy}
+}
+
+function cstr_point_on_line(l:Line, tau:number):Point {
+    let x = l.Ax * tau + l.Bx * (1 - tau);
+    let y = l.Ay * tau + l.By * (1 - tau);
+    return {x:x, y:y}
+}
+
+function cstr_point_on_circle(c:Circle, theta:number):Point {
+    let x = c.Cx + Math.cos(theta) * c.r;
+    let y = c.Cy + Math.sin(theta) * c.r
+    return {x:x, y:y}
+}
+
+/* TODO
+function cstr_circle_line_intersection(c:Circle, l:Line):Point {
+
+}
+
+function cstr_line_line_intersection(l: Line, m: Line):Point {
+
+}
+
+function cstr_circle_circle_intersection(c: Circle, d:Circle):Point {
+
+}
+*/
+
 let test = `
 circle A B C
 circle B A C
@@ -11,6 +76,8 @@ let ast = parse(test)
 let tokens = tokenize(test);
 console.log(tokens)
 console.log(JSON.stringify(ast, null, 2))
+
+
 
 
 /* Gemetric processing
