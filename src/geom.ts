@@ -22,42 +22,66 @@ interface Circle {
 
 type Geom = Point|Circle|Line;
 
-function cstr_point(params:[number, number]):Point {
+function cstr_point(geoms:[], params:[number, number]):Point {
     return {x:params[0], y:params[1]}
 }
 
-function cstr_line_from_two_points(geoms:[Point, Point]):Line {
+function cstr_line_from_two_points(geoms:[Point, Point], params:[]):Line {
     return {Ax:geoms[0].x, Ay:geoms[0].y, Bx:geoms[0].x, By:geoms[0].y}
 }
 
-function cstr_circle_from_center_and_radius(c:Point, r:number):Circle {
-    return {Cx:c.x, Cy:c.y, r:r}
+function cstr_circle_from_center_and_radius(geoms:[Point], params:[number]):Circle {
+    return {Cx:geoms[0].x, Cy:geoms[0].y, r:params[0]}
 }
 
-function cstr_circle_from_two_points(c:Point, p:Point):Circle {
+function cstr_circle_from_two_points(geoms:[Point, Point], params:[]):Circle {
+    let [p, c] = geoms
     let r = Math.sqrt((p.x - c.x)^2 + (p.y - c.y)^2)
     return {Cx:c.x, Cy:c.y, r:r}
 }
 
-function cstr_point_from_circle_center(c:Circle):Point {
-    return {x:c.Cx, y:c.Cy}
+function cstr_point_from_circle_center(geoms:[Circle], params:[]):Point {
+    return {x:geoms[0].Cx, y:geoms[0].Cy}
 }
 
-function cstr_point_on_line(l:Line, tau:number):Point {
+function cstr_point_on_line(geoms:[Line], params:[number]):Point {
+    let l = geoms[0];
+    let tau  = params[0];
     let x = l.Ax * tau + l.Bx * (1 - tau);
     let y = l.Ay * tau + l.By * (1 - tau);
     return {x:x, y:y}
 }
 
-function cstr_point_on_circle(c:Circle, theta:number):Point {
+function cstr_point_on_circle(geoms:[Circle], params:[number]):Point {
+    let c = geoms[0];
+    let theta = params[0];
     let x = c.Cx + Math.cos(theta) * c.r;
     let y = c.Cy + Math.sin(theta) * c.r
     return {x:x, y:y}
 }
 
+function cstr_line_line_intersection(geoms: [Line, Line], params:[]):Point {
+    let [l, m] = geoms;
+
+    // If any of the lines are ill-defined, this algo won't work
+    if ((l.Ax == l.Bx && l.Ay == l.By) || (m.Ax == m.Bx && m.Ay == m.By)) {
+        throw "" // TODO
+    }
+
+    let denom = (m.By - m.Ay) * (l.Bx - l.Ax) - (m.Bx - m.Ax) * (l.Bx - l.Ax)
+
+    if (denom === 0) {
+        // Lines are parralel
+        throw "" // TODO
+    }
+
+    
+
+ }
+
+
 /* TODO
 function cstr_circle_line_intersection(c:Circle, l:Line):Point { }
-function cstr_line_line_intersection(l: Line, m: Line):Point { }
 function cstr_circle_circle_intersection(c: Circle, d:Circle):Point { }
 */
 
@@ -126,7 +150,34 @@ function build_cms_from_circle_relation(r:Relation) {
 }
 
 function build_cms_from_line_relation(r:Relation) {
-    // TODO
+    let var_names = r.vars.map((v) => (v.name));
+    let name = r.name + '-' + var_names.join('');
+    let type = r.name;
+    let cms = {}
+    cms[name] = {name: name, type: type, methods:[]}
+    for (let i = 0; i < var_names.length; i++) {
+        let pi = 'point-' + var_names[i]
+
+        if (!(pi in cms)) {
+            cms[pi] = {name: pi, type: 'point', methods:[
+                {name: 'point', input_geoms: [], input_params: ['real', 'real'], cost: 2}
+            ]}
+        }
+
+        cms[pi].methods.push(
+            {name: 'point-on-line', input_geoms: [name], input_params: ['real'], cost:1}
+        )
+
+        for (let j = i; j < var_names.length; j++) {
+            if (i != j) {
+                let pj = 'point-' + var_names[j];
+                cms[name].methods.push(
+                    {name: 'line-from-two-points', input_geoms: [pi, pj], input_params: [], cost: 0}
+                )
+            }
+        }
+    }
+    return cms
 }
 
 function build_cms_from_relation(r:Relation) {
@@ -191,18 +242,55 @@ function cms_from_conjunction(c:Conjunction) {
     return build_cms_intersections(cms)
 }
 
+
+function construction_plan_least_cost_first(cms, budget=10) {
+    let geoms = Object.keys(cms);
+    let plan = [];
+
+
+    for (let i = 0; i < geoms.length; i++) {
+        let constructed = plan.map(([name, cm]) => (name))
+        innerLoop: for (let c = 0; c <= budget; c++) {
+            for (let geom in cms) {
+                if (!constructed.includes(geom) && geoms.includes(geom)) {
+                    for (let cm of cms[geom].methods) {
+                        if (cm.cost == c) {
+                            if (cm.input_geoms.map((a) => constructed.includes(a)).every((a) => (a == true))) {
+                                plan.push([geom, cm])
+                                budget -= c
+                                break innerLoop
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (plan.length - 1 < i) {
+            throw "Couldn't complete plan"
+        }
+    }
+    return plan
+
+}
+
 let test = `
-circle A B C
-line B A C
+circle D A B
+circle A D B
+line D A L
+line D B G
+circle B C G
+circle D G L
 `
 
 let ast = parse(test)
 let tokens = tokenize(test);
 let out = cms_from_conjunction(ast)
 
+let plan = construction_plan_least_cost_first(out)
+console.log(plan)
 // let x = [out, out, out, out].reduce(merge_cms)
 
-console.log(JSON.stringify(out, null, 2))
+// console.log(JSON.stringify(out, null, 2))
 
 /* Gemetric processing
    Step 1: Collect all relations associated with each variable
