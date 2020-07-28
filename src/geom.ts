@@ -1,5 +1,5 @@
 
-import { parse } from  './parser/parser'
+import { parse, Relation, Conjunction } from  './parser/parser'
 import { tokenize } from  './parser/tokens'
 
 interface Point {
@@ -20,12 +20,14 @@ interface Circle {
     r: number
 }
 
-function cstr_point(x:number, y:number):Point {
-    return {x:x, y:y}
+type Geom = Point|Circle|Line;
+
+function cstr_point(params:[number, number]):Point {
+    return {x:params[0], y:params[1]}
 }
 
-function cstr_line_from_two_points(p1:Point, p2:Point):Line {
-    return {Ax:p1.x, Ay:p1.y, Bx:p2.x, By:p2.y}
+function cstr_line_from_two_points(geoms:[Point, Point]):Line {
+    return {Ax:geoms[0].x, Ay:geoms[0].y, Bx:geoms[0].x, By:geoms[0].y}
 }
 
 function cstr_circle_from_center_and_radius(c:Point, r:number):Circle {
@@ -54,31 +56,153 @@ function cstr_point_on_circle(c:Circle, theta:number):Point {
 }
 
 /* TODO
-function cstr_circle_line_intersection(c:Circle, l:Line):Point {
-
-}
-
-function cstr_line_line_intersection(l: Line, m: Line):Point {
-
-}
-
-function cstr_circle_circle_intersection(c: Circle, d:Circle):Point {
-
-}
+function cstr_circle_line_intersection(c:Circle, l:Line):Point { }
+function cstr_line_line_intersection(l: Line, m: Line):Point { }
+function cstr_circle_circle_intersection(c: Circle, d:Circle):Point { }
 */
+
+function merge_cms(cms1, cms2) {
+    let out = {...cms1}
+
+    for (const v in cms2) {
+        if (v in out) {
+            cms2[v].methods.forEach((m1) => {
+                // look for any matching methods already in out
+                let x = out[v].methods.filter((m2) => {
+                    return m2.name == m1.name && m1.input_geoms.join(' ') == m2.input_geoms.join(' ')
+                })
+                // if none exist, add one
+                if (x.length == 0) {
+                    out[v].methods.push(m1)
+                } 
+            })    
+        }
+        else {
+            out[v] = cms2[v]
+        }
+    }
+
+    return out;
+}
+
+function build_cms_from_circle_relation(r:Relation) {
+    let var_names = r.vars.map((v) => (v.name));
+    let name = r.name + '-' + var_names.join('');
+    let type = r.name;
+    let cms = {}
+    cms[name] = {name: name, type: type, methods:[]}
+    for (let i = 0; i < var_names.length; i++) {
+        let pi = 'point-' + var_names[i]
+
+        if (!(pi in cms)) {
+            cms[pi] = {name: pi, type: 'point', methods:[
+                {name: 'point', input_geoms: [], input_params: ['real', 'real'], cost: 2}
+            ]}
+        }
+
+        if (i == 0) {
+            cms[name].methods.push(
+                {name:'circle-from-center-point', input_geoms:[pi], input_params: ['non-negative-real'], cost:1}
+            )
+            cms[pi].methods.push(
+                {name: 'point-from-circle-center', input_geoms: [name], input_params: [], cost:0}
+            )
+            for (let j = i; j < var_names.length; j++) {
+                if (i != j) {
+                    let pj = 'point-' + var_names[j]
+                    cms[name].methods.push(
+                        {name:'circle-from-two-points', input_geoms:[pi, pj], input_params: [], cost:0}
+                    )
+                }
+            }
+        }
+        else {
+            cms[pi].methods.push(
+                {name: 'point-on-circle', input_geoms: [name], input_params: ['angle'], cost:1}
+            )
+        }
+    }
+    return cms
+}
+
+function build_cms_from_line_relation(r:Relation) {
+    // TODO
+}
+
+function build_cms_from_relation(r:Relation) {
+    switch(r.name) {
+        case 'circle':
+            return build_cms_from_circle_relation(r)
+        case 'line':
+            return build_cms_from_line_relation(r)
+        default:
+            throw "Unknown relation " + r.name + ". No construction methods known."
+    }
+}
+function build_cms_intersections(cms) {
+    for (const g in cms) {
+        if (cms[g].type == 'point') {
+            let ms = cms[g].methods;
+            for (let i = 0; i < ms.length; i++) {
+                for (let j = i; j < ms.length; j++) {
+                    if (i != j) {
+                        if (ms[i].name == 'point-on-circle' && ms[j].name == 'point-on-circle') {
+                            cms[g].methods.push({
+                                name: 'circle-circle-intersection',
+                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
+                                input_params: ['bool'],
+                                cost:0}
+                            )
+                        }
+                        else if (ms[i].name == 'point-on-line' && ms[j].name == 'point-on-circle') {
+                            cms[g].methods.push({
+                                name: 'circle-line-intersection',
+                                input_geoms: [ms[j].input_geoms[0], ms[i].input_geoms[0]],
+                                input_params: ['bool'],
+                                cost:0}
+                            )
+                        }
+                        else if (ms[i].name == 'point-on-circle' && ms[j].name == 'point-on-line') {
+                            cms[g].methods.push({
+                                name: 'circle-line-intersection',
+                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
+                                input_params: ['bool'],
+                                cost:0}
+                            )
+                        }
+                        else if (ms[i].name == 'point-on-line' && ms[j].name == 'point-on-line') {
+                            cms[g].methods.push({
+                                name: 'line-line-intersection',
+                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
+                                input_params: [],
+                                cost:0}
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return cms
+}
+
+function cms_from_conjunction(c:Conjunction) {
+    let cms = c.rels.map(build_cms_from_relation).reduce(merge_cms, {})
+    return build_cms_intersections(cms)
+}
 
 let test = `
 circle A B C
-circle B A C
+line B A C
 `
 
 let ast = parse(test)
 let tokens = tokenize(test);
-console.log(tokens)
-console.log(JSON.stringify(ast, null, 2))
+let out = cms_from_conjunction(ast)
 
+// let x = [out, out, out, out].reduce(merge_cms)
 
-
+console.log(JSON.stringify(out, null, 2))
 
 /* Gemetric processing
    Step 1: Collect all relations associated with each variable
