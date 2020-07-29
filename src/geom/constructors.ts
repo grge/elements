@@ -10,7 +10,7 @@ export let point:GeomConstructor = {
     construct(geoms:[], params:[number, number]):Point {
         return {x:params[0], y:params[1]}
     },
-    infer_params(geoms:[], output:Point):[number, number] {
+    infer_params(input:[], output:Point):[number, number] {
         return [output.x, output.y]
     },
     dimension: 2
@@ -20,7 +20,7 @@ export let line_from_two_points:GeomConstructor = {
     construct(geoms:[Point, Point], params:[]):Line {
         return {Ax:geoms[0].x, Ay:geoms[0].y, Bx:geoms[0].x, By:geoms[0].y}
     },
-    infer_params(geoms:[Point, Point], output:Line):[] {
+    infer_params(input:[Point, Point], output:Line):[] {
         return [];
     },
     dimension: 0
@@ -30,7 +30,7 @@ export let circle_from_center_and_radius:GeomConstructor = {
     construct(geoms:[Point], params:[number]):Circle {
         return {Cx:geoms[0].x, Cy:geoms[0].y, r:params[0]}
     },
-    infer_params(geoms:[Point], output:Circle):[number] {
+    infer_params(input:[Point], output:Circle):[number] {
         return [output.r]
     },
     dimension: 1
@@ -42,7 +42,7 @@ export let circle_from_two_points:GeomConstructor = {
         let r = Math.sqrt((p.x - c.x)^2 + (p.y - c.y)^2)
         return {Cx:c.x, Cy:c.y, r:r}
     },
-    infer_params(geoms:[Point, Point], output:Circle):[] {
+    infer_params(input:[Point, Point], output:Circle):[] {
         return [];
     },
     dimension: 0
@@ -52,7 +52,7 @@ export let point_from_circle_center:GeomConstructor = {
     construct(geoms:[Circle], params:[]):Point {
         return {x:geoms[0].Cx, y:geoms[0].Cy}
     },
-    infer_params(geoms:[Circle], output:Point):[] {
+    infer_params(input:[Circle], output:Point):[] {
         return []
     },
     dimension: 0
@@ -66,8 +66,8 @@ export let point_on_line:GeomConstructor = {
         let y = l.Ay * tau + l.By * (1 - tau);
         return {x:x, y:y}
     },
-    infer_params(geoms:[Line], output:Point):[number] {
-        let l = geoms[0];
+    infer_params(input:[Line], output:Point):[number] {
+        let l = input[0];
         return [(output.x - l.Bx) / (l.Ax - l.Bx)]
     },
     dimension: 1
@@ -81,8 +81,8 @@ export let point_on_circle:GeomConstructor = {
         let y = c.Cy + Math.sin(theta) * c.r
         return {x:x, y:y}
     },
-    infer_params(geoms:[Circle], output:Point):[number] {
-        let c = geoms[0];
+    infer_params(input:[Circle], output:Point):[number] {
+        let c = input[0];
         let x = output.x - c.Cx 
         let y = output.y - c.Cy 
         return [Math.atan2(y, x)]
@@ -107,7 +107,7 @@ export let line_line_intersection:GeomConstructor = {
         let tau = numer / denom;
         return {x:tau*(l.Bx - l.Ax) + l.Ax, y: tau*(l.By - l.Ay) + l.Ay}
     },
-    infer_params(geoms:[Line, Line], output:Point):[] {
+    infer_params(input:[Line, Line], output:Point):[] {
         return [];
     },
     dimension: 0
@@ -151,7 +151,7 @@ export let circle_circle_intersection:GeomConstructor = {
             return {x: c.Cx - rx, y: c.Cy - ry}
         }
     },
-    infer_params(geoms:[Line, Line], output:Point):[boolean] {
+    infer_params(input:[Line, Line], output:Point):[boolean] {
         // TODO: This is not a correct implementation
         return [true]
     },
@@ -182,7 +182,7 @@ export let circle_line_intersection:GeomConstructor = {
             y: (b + m * C.Cx + m**2 * C.Cy + z) / (1 + m**2),
         }
     },
-    infer_params(geoms:[Line, Line], output:Point):[boolean] {
+    infer_params(input:[Line, Line], output:Point):[boolean] {
         // TODO: This is not a correct implementation
         return [true]
     },
