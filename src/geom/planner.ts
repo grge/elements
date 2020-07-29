@@ -1,18 +1,54 @@
 import { Relation, Conjunction } from  '../parser/parser'
+import * as geom from './geom'
 
-function merge_cms(cms1, cms2) {
-    let out = {...cms1}
+/* Much of the code below makes references to a directed graph analogy:
+   The planner needs to determine a viable method of constructing all of the
+   geoms in a given conjunction, given a limited set of allowable pathways.
+   In this analogy, each Geom is a node in the graph, while all possible
+   GeomConstructors are represented by zero or more edges, i.e. the list of Geoms
+   that are inputs to the constructor in question.
 
-    for (const v in cms2) {
+   Each construction pathway has an associated "cost", i.e. the dimension in the
+   Hilbert sense, i.e., the degrees of freedom.
+   
+   The goal of the planner is to span the graph (visit each node) within a given
+   dimension budget.
+*/
+
+// The Edgeset inferface represents a single viable pathway for the planner.
+// I.e., it describes one possible geom construction and the requirements. 
+// Since a GeomConstructor may require multiple input geoms, the constrction
+// represents an "EdgeSet" rather than just a single edge.
+interface EdgeSet {
+    out_node: string,
+    in_nodes: Array<string>,
+    constructor: geom.GeomConstructor,
+}
+
+interface Node {
+    name: string,
+    type: string, // This names Geom subtype. Is there a typescripty way to do it?
+    edges: Array<EdgeSet>
+}
+
+interface Graph {
+    [name: string]: Node
+}
+
+function merge_graph(g1:Graph, g2:Graph):Graph {
+    let out = {...g1}
+
+    for (const v in g2) {
         if (v in out) {
-            cms2[v].methods.forEach((m1) => {
+            g2[v].edges.forEach((m1) => {
                 // look for any matching methods already in out
-                let x = out[v].methods.filter((m2) => {
-                    return m2.name == m1.name && m1.input_geoms.join(' ') == m2.input_geoms.join(' ')
+                let x = out[v].edges.filter((m2) => {
+                    return (m2.constructor.name == m1.constructor.name
+                        && m1.in_nodes.join(' ') == m2.in_nodes.join(' '))
                 })
                 // if none exist, add one
                 if (x.length == 0) {
-                    out[v].methods.push(m1)
+                    out[v].edges.push(m1)
                 } 
             })    
         }
@@ -20,7 +56,6 @@ function merge_cms(cms1, cms2) {
             out[v] = cms2[v]
         }
     }
-
     return out;
 }
 
