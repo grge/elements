@@ -62,28 +62,87 @@ function cstr_point_on_circle(geoms:[Circle], params:[number]):Point {
 
 function cstr_line_line_intersection(geoms: [Line, Line], params:[]):Point {
     let [l, m] = geoms;
-
-    // If any of the lines are ill-defined, this algo won't work
+    // If either lines is defined by coincident points, then throw an error
     if ((l.Ax == l.Bx && l.Ay == l.By) || (m.Ax == m.Bx && m.Ay == m.By)) {
         throw "" // TODO
     }
-
     let denom = (m.By - m.Ay) * (l.Bx - l.Ax) - (m.Bx - m.Ax) * (l.Bx - l.Ax)
-
+    // If the lines are parallel (i.e. the denominator is zero), throw an error
     if (denom === 0) {
-        // Lines are parralel
         throw "" // TODO
     }
-
-    
-
+    let numer = (m.Bx - m.Ax) * (l.Ay - m.Ay) - (m.By - m.Ay) * (l.Ax - m.Ax)
+    // Note: tau is a parameter for the line l
+    let tau = numer / denom;
+    return {x:tau*(l.Bx - l.Ax) + l.Ax, y: tau*(l.By - l.Ay) + l.Ay}
  }
 
 
-/* TODO
-function cstr_circle_line_intersection(c:Circle, l:Line):Point { }
-function cstr_circle_circle_intersection(c: Circle, d:Circle):Point { }
-*/
+function cstr_circle_circle_intersection(geoms: [Circle, Circle], params:[Boolean]):Point { 
+    let [c, d] = geoms;
+    let [k] = params;
+
+    // distance between the two centers
+    let D = (d.Cx - c.Cx)**2 + (d.Cy - c.Cy)**2;
+
+    // If the centers are further apart than the sum of the radii, there are no solutions
+    if (D > c.r + d.r) {
+        throw ""
+    }
+
+    // If one circle is inside of the other, there are no solutions
+    if (D < Math.abs(c.r - d.r)) {
+        throw ""
+    }
+
+    // Note: point M is the intersection of the line joining the two circle centers,
+    // and the line joining the two intersection points. 
+
+    // find distance from c to M
+    let a = (c.r**2 - d.r**2 + D**2) / (2.0 * D)
+
+    // coordinates of M
+    let Mx = c.Cx + (d.Cx - c.Cx) * a / D
+    let My = c.Cy + (d.Cy - c.Cy) * a / D
+
+    // distnce from M to intersection points
+    let h = Math.sqrt(c.r**2 - a**2)
+
+    let rx = -(d.Cy - c.Cy) * (h / D)
+    let ry = (d.Cx - c.Cx) * (h / D)
+
+    if (k) {
+        return {x: c.Cx + rx, y: c.Cy + ry}
+    }
+    else {
+        return {x: c.Cx - rx, y: c.Cy - ry}
+    }
+
+}
+
+function cstr_circle_line_intersection(geoms:[Circle, Line], params:[Boolean]):Point {
+    let [C, L] = geoms;
+    let [k] = params;
+
+    // slope and intercept of L
+    let m = (L.By - L.Ay) / (L.Bx - L.Ax)
+    let b = L.Ay - m * L.Ax
+
+    let discriminant = C.r**2 * (1 + m**2) - (C.Cy - m * C.Cx - b)**2
+
+    if (discriminant < 0) {
+        throw ""
+    }
+
+    let z = Math.sqrt(discriminant)
+    if (k) {
+        z = -z
+    }
+    return {
+        x: (C.Cx + m * C.Cy - m * b + z) / (1 + m**2),
+        y: (b + m * C.Cx + m**2 * C.Cy + z) / (1 + m**2),
+    }
+ }
 
 function merge_cms(cms1, cms2) {
     let out = {...cms1}
