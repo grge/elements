@@ -1,6 +1,6 @@
 import { parse } from '../parser/parser'
 import { tokenize } from  '../parser/tokens'
-import { cms_from_conjunction, construction_plan_least_cost_first} from './planner'
+import { graph_from_conjunction, make_plan__least_cost_first, execute_plan} from './planner'
 
 let test = `
 circle D A B
@@ -12,8 +12,7 @@ circle D G L
 `
 
 let ast = parse(test)
-let tokens = tokenize(test);
-let out = cms_from_conjunction(ast)
-
-let plan = construction_plan_least_cost_first(out)
-console.log(plan)
+let out = graph_from_conjunction(ast)
+let plan = make_plan__least_cost_first(out, 100)
+let geoms = execute_plan(plan)
+console.log(geoms)
