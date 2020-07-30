@@ -28,185 +28,195 @@ interface EdgeSet {
 interface Node {
     name: string,
     type: string, // This names Geom subtype. Is there a typescripty way to do it?
-    edges: Array<EdgeSet>
+    edge_sets: Array<EdgeSet>
 }
 
 interface Graph {
     [name: string]: Node
 }
 
+type Plan = Array<EdgeSet>
+
 function merge_graph(g1:Graph, g2:Graph):Graph {
     let out = {...g1}
 
     for (const v in g2) {
         if (v in out) {
-            g2[v].edges.forEach((m1) => {
+            g2[v].edge_sets.forEach((e1) => {
                 // look for any matching methods already in out
-                let x = out[v].edges.filter((m2) => {
-                    return (m2.constructor.name == m1.constructor.name
-                        && m1.in_nodes.join(' ') == m2.in_nodes.join(' '))
+                let x = out[v].edge_sets.filter((e2) => {
+                    return (e1.constructor.name == e1.constructor.name
+                        && e1.in_nodes.join(' ') == e2.in_nodes.join(' '))
                 })
                 // if none exist, add one
                 if (x.length == 0) {
-                    out[v].edges.push(m1)
+                    out[v].edge_sets.push(e1)
                 } 
             })    
         }
         else {
-            out[v] = cms2[v]
+            out[v] = g2[v]
         }
     }
     return out;
 }
 
-function build_cms_from_circle_relation(r:Relation) {
+function build_graph_from_circle_relation(r:Relation):Graph {
     let var_names = r.vars.map((v) => (v.name));
     let name = r.name + '-' + var_names.join('');
     let type = r.name;
-    let cms = {}
-    cms[name] = {name: name, type: type, methods:[]}
+    let g:Graph = {};
+    g[name] = {name: name, type: type, edge_sets:[]}
     for (let i = 0; i < var_names.length; i++) {
         let pi = 'point-' + var_names[i]
 
-        if (!(pi in cms)) {
-            cms[pi] = {name: pi, type: 'point', methods:[
-                {name: 'point', input_geoms: [], input_params: ['real', 'real'], cost: 2}
+        if (!(pi in g)) {
+            g[pi] = {name: pi, type: 'point', edge_sets:[
+                {constructor:geom.point, in_nodes: [], out_node: pi}
             ]}
         }
 
         if (i == 0) {
-            cms[name].methods.push(
-                {name:'circle-from-center-point', input_geoms:[pi], input_params: ['non-negative-real'], cost:1}
+            g[name].edge_sets.push(
+                {constructor:geom.circle_from_center_and_radius, in_nodes:[pi], out_node:name}
             )
-            cms[pi].methods.push(
-                {name: 'point-from-circle-center', input_geoms: [name], input_params: [], cost:0}
+            g[pi].edge_sets.push(
+                {constructor:geom.point_from_circle_center, in_nodes:[name], out_node:pi}
             )
             for (let j = i; j < var_names.length; j++) {
                 if (i != j) {
                     let pj = 'point-' + var_names[j]
-                    cms[name].methods.push(
-                        {name:'circle-from-two-points', input_geoms:[pi, pj], input_params: [], cost:0}
+                    g[name].edge_sets.push(
+                        {constructor:geom.circle_from_two_points, in_nodes:[pi, pj], out_node:name}
                     )
                 }
             }
         }
         else {
-            cms[pi].methods.push(
-                {name: 'point-on-circle', input_geoms: [name], input_params: ['angle'], cost:1}
+            g[pi].edge_sets.push(
+                {constructor:geom.point_on_circle, in_nodes:[name], out_node:pi}
             )
         }
     }
-    return cms
+    return g
 }
 
-function build_cms_from_line_relation(r:Relation) {
+function build_graph_from_line_relation(r:Relation):Graph {
     let var_names = r.vars.map((v) => (v.name));
     let name = r.name + '-' + var_names.join('');
     let type = r.name;
-    let cms = {}
-    cms[name] = {name: name, type: type, methods:[]}
+    let g:Graph = {}
+    g[name] = {name: name, type: type, edge_sets:[]}
     for (let i = 0; i < var_names.length; i++) {
         let pi = 'point-' + var_names[i]
 
-        if (!(pi in cms)) {
-            cms[pi] = {name: pi, type: 'point', methods:[
-                {name: 'point', input_geoms: [], input_params: ['real', 'real'], cost: 2}
+        if (!(pi in g)) {
+            g[pi] = {name: pi, type: 'point', edge_sets:[
+                {constructor:geom.point, in_nodes: [], out_node:pi}
             ]}
         }
 
-        cms[pi].methods.push(
-            {name: 'point-on-line', input_geoms: [name], input_params: ['real'], cost:1}
+        g[pi].edge_sets.push(
+            {constructor:geom.point_on_line, in_nodes: [name], out_node: pi}
         )
 
         for (let j = i; j < var_names.length; j++) {
             if (i != j) {
                 let pj = 'point-' + var_names[j];
-                cms[name].methods.push(
-                    {name: 'line-from-two-points', input_geoms: [pi, pj], input_params: [], cost: 0}
+                g[name].edge_sets.push(
+                    {constructor:geom.line_from_two_points, in_nodes:[pi, pj], out_node:name}
                 )
             }
         }
     }
-    return cms
+    return g
 }
 
-function build_cms_from_relation(r:Relation) {
+function build_graph_from_relation(r:Relation):Graph {
     switch(r.name) {
         case 'circle':
-            return build_cms_from_circle_relation(r)
+            return build_graph_from_circle_relation(r)
         case 'line':
-            return build_cms_from_line_relation(r)
+            return build_graph_from_line_relation(r)
         default:
             throw "Unknown relation " + r.name + ". No construction methods known."
     }
 }
 
-function build_cms_intersections(cms) {
-    for (const g in cms) {
-        if (cms[g].type == 'point') {
-            let ms = cms[g].methods;
-            for (let i = 0; i < ms.length; i++) {
-                for (let j = i; j < ms.length; j++) {
+function build_graph_intersections(g:Graph):Graph {
+    for (const node in g) {
+        if (g[node].type == 'point') {
+            let es = g[node].edge_sets;
+            for (let i = 0; i < es.length; i++) {
+                for (let j = i; j < es.length; j++) {
                     if (i != j) {
-                        if (ms[i].name == 'point-on-circle' && ms[j].name == 'point-on-circle') {
-                            cms[g].methods.push({
-                                name: 'circle-circle-intersection',
-                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
-                                input_params: ['bool'],
-                                cost:0}
-                            )
+                        if (   es[i].constructor.name == 'point_on_circle'
+                            && es[j].constructor.name == 'point_on_circle') {
+                            g[node].edge_sets.push({
+                                constructor: geom.circle_circle_intersection,
+                                in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
+                                out_node: node
+                            })
                         }
-                        else if (ms[i].name == 'point-on-line' && ms[j].name == 'point-on-circle') {
-                            cms[g].methods.push({
-                                name: 'circle-line-intersection',
-                                input_geoms: [ms[j].input_geoms[0], ms[i].input_geoms[0]],
-                                input_params: ['bool'],
-                                cost:0}
-                            )
+
+                        else if (   es[i].constructor.name == 'point_on_line'
+                                 && es[j].constructor.name == 'point_on_circle') {
+                            g[node].edge_sets.push({
+                                constructor: geom.circle_line_intersection,
+                                in_nodes: [es[j].in_nodes[0], es[i].in_nodes[0]],
+                                out_node: node
+                            })
                         }
-                        else if (ms[i].name == 'point-on-circle' && ms[j].name == 'point-on-line') {
-                            cms[g].methods.push({
-                                name: 'circle-line-intersection',
-                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
-                                input_params: ['bool'],
-                                cost:0}
-                            )
+
+                        else if (   es[i].constructor.name == 'point_on_circle'
+                                 && es[j].constructor.name == 'point_on_line') {
+                            g[node].edge_sets.push({
+                                constructor: geom.circle_line_intersection,
+                                in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
+                                out_node: node
+                            })
                         }
-                        else if (ms[i].name == 'point-on-line' && ms[j].name == 'point-on-line') {
-                            cms[g].methods.push({
-                                name: 'line-line-intersection',
-                                input_geoms: [ms[i].input_geoms[0], ms[j].input_geoms[0]],
-                                input_params: [],
-                                cost:0}
-                            )
+
+                        else if (   es[i].constructor.name == 'point_on_line'
+                                 && es[j].constructor.name == 'point_on_line') {
+                            g[node].edge_sets.push({
+                                constructor: geom.line_line_intersection,
+                                in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
+                                out_node: node
+                            })
                         }
                     }
                 }
             }
         }
     }
-    return cms
+    return g
 }
 
-export function cms_from_conjunction(c:Conjunction) {
-    let cms = c.rels.map(build_cms_from_relation).reduce(merge_cms, {})
-    return build_cms_intersections(cms)
+export function graph_from_conjunction(c:Conjunction):Graph {
+    let cms = c.rels.map(build_graph_from_relation).reduce(merge_graph, {})
+    return build_graph_intersections(cms)
 }
 
-export function construction_plan_least_cost_first(cms, budget=10) {
-    let geoms = Object.keys(cms);
+export function make_plan__least_cost_first(g:Graph, budget=10):Plan {
+    let geoms = Object.keys(g);
     let plan = [];
 
     for (let i = 0; i < geoms.length; i++) {
-        let constructed = plan.map(([name, cm]) => (name))
-        innerLoop: for (let c = 0; c <= budget; c++) {
-            for (let geom in cms) {
+        let constructed = plan.map((es) => (es.out_node))
+        innerLoop: for (let dim = 0; dim <= budget; dim++) {
+            for (let geom in g) {
                 if (!constructed.includes(geom) && geoms.includes(geom)) {
-                    for (let cm of cms[geom].methods) {
-                        if (cm.cost == c) {
-                            if (cm.input_geoms.map((a) => constructed.includes(a)).every((a) => (a == true))) {
-                                plan.push([geom, cm])
-                                budget -= c
+                    for (let es of g[geom].edge_sets) {
+
+                        // If this edge has the right dimension cost
+                        if (es.constructor.dimension == dim) {
+
+                            // If all required nodes have been constructed
+                            if (es.in_nodes.map((a) => constructed.includes(a)).every((a) => (a == true))) {
+
+                                plan.push(es)
+                                budget -= dim
                                 break innerLoop
                             }
                         }
@@ -219,4 +229,28 @@ export function construction_plan_least_cost_first(cms, budget=10) {
         }
     }
     return plan
+}
+
+export function get_random_param(param_type) {
+    switch (param_type) {
+        case geom.ParamType.Real:
+            return Math.random() * 20 - 10
+        case geom.ParamType.NonNegativeReal:
+            return Math.random() * 10
+        case geom.ParamType.Angle:
+            return Math.random() * Math.PI * 2
+        case geom.ParamType.Boolean:
+            return true
+    }
+}
+
+export function execute_plan(p:Plan) {
+    let geoms = {}
+
+    for (let es of p) {
+        let params = es.constructor.param_types.map(get_random_param)
+        let in_geoms = es.in_nodes.map((n) => geoms[n])
+        geoms[es.out_node] = es.constructor(in_geoms, params) 
+    }
+    return geoms
 }
