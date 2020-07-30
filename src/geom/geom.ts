@@ -64,7 +64,7 @@ Construct a Line from two existing Points
 */
 export const line_from_two_points:GeomConstructor = 
     function line_from_two_points(geoms:[Point, Point], params:[]):Line {
-        return {Ax:geoms[0].x, Ay:geoms[0].y, Bx:geoms[0].x, By:geoms[0].y}
+        return {Ax:geoms[0].x, Ay:geoms[0].y, Bx:geoms[1].x, By:geoms[1].y}
     }
 
 line_from_two_points.infer_params = (input:[Point, Point], output:Line) => [];
@@ -93,8 +93,8 @@ the Circle itself.
 */
 export const circle_from_two_points:GeomConstructor = 
     function circle_from_two_points(geoms:[Point, Point], params:[]):Circle {
-        let [p, c] = geoms
-        let r = Math.sqrt((p.x - c.x)^2 + (p.y - c.y)^2)
+        let [c, p] = geoms
+        let r = Math.sqrt((p.x - c.x)**2 + (p.y - c.y)**2)
         return {Cx:c.x, Cy:c.y, r:r}
     }
     
@@ -199,11 +199,11 @@ export const circle_circle_intersection:GeomConstructor =
         let [k] = params;
 
         // distance between the two centers
-        let D = (d.Cx - c.Cx)**2 + (d.Cy - c.Cy)**2;
+        let D = Math.sqrt((d.Cx - c.Cx)**2 + (d.Cy - c.Cy)**2);
 
         // If the centers are further apart than the sum of the radii, there
         // are no solutions
-        if (D > c.r + d.r) { throw "Cirles do not intersect" }
+        if (D > c.r + d.r) { throw "Circles have no intersection. " }
 
         // If one circle is inside of the other, there are no solutions
         if (D < Math.abs(c.r - d.r)) { throw "Circles do not intersect" }
@@ -256,7 +256,7 @@ export const circle_line_intersection:GeomConstructor =
         let discriminant = C.r**2 * (1 + m**2) - (C.Cy - m * C.Cx - b)**2
 
         if (discriminant < 0) {
-            throw ""
+            throw "Circle and line do not intsersect"
         }
 
         let z = Math.sqrt(discriminant)
