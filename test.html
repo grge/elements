@@ -1,0 +1,20 @@
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/systemjs/0.20.19/system.js" integrity="sha256-HCJlhCZ21EKx0Wo6wCF+rbeBHlVlOSJccd4zTQe2TNw=" crossorigin="anonymous"></script>
+</head>
+<body>
+<script>
+System.config({
+    packages: {
+        './': {
+            defaultExtension: 'js'
+        }
+    }
+});
+
+// Load the main module
+SystemJS.import("build/geom/play").then((v) => (console.log(v.geoms)));
+
+</script>
+</body>
+</html>

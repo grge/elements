@@ -1,89 +1,88 @@
 import { Token, tokenize } from './tokens'
 
 export interface Definition {
-    name: string,
-    vars: Array<Variable>,
-    conj: Conjunction,
+    name: string;
+    vars: Array<Variable>;
+    conj: Conjunction;
 }
 
 export interface Conjunction {
-    rels: Array<Relation>,
-    defs: Array<Definition>
+    rels: Array<Relation>;
+    defs: Array<Definition>;
 }
 
 export interface Relation {
-    name: string,
-    vars: Array<Variable>
+    name: string;
+    vars: Array<Variable>;
 }
 
 export interface Variable {
-    name: string
+    name: string;
 }
 
-export function parse_variable(tokens:Array<Token>):Variable {
-    let token = tokens.shift()
-    // token = tokens.shift();
-    if (token.type == "Term") {
-        return {name: token.name};
-    }
+export function parse_variable (tokens: Array<Token>): Variable {
+  const token = tokens.shift()
+  if (token.type === 'Term') {
+    return { name: token.name }
+  }
 }
 
-export function parse_relation_or_definition(tokens:Array<Token>):Relation|Definition {
-    let token = tokens.shift();
+export function parse_relation_or_definition (tokens: Array<Token>): Relation|Definition {
+  let token = tokens.shift()
 
-    switch(token.type) {
-        case "Term":
-            let name = token.name;
-            let vars:Array<Variable> = [];
+  switch (token.type) {
+    case 'Term':
+      const name = token.name
+      const vars: Array<Variable> = []
 
-            while (tokens && tokens[0].type == "Term") {
-                vars.push(parse_variable(tokens));
-            }
+      while (tokens && tokens[0].type === 'Term') {
+        vars.push(parse_variable(tokens))
+      }
 
-            token = tokens.shift();
+      token = tokens.shift()
 
-            switch(token.type) {
-                case "Colon":
-                    token = tokens.shift();
-                    if (token.type != "Indent" ) {
-                        throw "Parse error: Expected indent, got " + token.type
-                    };
-                    let conj = parse_conjunction(tokens);
-                    token = tokens.shift();
-                    if (token.type != "EOF" && token.type != "Dedent") {
-                        throw "Parse error: Expected dedent, got " + token.type
-                    };
-                    return {name: name, vars: vars, conj: conj}
-                case "Newline":
-                case "EOF":
-                    return {name: name, vars: vars}
-                default:
-                    throw "Parse error: Unexpected token" + token.type;
-            }
+      switch (token.type) {
+        case 'Colon':
+          token = tokens.shift()
+          if (token.type !== 'Indent') {
+            throw 'Parse error: Expected indent, got ' + token.type
+          };
+          const conj = parse_conjunction(tokens)
+          token = tokens.shift()
+          if (token.type !== 'EOF' && token.type !== 'Dedent') {
+            throw 'Parse error: Expected dedent, got ' + token.type
+          };
+          return { name: name, vars: vars, conj: conj }
+        case 'Newline':
+        case 'EOF':
+          return { name: name, vars: vars }
         default:
-            throw "Parse error: Expected Term, got " + token.type;
-    }
+          throw 'Parse error: Unexpected token' + token.type
+      }
+    default:
+      throw 'Parse error: Expected Term, got ' + token.type
+  }
 }
 
-export function parse_conjunction(tokens:Array<Token>):Conjunction {
-    let rels:Array<Relation> = [];
-    let defs:Array<Definition> = [];
+export function parse_conjunction (tokens: Array<Token>): Conjunction {
+  const rels: Array<Relation> = []
+  const defs: Array<Definition> = []
 
-    while (tokens.length && tokens[0].type != "EOF" && tokens[0].type != "Dedent") {
-        if (tokens[0].type == 'Indent') { tokens.pop() }
-        var x = parse_relation_or_definition(tokens);
+  while (tokens.length && tokens[0].type !== 'EOF' && tokens[0].type !== 'Dedent') {
+    if (tokens[0].type === 'Indent') { tokens.pop() }
+    const x = parse_relation_or_definition(tokens)
 
-        if((x as Definition).conj) {
-            defs.push(x as Definition);
-        } else {
-            rels.push(x as Relation);
-        }
+    if ((x as Definition).conj) {
+      defs.push(x as Definition)
+    } else {
+      rels.push(x as Relation)
     }
-    return {rels: rels, defs: defs}
+  }
+  return { rels: rels, defs: defs }
 }
 
-export function parse(source:string):Conjunction {
-    return parse_conjunction(tokenize(source))
+export function parse (source: string): Conjunction {
+  return parse_conjunction(tokenize(source))
 }
 
 /* Code needs repair:
@@ -94,7 +93,6 @@ var expand = function(rel, scope) {
     if (!def) { return rel; }
 
     var names = function(vars) { return _.map(vars, function(v) { return v.name })};
-
 
     // for variables in the projection, we use substitions
     var lookup = _.object(_.zip(names(def.variables), rel.variables))
