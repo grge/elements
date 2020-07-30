@@ -1,26 +1,23 @@
 <template>
   <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-    <div>{{ test }}</div>
+    <Geoms :geoms="geoms"/>
   </div>
 </template>
 
-<script >
+<script lang='ts'>
 // @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
+import Geoms from '@/components/Geoms.vue'
 import { geoms } from '@/geom/play'
-console.log(geoms)
 
 export default {
   name: 'Home',
-  data: () => {
+  data: () => { //eslint-disable-line
     return {
-      test: geoms
+      geoms: geoms
     }
   },
   components: {
-    HelloWorld
+    Geoms
   }
 }
 </script>

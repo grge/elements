@@ -45,11 +45,11 @@ function merge_graph (g1: Graph, g2: Graph): Graph {
       g2[v].edge_sets.forEach((e1) => {
         // look for any matching methods already in out
         const x = out[v].edge_sets.filter((e2) => {
-          return (e1.constructor.name == e1.constructor.name &&
-                        e1.in_nodes.join(' ') == e2.in_nodes.join(' '))
+          return (e1.constructor.name === e2.constructor.name &&
+                        e1.in_nodes.join(' ') === e2.in_nodes.join(' '))
         })
         // if none exist, add one
-        if (x.length == 0) {
+        if (x.length === 0) {
           out[v].edge_sets.push(e1)
         }
       })
@@ -79,7 +79,7 @@ function build_graph_from_circle_relation (r: Relation): Graph {
       }
     }
 
-    if (i == 0) {
+    if (i === 0) {
       g[name].edge_sets.push(
         { constructor: geom.circle_from_center_and_radius, in_nodes: [pi], out_node: name }
       )
@@ -87,7 +87,7 @@ function build_graph_from_circle_relation (r: Relation): Graph {
         { constructor: geom.point_from_circle_center, in_nodes: [name], out_node: pi }
       )
       for (let j = i; j < var_names.length; j++) {
-        if (i != j) {
+        if (i !== j) {
           const pj = 'point-' + var_names[j]
           g[name].edge_sets.push(
             { constructor: geom.circle_from_two_points, in_nodes: [pi, pj], out_node: name }
@@ -127,7 +127,7 @@ function build_graph_from_line_relation (r: Relation): Graph {
     )
 
     for (let j = i; j < var_names.length; j++) {
-      if (i != j) {
+      if (i !== j) {
         const pj = 'point-' + var_names[j]
         g[name].edge_sets.push(
           { constructor: geom.line_from_two_points, in_nodes: [pi, pj], out_node: name }
@@ -145,40 +145,40 @@ function build_graph_from_relation (r: Relation): Graph {
     case 'line':
       return build_graph_from_line_relation(r)
     default:
-      throw 'Unknown relation ' + r.name + '. No construction methods known.'
+      throw Error('Unknown relation ' + r.name + '. No construction methods known.')
   }
 }
 
 function build_graph_intersections (g: Graph): Graph {
   for (const node in g) {
-    if (g[node].type == 'point') {
+    if (g[node].type === 'point') {
       const es = g[node].edge_sets
       for (let i = 0; i < es.length; i++) {
         for (let j = i; j < es.length; j++) {
-          if (i != j) {
-            if (es[i].constructor.name == 'point_on_circle' &&
-                            es[j].constructor.name == 'point_on_circle') {
+          if (i !== j) {
+            if (es[i].constructor.name === 'point_on_circle' &&
+                            es[j].constructor.name === 'point_on_circle') {
               g[node].edge_sets.push({
                 constructor: geom.circle_circle_intersection,
                 in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
                 out_node: node
               })
-            } else if (es[i].constructor.name == 'point_on_line' &&
-                                 es[j].constructor.name == 'point_on_circle') {
+            } else if (es[i].constructor.name === 'point_on_line' &&
+                                 es[j].constructor.name === 'point_on_circle') {
               g[node].edge_sets.push({
                 constructor: geom.circle_line_intersection,
                 in_nodes: [es[j].in_nodes[0], es[i].in_nodes[0]],
                 out_node: node
               })
-            } else if (es[i].constructor.name == 'point_on_circle' &&
-                                 es[j].constructor.name == 'point_on_line') {
+            } else if (es[i].constructor.name === 'point_on_circle' &&
+                                 es[j].constructor.name === 'point_on_line') {
               g[node].edge_sets.push({
                 constructor: geom.circle_line_intersection,
                 in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
                 out_node: node
               })
-            } else if (es[i].constructor.name == 'point_on_line' &&
-                                 es[j].constructor.name == 'point_on_line') {
+            } else if (es[i].constructor.name === 'point_on_line' &&
+                                 es[j].constructor.name === 'point_on_line') {
               g[node].edge_sets.push({
                 constructor: geom.line_line_intersection,
                 in_nodes: [es[i].in_nodes[0], es[j].in_nodes[0]],
@@ -204,16 +204,18 @@ export function make_plan__least_cost_first (g: Graph, budget = 10): Plan {
 
   for (let i = 0; i < geoms.length; i++) {
     const constructed = plan.map((es) => (es.out_node))
+    // eslint-disable-next-line no-labels
     innerLoop: for (let dim = 0; dim <= budget; dim++) {
       for (const geom in g) {
         if (!constructed.includes(geom) && geoms.includes(geom)) {
           for (const es of g[geom].edge_sets) {
             // If this edge has the right dimension cost
-            if (es.constructor.dimension == dim) {
+            if (es.constructor.dimension === dim) {
               // If all required nodes have been constructed
-              if (es.in_nodes.map((a) => constructed.includes(a)).every((a) => (a == true))) {
+              if (es.in_nodes.map((a) => constructed.includes(a)).every((a) => (a === true))) {
                 plan.push(es)
                 budget -= dim
+                // eslint-disable-next-line no-labels
                 break innerLoop
               }
             }
@@ -222,13 +224,13 @@ export function make_plan__least_cost_first (g: Graph, budget = 10): Plan {
       }
     }
     if (plan.length - 1 < i) {
-      throw "Couldn't complete plan"
+      throw Error("Couldn't complete plan")
     }
   }
   return plan
 }
 
-export function get_random_param (param_type) {
+export function get_random_param (param_type): number|boolean {
   switch (param_type) {
     case geom.ParamType.Real:
       return Math.random() * 20 - 10
@@ -241,7 +243,7 @@ export function get_random_param (param_type) {
   }
 }
 
-export function execute_plan (p: Plan) {
+export function execute_plan (p: Plan): Record<string, geom.Geom> {
   const geoms = {}
 
   for (const es of p) {

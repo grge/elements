@@ -38,10 +38,12 @@
     "@vue/eslint-config-typescript": "^5.0.2",
     "@vue/test-utils": "^1.0.3",
     "ava": "^3.11.0",
+    "babel-eslint": "^10.1.0",
     "eslint": "^6.7.2",
     "eslint-plugin-import": "^2.20.2",
     "eslint-plugin-node": "^11.1.0",
     "eslint-plugin-promise": "^4.2.1",
+    "eslint-plugin-snakecasejs": "^2.2.0",
     "eslint-plugin-standard": "^4.0.0",
     "eslint-plugin-vue": "^6.2.2",
     "stylus": "^0.54.7",
@@ -56,17 +58,26 @@
     "env": {
       "node": true
     },
+    "parser": "vue-eslint-parser",
     "extends": [
       "plugin:vue/essential",
-      "@vue/standard"
+      "@vue/standard",
+      "plugin:@typescript-eslint/recommended"
     ],
     "parserOptions": {
+      "parser": "@typescript-eslint/parser",
       "ecmaVersion": 2020
     },
     "rules": {
-      
+      "@typescript-eslint/camelcase": ["off"]
     },
     "overrides": [
+      {
+          "files": ["**/*.ts"],
+          "rules": {
+              "camelcase": ["off"]
+          }
+      },
       {
         "files": [
           "**/__tests__/*.{j,t}s?(x)",

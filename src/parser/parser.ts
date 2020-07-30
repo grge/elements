@@ -30,11 +30,12 @@ export function parse_variable (tokens: Array<Token>): Variable {
 export function parse_relation_or_definition (tokens: Array<Token>): Relation|Definition {
   let token = tokens.shift()
 
+  const name = token.name
+  const vars: Array<Variable> = []
   switch (token.type) {
     case 'Term':
-      const name = token.name
-      const vars: Array<Variable> = []
 
+      // eslint-disable-next-line no-unmodified-loop-condition
       while (tokens && tokens[0].type === 'Term') {
         vars.push(parse_variable(tokens))
       }
@@ -45,22 +46,23 @@ export function parse_relation_or_definition (tokens: Array<Token>): Relation|De
         case 'Colon':
           token = tokens.shift()
           if (token.type !== 'Indent') {
-            throw 'Parse error: Expected indent, got ' + token.type
+            throw Error('Parse error: Expected indent, got ' + token.type)
           };
+          // eslint-disable-next-line
           const conj = parse_conjunction(tokens)
           token = tokens.shift()
           if (token.type !== 'EOF' && token.type !== 'Dedent') {
-            throw 'Parse error: Expected dedent, got ' + token.type
+            throw Error('Parse error: Expected dedent, got ' + token.type)
           };
           return { name: name, vars: vars, conj: conj }
         case 'Newline':
         case 'EOF':
           return { name: name, vars: vars }
         default:
-          throw 'Parse error: Unexpected token' + token.type
+          throw Error('Parse error: Unexpected token' + token.type)
       }
     default:
-      throw 'Parse error: Expected Term, got ' + token.type
+      throw Error('Parse error: Expected Term, got ' + token.type)
   }
 }
 
@@ -72,11 +74,13 @@ export function parse_conjunction (tokens: Array<Token>): Conjunction {
     if (tokens[0].type === 'Indent') { tokens.pop() }
     const x = parse_relation_or_definition(tokens)
 
+    /* eslint-disable */
     if ((x as Definition).conj) {
       defs.push(x as Definition)
     } else {
       rels.push(x as Relation)
     }
+    /* eslint-enable */
   }
   return { rels: rels, defs: defs }
 }

@@ -1,14 +1,18 @@
-
-interface Rule {
-    start: State;
-    parser: Parser;
-    end: State;
-    actions: Array<Action>;
-}
-
 export interface Token {
     type: string;
     name: string;
+}
+
+enum State {
+    Start,
+    Term,
+    Whitespace,
+    Indent
+}
+
+interface Parser {
+    name: string;
+    rx: RegExp;
 }
 
 interface GlobalState {
@@ -20,21 +24,16 @@ interface GlobalState {
 
 type Action = (input: string, data: GlobalState) => void
 
-interface Parser {
-    name: string;
-    rx: RegExp;
-}
-
-enum State {
-    Start,
-    Term,
-    Whitespace,
-    Indent
+interface Rule {
+    start: State;
+    parser: Parser;
+    end: State;
+    actions: Array<Action>;
 }
 
 const parsers = {
   Space: { name: 'space', rx: / / },
-  Letter: { name: 'letter', rx: /[\w\-]/ },
+  Letter: { name: 'letter', rx: /[\w-]/ },
   Colon: { name: 'colon', rx: /:/ },
   Endline: { name: 'endline', rx: /[\n\r\f]/ }
 }
@@ -58,14 +57,13 @@ const emit_indent_or_dedent: Action = (input, data) => {
   let expected_indent = stack_size ? data.indent_stack[stack_size - 1] : 0
 
   // We're still on the same block as the previous line
-  if (data.indent_level != expected_indent) {
+  if (data.indent_level !== expected_indent) {
     // We're on a new indent level. So emit a token and push the stack.
     if (data.indent_level > expected_indent) {
       data.tokens.push({ type: 'Indent', name: null })
       data.indent_stack.push(data.indent_level)
-    }
-    // We've dropped down an indent, pop the stack until we find the right level.
-    else {
+    } else {
+      // We've dropped down an indent, pop the stack until we find the right level.
       while (data.indent_stack.length && data.indent_level < expected_indent) {
         expected_indent = data.indent_stack.pop()
         data.tokens.push({ type: 'Dedent', name: null })
@@ -169,15 +167,15 @@ const rules: Array<Rule> = [
 
 function get_rule (rules: Array<Rule>, input: string, state: State): Rule {
   for (let i = 0; i < rules.length; i++) {
-    if (rules[i].start == state && rules[i].parser.rx.test(input)) {
+    if (rules[i].start === state && rules[i].parser.rx.test(input)) {
       return rules[i]
     }
   }
   console.log(state, input)
-  throw 'Parse error at ' + input
+  throw Error('Parse error at ' + input)
 }
 
-export function tokenize (input: string) {
+export function tokenize (input: string): Array<Token> {
   let state = State.Start
 
   const global_state: GlobalState = { tokens: [], indent_level: 0, indent_stack: [], current_term: '' }

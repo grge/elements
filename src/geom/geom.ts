@@ -54,18 +54,18 @@ export const point: GeomConstructor =
 point.infer_params = function (input: [], output: Point): [number, number] {
   return [output.x, output.y]
 }
-point.param_types = [ParamType.Real, ParamType.Real],
+point.param_types = [ParamType.Real, ParamType.Real]
 point.dimension = 2
 
 /*
 Construct a Line from two existing Points
 */
 export const line_from_two_points: GeomConstructor =
-    function line_from_two_points (geoms: [Point, Point], params: []): Line {
+    function line_from_two_points (geoms: [Point, Point]): Line {
       return { Ax: geoms[0].x, Ay: geoms[0].y, Bx: geoms[1].x, By: geoms[1].y }
     }
 
-line_from_two_points.infer_params = (input: [Point, Point], output: Line) => []
+line_from_two_points.infer_params = (): [] => []
 line_from_two_points.param_types = []
 line_from_two_points.dimension = 0
 
@@ -88,13 +88,13 @@ Construct a Circle from two existing Points: one at the center, and another on
 the Circle itself.
 */
 export const circle_from_two_points: GeomConstructor =
-    function circle_from_two_points (geoms: [Point, Point], params: []): Circle {
+    function circle_from_two_points (geoms: [Point, Point]): Circle {
       const [c, p] = geoms
       const r = Math.sqrt((p.x - c.x) ** 2 + (p.y - c.y) ** 2)
       return { Cx: c.x, Cy: c.y, r: r }
     }
 
-circle_from_two_points.infer_params = (input: [Point, Point], output: Circle) => []
+circle_from_two_points.infer_params = (): [] => []
 circle_from_two_points.param_types = []
 circle_from_two_points.dimension = 0
 
@@ -102,11 +102,11 @@ circle_from_two_points.dimension = 0
 Construct a Point at the center of an existing Circle
 */
 export const point_from_circle_center: GeomConstructor =
-    function point_from_circle_center (geoms: [Circle], params: []): Point {
+    function point_from_circle_center (geoms: [Circle]): Point {
       return { x: geoms[0].Cx, y: geoms[0].Cy }
     }
 
-point_from_circle_center.infer_params = (input: [Circle], output: Point) => []
+point_from_circle_center.infer_params = (): [] => []
 point_from_circle_center.param_types = []
 point_from_circle_center.dimension = 0
 
@@ -140,6 +140,7 @@ export const point_on_circle: GeomConstructor =
       const theta = params[0]
       const x = c.Cx + Math.cos(theta) * c.r
       const y = c.Cy + Math.sin(theta) * c.r
+      console.log(theta)
       return { x: x, y: y }
     }
 
@@ -157,16 +158,16 @@ Construct a Point that is at the intersection of two existing Lines.
 If the lines are parallel, this throws an error.
 */
 export const line_line_intersection: GeomConstructor =
-    function line_line_intersection (geoms: [Line, Line], params: []): Point {
+    function line_line_intersection (geoms: [Line, Line]): Point {
       const [l, m] = geoms
       // If either lines is defined by coincident points
-      if ((l.Ax == l.Bx && l.Ay == l.By) || (m.Ax == m.Bx && m.Ay == m.By)) {
-        throw 'Cannot construct intersection from poorly defined Line'
+      if ((l.Ax === l.Bx && l.Ay === l.By) || (m.Ax === m.Bx && m.Ay === m.By)) {
+        throw Error('Cannot construct intersection from poorly defined Line')
       }
       const denom = (m.By - m.Ay) * (l.Bx - l.Ax) - (m.Bx - m.Ax) * (l.Bx - l.Ax)
       // If the lines are parallel (i.e. the denominator is zero)
       if (denom === 0) {
-        throw 'Cannot construct intersection of parallel lines'
+        throw Error('Cannot construct intersection of parallel lines')
       }
       const numer = (m.Bx - m.Ax) * (l.Ay - m.Ay) - (m.By - m.Ay) * (l.Ax - m.Ax)
       // Note: tau is a parameter for the line l
@@ -174,7 +175,7 @@ export const line_line_intersection: GeomConstructor =
       return { x: tau * (l.Bx - l.Ax) + l.Ax, y: tau * (l.By - l.Ay) + l.Ay }
     }
 
-line_line_intersection.infer_params = (input: [Line, Line], output: Point) => []
+line_line_intersection.infer_params = (): [] => []
 line_line_intersection.param_types = []
 line_line_intersection.dimension = 0
 
@@ -194,10 +195,10 @@ export const circle_circle_intersection: GeomConstructor =
 
       // If the centers are further apart than the sum of the radii, there
       // are no solutions
-      if (D > c.r + d.r) { throw 'Circles have no intersection. ' }
+      if (D > c.r + d.r) { throw Error('Circles have no intersection. ') }
 
       // If one circle is inside of the other, there are no solutions
-      if (D < Math.abs(c.r - d.r)) { throw 'Circles do not intersect' }
+      if (D < Math.abs(c.r - d.r)) { throw Error('Circles do not intersect') }
 
       // Point M is the intersection of the line joining the two circle
       // centers, and the line joining the two intersection points.
@@ -205,9 +206,9 @@ export const circle_circle_intersection: GeomConstructor =
       // find distance from c to M
       const a = (c.r ** 2 - d.r ** 2 + D ** 2) / (2.0 * D)
 
-      // coordinates of M
-      const Mx = c.Cx + (d.Cx - c.Cx) * a / D
-      const My = c.Cy + (d.Cy - c.Cy) * a / D
+      // coordinates of M (useful for debugging, but not needed for return value)
+      // const Mx = c.Cx + (d.Cx - c.Cx) * a / D
+      // const My = c.Cy + (d.Cy - c.Cy) * a / D
 
       // distnce from M to intersection points
       const h = Math.sqrt(c.r ** 2 - a ** 2)
@@ -223,7 +224,7 @@ export const circle_circle_intersection: GeomConstructor =
     }
 
 // Note: infer_params is not yet implemented
-circle_circle_intersection.infer_params = (input: [Line, Line], output: Point) => [true]
+circle_circle_intersection.infer_params = (): [boolean] => [true]
 circle_circle_intersection.param_types = [ParamType.Boolean]
 circle_circle_intersection.dimension = 0
 
@@ -245,7 +246,7 @@ export const circle_line_intersection: GeomConstructor =
       const discriminant = C.r ** 2 * (1 + m ** 2) - (C.Cy - m * C.Cx - b) ** 2
 
       if (discriminant < 0) {
-        throw 'Circle and line do not intsersect'
+        throw Error('Circle and line do not intsersect')
       }
 
       let z = Math.sqrt(discriminant)
@@ -259,6 +260,6 @@ export const circle_line_intersection: GeomConstructor =
     }
 
 // Note: infer_params is not yet implemented
-circle_line_intersection.infer_params = (input: [Line, Line], output: Point) => [true]
+circle_line_intersection.infer_params = (): [boolean] => [true]
 circle_line_intersection.param_types = [ParamType.Boolean]
 circle_line_intersection.dimension = 0
