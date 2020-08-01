@@ -238,24 +238,38 @@ export const circle_line_intersection: GeomConstructor =
       const [C, L] = geoms
       const [k] = params
 
-      // slope and intercept of L
-      const m = (L.By - L.Ay) / (L.Bx - L.Ax)
-      const b = L.Ay - m * L.Ax
+      /* eslint-disable space-infix-ops */
 
-      const discriminant = C.r ** 2 * (1 + m ** 2) - (C.Cy - m * C.Cx - b) ** 2
+      const [Ax, Ay, Bx, By, Cx, Cy, r] = [L.Ax, L.Ay, L.Bx, L.By, C.Cx, C.Cy, C.r]
 
-      if (discriminant < 0) {
-        throw Error('Circle and line do not intsersect')
-      }
+      /*
+      If the line has the parametric form A + t*(B - A), then we find t by
+      substituting this form into the equation of the circle.
+      After collecting terms in t, the euqation is quadratic
 
-      let z = Math.sqrt(discriminant)
-      if (k) {
-        z = -z
-      }
+        a*t^2 + b*t + c = 0
+
+      where
+      */
+      const a = (Bx - Ax)**2 + (By - Ay)**2
+      const b = 2 * ((Bx - Ax)*(Ax - Cx) + (By - Ay)*(Ay - Cy))
+      const c = Cx**2 + Cy**2 + Ax**2 + Ay**2 - 2*(Cx*Ax + Cy*Ay) - r**2
+
+      const d = b**2 - 4 * a * c // discriminant of the quadratic equation
+
+      if (d < 0) { throw Error('No solutions, line and circle do not intersect.') }
+
+      let sqrt_d = Math.sqrt(d)
+
+      if (k) { sqrt_d = -sqrt_d }
+
+      const t = (-b + sqrt_d) / (2*a)
+
       return {
-        x: (C.Cx + m * C.Cy - m * b + z) / (1 + m ** 2),
-        y: (b + m * C.Cx + m ** 2 * C.Cy + z) / (1 + m ** 2)
+        x: Ax + t*(Bx - Ax),
+        y: Ay + t*(By - Ay)
       }
+      /* eslint-enable space-infix-ops */
     }
 
 // Note: infer_params is not yet implemented
