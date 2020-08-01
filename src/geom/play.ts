@@ -1,14 +1,21 @@
 import { parse } from '../parser/parser'
-import { graph_from_conjunction, make_plan__least_cost_first, execute_plan } from './planner'
+import { geom_set_from_conjunction, build_construction_plan, execute_plan } from './planner'
 
 const test = `
-circle A B C
 
 line A B C
+line D B E
+
+
 `
 
 const ast = parse(test)
-const out = graph_from_conjunction(ast)
-const plan = make_plan__least_cost_first(out, 100)
-export const geoms = execute_plan(plan)
+const geom_set = geom_set_from_conjunction(ast)
+const plan = build_construction_plan(geom_set)
+export const out = execute_plan(plan)
+
 console.log(plan)
+console.log(out)
+// const plan = make_plan__least_cost_first(out, 100)
+// export const geoms = execute_plan(plan)
+// console.log(plan)

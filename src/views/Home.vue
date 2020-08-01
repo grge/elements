@@ -1,19 +1,20 @@
 <template>
   <div class="home">
     <Geoms :geoms="geoms"/>
+    {{ out }}
   </div>
 </template>
 
 <script lang='ts'>
 // @ is an alias to /src
 import Geoms from '@/components/Geoms.vue'
-import { geoms } from '@/geom/play'
+import { out } from '@/geom/play'
 
 export default {
   name: 'Home',
   data: () => { //eslint-disable-line
     return {
-      geoms: geoms
+      geoms: out
     }
   },
   components: {

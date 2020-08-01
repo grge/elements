@@ -140,7 +140,6 @@ export const point_on_circle: GeomConstructor =
       const theta = params[0]
       const x = c.Cx + Math.cos(theta) * c.r
       const y = c.Cy + Math.sin(theta) * c.r
-      console.log(theta)
       return { x: x, y: y }
     }
 
