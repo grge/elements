@@ -209,7 +209,7 @@ export function geom_set_from_conjunction (c: Conjunction): ConstructableGeomSet
 export function get_random_param (param_type): number|boolean {
   switch (param_type) {
     case geom.ParamType.Real:
-      return Math.random() * 20 - 10
+      return Math.random() * 10 - 5
     case geom.ParamType.NonNegativeReal:
       return Math.random() * 10
     case geom.ParamType.Angle:
@@ -240,9 +240,6 @@ function get_min_remaining_dimension (geom_set: ConstructableGeomSet, constructe
   /* Calculates a hueristic based estimate of the dimension of a set of
      constructable geoms: the sum of minimum dimension of all construction methods
      for each geom.
-
-     This estimate could be slightly improved, since any construction needs to use 2
-     degrees of freedom to construct the first point.
   */
 
   const min_remaining_dimension = Object.keys(geom_set).map((g) => {
@@ -254,7 +251,11 @@ function get_min_remaining_dimension (geom_set: ConstructableGeomSet, constructe
       }))
     }
   }).reduce((p, c) => (p + c))
-  return min_remaining_dimension
+  if (constructed.length === 0) {
+    return Math.max(2, min_remaining_dimension)
+  } else {
+    return min_remaining_dimension
+  }
 }
 
 function get_extensions_from_node (node: Node, constr_methods: ConstructableGeomSet): Array<GraphExtension> {
