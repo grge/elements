@@ -159,19 +159,22 @@ If the lines are parallel, this throws an error.
 export const line_line_intersection: GeomConstructor =
     function line_line_intersection (geoms: [Line, Line]): Point {
       const [l, m] = geoms
+      console.log(l, m)
       // If either lines is defined by coincident points
       if ((l.Ax === l.Bx && l.Ay === l.By) || (m.Ax === m.Bx && m.Ay === m.By)) {
         throw Error('Cannot construct intersection from poorly defined Line')
       }
-      const denom = (m.By - m.Ay) * (l.Bx - l.Ax) - (m.Bx - m.Ax) * (l.Bx - l.Ax)
+      const denom = (m.Ay - m.By) * (l.Ax - l.Bx) - (m.Ax - m.Bx) * (l.Ay - l.By)
       // If the lines are parallel (i.e. the denominator is zero)
       if (denom === 0) {
         throw Error('Cannot construct intersection of parallel lines')
       }
-      const numer = (m.Bx - m.Ax) * (l.Ay - m.Ay) - (m.By - m.Ay) * (l.Ax - m.Ax)
-      // Note: tau is a parameter for the line l
-      const tau = numer / denom
-      return { x: tau * (l.Bx - l.Ax) + l.Ax, y: tau * (l.By - l.Ay) + l.Ay }
+      const numer_l = (l.Ax * l.By - l.Ay * l.Bx)
+      const numer_m = (m.Ax * m.By - m.Ay * m.Bx)
+      return {
+        x: (numer_l * (m.Ax - m.Bx) - numer_m * (l.Ax - l.Bx)) / denom,
+        y: (numer_l * (m.Ay - m.By) - numer_m * (l.Ay - l.By)) / denom
+      }
     }
 
 line_line_intersection.infer_params = (): [] => []
