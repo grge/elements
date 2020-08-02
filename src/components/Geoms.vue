@@ -4,7 +4,7 @@
       <circle class='circle' :key='c.name' v-for='c in circles' :cx='c.Cx' :cy='c.Cy' :r='c.r'/>
       <line class='line' :key='l.name' v-for='l in lines' :x1='l.x1' :y1='l.y1' :x2='l.x2' :y2='l.y2'/>
       <circle class='point' :key='p.name' v-for='p in points' :cx='p.x' :cy='p.y' r='0.7'/>
-      <text class='label' :x='p.x' :y='p.y' :key='p.name' v-for='p in points'>{{p.name}}</text>
+      <text class='label' :x='p.x' :y='p.y' :key='"label"+p.name' v-for='p in points'>{{p.name}}</text>
     </svg>
   </div>
 </template>
