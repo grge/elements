@@ -1,7 +1,6 @@
 <template>
   <div class="home">
     <Geoms :geoms="geoms"/>
-    {{ out }}
   </div>
 </template>
 
