@@ -186,40 +186,43 @@ construct.
 */
 export const circle_circle_intersection: GeomConstructor =
     function circle_circle_intersection (geoms: [Circle, Circle], params: [boolean]): Point {
-      const [c, d] = geoms
+      const [C, D] = geoms
       const [k] = params
 
-      // distance between the two centers
-      const D = Math.sqrt((d.Cx - c.Cx) ** 2 + (d.Cy - c.Cy) ** 2)
+      const [Cx, Cy, Dx, Dy, r, s] = [C.Cx, C.Cy, D.Cx, D.Cy, C.r, D.r]
 
-      // If the centers are further apart than the sum of the radii, there
-      // are no solutions
-      if (D > c.r + d.r) { throw Error('Circles have no intersection. ') }
+      /* eslint-disable space-infix-ops */
+      const d = Math.sqrt((Dx - Cx)**2 + (Dy - Cy)**2)
 
-      // If one circle is inside of the other, there are no solutions
-      if (D < Math.abs(c.r - d.r)) { throw Error('Circles do not intersect') }
+      if (d > r + s) { throw Error('Non-overlapping circle have no intersection. ') }
+      if (d < Math.abs(r - s)) { throw Error('Circle inside another circle has no intersection.') }
 
-      // Point M is the intersection of the line joining the two circle
-      // centers, and the line joining the two intersection points.
+      /* Consider
+          CD: the line between the centers of the two circles
+          EF: the line between the two intersection points we are trying to find
 
-      // find distance from c to M
-      const a = (c.r ** 2 - d.r ** 2 + D ** 2) / (2.0 * D)
+         then:
+          CD and EF intesect at point M.
+          CME be the right triangles, with hypotenus r
 
-      // coordinates of M (useful for debugging, but not needed for return value)
-      // const Mx = c.Cx + (d.Cx - c.Cx) * a / D
-      // const My = c.Cy + (d.Cy - c.Cy) * a / D
+         let a be the length of the side of the triangle CME coincident with line CD
+
+         then we have
+      */
+      const a = (r**2 - s**2 + d**2) / (2 * d)
 
       // distnce from M to intersection points
-      const h = Math.sqrt(c.r ** 2 - a ** 2)
+      const h = Math.sqrt(r**2 - a**2)
 
-      const rx = -(d.Cy - c.Cy) * (h / D)
-      const ry = (d.Cx - c.Cx) * (h / D)
+      const Mx = Cx + a * (Dx - Cx) / d
+      const My = Cy + a * (Dy - Cy) / d
 
       if (k) {
-        return { x: c.Cx + rx, y: c.Cy + ry }
+        return { x: Mx + h * (Dy - Cy) / d, y: My - h*(Dx - Cx) / d }
       } else {
-        return { x: c.Cx - rx, y: c.Cy - ry }
+        return { x: Mx - h * (Dy - Cy) / d, y: My + h*(Dx - Cx) / d }
       }
+      /* eslint-enable space-infix-ops */
     }
 
 // Note: infer_params is not yet implemented
