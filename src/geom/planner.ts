@@ -23,6 +23,7 @@ type Plan = Array<ConstructionMethod>
 
 interface GraphExtension {
   cost: number;
+  remaining_cost: number;
   out_node_id: string;
   in_node_id: string;
   constr_method: ConstructionMethod;
@@ -33,6 +34,16 @@ interface Node {
   cost: number;
   plan: Plan;
 }
+
+// function shuffle<T> (a: Array<T>): Array<T> {
+//   for (let i: number = a.length - 1; i > 0; i--) {
+//     const j = Math.floor(Math.random() * (i + 1))
+//     const rem = a[i]
+//     a[i] = a[j]
+//     a[j] = rem
+//   }
+//   return a
+// }
 
 function merge_geom_sets (g1: ConstructableGeomSet, g2: ConstructableGeomSet): ConstructableGeomSet {
   const out = { ...g1 }
@@ -225,8 +236,30 @@ function constructable_from (m: ConstructionMethod, node_id: string): boolean {
   return m.in_geom_names.map((g) => (geoms.includes(g))).every((v) => (v === true))
 }
 
-function get_extensions_from_node (node: Node, constr_methods): Array<GraphExtension> {
+function get_min_remaining_dimension (geom_set: ConstructableGeomSet, constructed: Array<string>): number {
+  /* Calculates a hueristic based estimate of the dimension of a set of
+     constructable geoms: the sum of minimum dimension of all construction methods
+     for each geom.
+
+     This estimate could be slightly improved, since any construction needs to use 2
+     degrees of freedom to construct the first point.
+  */
+
+  const min_remaining_dimension = Object.keys(geom_set).map((g) => {
+    if (constructed.includes(g)) {
+      return 0
+    } else {
+      return Math.min(...geom_set[g].constr_methods.map((m) => {
+        return m.constructor.dimension
+      }))
+    }
+  }).reduce((p, c) => (p + c))
+  return min_remaining_dimension
+}
+
+function get_extensions_from_node (node: Node, constr_methods: ConstructableGeomSet): Array<GraphExtension> {
   const constructed_geoms = make_geom_names_from_node_id(node.id)
+
   const all_geoms = Object.keys(constr_methods)
   const out: Array<GraphExtension> = []
   all_geoms
@@ -237,6 +270,7 @@ function get_extensions_from_node (node: Node, constr_methods): Array<GraphExten
         .forEach((m: ConstructionMethod) => {
           out.push({
             cost: node.cost + m.constructor.dimension,
+            remaining_cost: get_min_remaining_dimension(constr_methods, constructed_geoms),
             out_node_id: make_node_id_from_geom_names([...constructed_geoms, m.out_geom_name]),
             in_node_id: node.id,
             constr_method: m
@@ -246,16 +280,33 @@ function get_extensions_from_node (node: Node, constr_methods): Array<GraphExten
   return out
 }
 
-export function build_construction_plan (constr_methods): Plan {
+export function build_construction_plan (constr_methods: ConstructableGeomSet): Plan {
   const nodes = {}
-  const q = new PriorityQueue((a, b) => (b.cost - a.cost))
+
+  const q = new PriorityQueue((a, b) => {
+    const a_cost = a.cost + a.remaining_cost
+    const b_cost = b.cost + b.remaining_cost
+
+    if (a_cost === b_cost) {
+      // break ties by searching depth first
+      const a_len = make_geom_names_from_node_id(a.out_node_id).length
+      const b_len = make_geom_names_from_node_id(b.out_node_id).length
+      return a_len - b_len
+    } else {
+      return b_cost - a_cost
+    }
+  })
+
   const budget = Infinity
-  nodes[''] = { id: '', cost: 0, plan: [] }
+  const dim = get_min_remaining_dimension(constr_methods, [])
+  nodes[''] = { id: '', cost: 0, remaining_cost: dim, plan: [] }
   const end_node_id = make_node_id_from_geom_names(Object.keys(constr_methods))
 
   get_extensions_from_node(nodes[''], constr_methods).forEach(q.add)
 
+  let i = 0
   while (!q.isEmpty()) {
+    i++
     const ext: GraphExtension = q.dequeue()
 
     if (ext.cost <= budget) {
@@ -268,6 +319,7 @@ export function build_construction_plan (constr_methods): Plan {
       }
 
       if (ext.out_node_id === end_node_id) {
+        console.log(i)
         return nodes[end_node_id].plan
       } else {
         get_extensions_from_node(nodes[ext.out_node_id], constr_methods).forEach(q.enqueue)
