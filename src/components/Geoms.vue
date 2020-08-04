@@ -1,6 +1,6 @@
 <template>
-  <div class="hello">
-    <svg width='100%' height='500px' viewBox='-25 -25 50 50'>
+  <div class="geoms">
+    <svg class='geoms-svg' viewBox='-25 -25 50 50'>
       <circle class='circle' :key='c.name' v-for='c in circles' :cx='c.Cx' :cy='c.Cy' :r='c.r'/>
       <line class='line' :key='l.name' v-for='l in lines' :x1='l.x1' :y1='l.y1' :x2='l.x2' :y2='l.y2'/>
       <circle class='point' :key='p.name' v-for='p in points' :cx='p.x' :cy='p.y' r='0.7'/>
@@ -42,6 +42,14 @@ export default class Geoms extends Vue {
 </script>
 
 <style scoped lang="stylus">
+.geoms
+  display block
+  object-fit cover
+
+.geoms-svg
+  width 100%
+  height 800px
+
 .circle
   stroke black
   stroke-width 0.2

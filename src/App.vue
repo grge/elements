@@ -14,6 +14,20 @@
   -webkit-font-smoothing antialiased
   -moz-osx-font-smoothing grayscale
   text-align center
-  color #2c3e50
-  margin-top 60px
+  height 100vh
+  display grid
+  grid-template-columns 400px auto
+  grid-template-rows 40px auto
+  row-gap 8px
+  column-gap 8px
+
+#nav
+ padding-top 5px
+ grid-column 1 / 3
+ grid-row 1 / 2
+
+html, body
+  padding 0
+  margin 0
+
 </style>
