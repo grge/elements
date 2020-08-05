@@ -159,7 +159,6 @@ If the lines are parallel, this throws an error.
 export const line_line_intersection: GeomConstructor =
     function line_line_intersection (geoms: [Line, Line]): Point {
       const [l, m] = geoms
-      console.log(l, m)
       // If either lines is defined by coincident points
       if ((l.Ax === l.Bx && l.Ay === l.By) || (m.Ax === m.Bx && m.Ay === m.By)) {
         throw Error('Cannot construct intersection from poorly defined Line')

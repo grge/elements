@@ -11,7 +11,8 @@ import Editor from '@/components/Editor.vue'
 import Geoms from '@/components/Geoms.vue'
 
 import { parse } from '@/parser/parser'
-import { geom_set_from_conjunction, build_construction_plan, execute_plan } from '@/geom/planner'
+import { geom_set_from_conjunction, build_construction_plan } from '@/geom/planner'
+import { execute_plan } from '@/geom/draw'
 
 export default {
   name: 'Home',

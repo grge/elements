@@ -19,7 +19,7 @@ interface ConstructableGeomSet {
     [name: string]: ConstructableGeom;
 }
 
-type Plan = Array<ConstructionMethod>
+export type Plan = Array<ConstructionMethod>
 
 interface GraphExtension {
   cost: number;
@@ -206,19 +206,6 @@ export function geom_set_from_conjunction (c: Conjunction): ConstructableGeomSet
   return build_geom_set_intersections(geoms)
 }
 
-export function get_random_param (param_type): number|boolean {
-  switch (param_type) {
-    case geom.ParamType.Real:
-      return Math.random() * 10 - 5
-    case geom.ParamType.NonNegativeReal:
-      return Math.random() * 10
-    case geom.ParamType.Angle:
-      return Math.random() * Math.PI * 2
-    case geom.ParamType.Boolean:
-      return true
-  }
-}
-
 function make_node_id_from_geom_names (geom_names: Array<string>): string {
   return geom_names.sort().join('\x1e')
 }
@@ -320,7 +307,6 @@ export function build_construction_plan (constr_methods: ConstructableGeomSet): 
       }
 
       if (ext.out_node_id === end_node_id) {
-        console.log(i)
         return nodes[end_node_id].plan
       } else {
         get_extensions_from_node(nodes[ext.out_node_id], constr_methods).forEach(q.enqueue)
@@ -328,15 +314,4 @@ export function build_construction_plan (constr_methods: ConstructableGeomSet): 
     }
   }
   throw Error('Could not find a construction plan')
-}
-
-export function execute_plan (p: Plan): Record<string, geom.Geom> {
-  const geoms = {}
-
-  for (const cm of p) {
-    const params = cm.constructor.param_types.map(get_random_param)
-    const in_geoms = cm.in_geom_names.map((n) => geoms[n])
-    geoms[cm.out_geom_name] = cm.constructor(in_geoms, params)
-  }
-  return geoms
 }
