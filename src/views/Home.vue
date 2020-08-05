@@ -9,7 +9,6 @@
 // @ is an alias to /src
 import Editor from '@/components/Editor.vue'
 import Geoms from '@/components/Geoms.vue'
-import { out } from '@/geom/play'
 
 import { parse } from '@/parser/parser'
 import { geom_set_from_conjunction, build_construction_plan, execute_plan } from '@/geom/planner'
@@ -18,7 +17,7 @@ export default {
   name: 'Home',
   data: () => { //eslint-disable-line
     return {
-      geoms: out,
+      geoms: {},
       source: ''
     }
   },
