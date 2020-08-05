@@ -1,15 +1,16 @@
 <template>
-  <textarea @input='debounceInput' spellcheck='false' class='editor'/>
+  <textarea @input='debounceInput' :value='value' spellcheck='false' class='editor'/>
 </template>
 
 <script lang="ts">
-import { Component, Vue } from 'vue-property-decorator'
+import { Component, Prop, Vue } from 'vue-property-decorator'
 import _ from 'lodash'
 
 @Component
 
 export default class Editor extends Vue {
   input = ''
+  @Prop() private value: object
 
   timeout = null;
   // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
@@ -17,7 +18,7 @@ export default class Editor extends Vue {
     clearTimeout(this.timeout)
 
     this.timeout = setTimeout(() => {
-      this.input = e.target.value
+      this.$emit('change', e.target.value)
     }, 500)
   }
 }

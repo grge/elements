@@ -42,6 +42,9 @@ export default class Geoms extends Vue {
 </script>
 
 <style scoped lang="stylus">
+svg
+  background-color red
+
 .geoms
   display block
   object-fit cover
@@ -51,16 +54,18 @@ export default class Geoms extends Vue {
   height 800px
 
 .circle
-  stroke black
-  stroke-width 0.2
+  stroke white
+  stroke-width 8
+  vector-effect non-scaling-stroke
   fill none
 
 .point
-  fill red
+  fill black
 
 .line
-  stroke black
-  stroke-width 0.2
+  stroke white
+  stroke-width 8
+  vector-effect non-scaling-stroke
 
 .label
   font-size 3px

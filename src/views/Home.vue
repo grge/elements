@@ -1,6 +1,6 @@
 <template>
   <div class="home">
-    <Editor />
+    <Editor :value='source' @change='updateSource'/>
     <Geoms :geoms="geoms"/>
   </div>
 </template>
@@ -11,11 +11,28 @@ import Editor from '@/components/Editor.vue'
 import Geoms from '@/components/Geoms.vue'
 import { out } from '@/geom/play'
 
+import { parse } from '@/parser/parser'
+import { geom_set_from_conjunction, build_construction_plan, execute_plan } from '@/geom/planner'
+
 export default {
   name: 'Home',
   data: () => { //eslint-disable-line
     return {
-      geoms: out
+      geoms: out,
+      source: ''
+    }
+  },
+  methods: {
+    updateSource (text) {
+      this.$data.source = text
+      this.updateGeoms()
+    },
+    updateGeoms () {
+      const ast = parse(this.$data.source)
+      const geom_set = geom_set_from_conjunction(ast)
+      const plan = build_construction_plan(geom_set)
+      this.$data.geoms = execute_plan(plan)
+      console.log(plan)
     }
   },
   components: {
