@@ -12,7 +12,7 @@ import Geoms from '@/components/Geoms.vue'
 
 import { parse } from '@/parser/parser'
 import { geom_set_from_conjunction, build_construction_plan } from '@/geom/planner'
-import { execute_plan } from '@/geom/draw'
+import { execute_plan } from '@/geom/plan_executer'
 
 export default {
   name: 'Home',

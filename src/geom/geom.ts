@@ -18,6 +18,18 @@ export interface Circle {
 
 export type Geom = Point|Circle|Line;
 
+export function isLine (g: Geom): g is Line {
+  return (g as Line).Ax !== undefined && (g as Line).By !== undefined
+}
+
+export function isPoint (g: Geom): g is Point {
+  return (g as Point).x !== undefined && (g as Point).y !== undefined
+}
+
+export function isCircle (g: Geom): g is Circle {
+  return (g as Circle).Cx !== undefined && (g as Circle).r !== undefined
+}
+
 /*
 
 NOTE:

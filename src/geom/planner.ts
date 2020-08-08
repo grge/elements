@@ -35,16 +35,6 @@ interface Node {
   plan: Plan;
 }
 
-// function shuffle<T> (a: Array<T>): Array<T> {
-//   for (let i: number = a.length - 1; i > 0; i--) {
-//     const j = Math.floor(Math.random() * (i + 1))
-//     const rem = a[i]
-//     a[i] = a[j]
-//     a[j] = rem
-//   }
-//   return a
-// }
-
 function merge_geom_sets (g1: ConstructableGeomSet, g2: ConstructableGeomSet): ConstructableGeomSet {
   const out = { ...g1 }
 
