@@ -83,8 +83,10 @@ export function test_cost (geoms: ConstructedGeoms): number {
 
   // the pairwise cost is minimal when d == 4 increases very fast as d approaches 0,
   // and increase quadratically for d > 4
-  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 50) ** 2))
-  return pairwise_costs.reduce((a, b) => (a + b), 0) / pairwise_costs.length
+  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 20) ** 2))
+  const mutually_seperated = pairwise_costs.reduce((a, b) => (a + b), 0) / pairwise_costs.length
+  const close_to_zero = points.map((p) => (Math.sqrt((p.x ** 2 + p.y ** 2)))).reduce((a, b) => (a + b), 0) / points.length
+  return mutually_seperated + close_to_zero * 2
 }
 
 export function get_param_types (p: Plan): Array<geom.ParamType> {
@@ -160,7 +162,7 @@ function v_mul (v1, c) {
   return v1.map((a) => (a * c))
 }
 
-export function optimise_real_params (p: Plan, start_params: ParamList, J: ConstructionCostFunction, max_iter: number): ParamList {
+export function optimise_real_params (p: Plan, start_params: ParamList, J: ConstructionCostFunction, max_iter: number, start_iter: number): ParamList {
   /*
      In principle, I could work out the gradient of the cost function analytically,
      If the cost is a linear function of the pair-wise distances between points,
@@ -168,13 +170,6 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
 
      But... for now I am using SPSA. This is more flexible and easier
      to code until I am confident about the type of cost function that I want.
-
-   1. Extract booleans and real params
-
-   2. Create a "execute_plan_at" with the boolean params curried, i.e. a function of a vector in R^n
-
-   3.
-
   */
 
   const param_types = get_param_types(p)
@@ -202,29 +197,31 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
   }
 
   let v = start_params.filter((v, ix) => (real_ixs.includes(ix)))
-  let iter = 0
+  let iter = start_iter
+  max_iter += iter
 
   // these constants control the step size (a)
-  // a := a_par / (i + 1 + big_a_par) ** alpha
-  const a_par = 0.001
-  const big_a_par = max_iter / 2
+  // a := a_par / (i + 1 + big_a_par) ^ alpha
+  const a_par = 0.05
+  const big_a_par = 0
   const alpha = 0.602
 
   // the constants control the perturbation vector scale (c)
   // c := c_par / (i + 1) ^ gamma
-  const c_par = 0.001
-  const gamma = 0.4
+  const c_par = 0.01
+  const gamma = 0.1
 
-  while (iter < max_iter) {
+  let diff = 10000
+  while ((iter < max_iter) && (diff > 0.000001)) {
     // Get the starting vector of the real params
 
     const dv = random_perturbation_vector()
     const a = a_par / (iter + 1 + big_a_par) ** alpha
     const c = c_par / (iter + 1) ** gamma
     const c_dv = v_mul(dv, c)
-    const diff = K(v_add(v, c_dv)) - K(v_sub(v, c_dv))
-    const grad = c_dv.map((v) => (diff / (2 * v)))
-    v = v_add(v, v_mul(grad, a))
+    diff = K(v_add(v, c_dv)) - K(v_sub(v, c_dv))
+    const grad = c_dv.map((u) => (diff / (2 * u)))
+    v = v_sub(v, v_mul(grad, a))
     iter += 1
   }
 
@@ -237,7 +234,7 @@ export function optimise_params (p: Plan, start_params: ParamList, J: Constructi
   // Now find a good combo of boolean params
   params = optimise_bool_params(p, params, J)
   // Now do a proper optimisation of the real params
-  return optimise_real_params(p, params, J, 1000)
+  return optimise_real_params(p, params, J, 5000)
 }
 
 export function execute_plan (p: Plan): Record<string, geom.Geom> {
