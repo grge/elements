@@ -86,7 +86,7 @@ Construct a Circle from an existing Point at the center, and a free radius param
 */
 export const circle_from_center_and_radius: GeomConstructor =
     function circle_from_center_and_radius (geoms: [Point], params: [number]): Circle {
-      return { Cx: geoms[0].x, Cy: geoms[0].y, r: params[0] }
+      return { Cx: geoms[0].x, Cy: geoms[0].y, r: Math.abs(params[0]) }
     }
 
 circle_from_center_and_radius.infer_params = function (input: [Point], output: Circle): [number] {

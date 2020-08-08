@@ -83,8 +83,7 @@ export function test_cost (geoms: ConstructedGeoms): number {
 
   // the pairwise cost is minimal when d == 4 increases very fast as d approaches 0,
   // and increase quadratically for d > 4
-
-  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 4) ** 2))
+  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 50) ** 2))
   return pairwise_costs.reduce((a, b) => (a + b), 0) / pairwise_costs.length
 }
 
@@ -147,6 +146,20 @@ export function optimise_bool_params (p: Plan, start_params: ParamList, J: Const
   return params
 }
 
+function v_add (v1, v2) {
+  const zip = (a, b) => (a.map((k, i) => [k, b[i]]))
+  return zip(v1, v2).map(([a, b]) => (a + b))
+}
+
+function v_sub (v1, v2) {
+  const zip = (a, b) => (a.map((k, i) => [k, b[i]]))
+  return zip(v1, v2).map(([a, b]) => (a - b))
+}
+
+function v_mul (v1, c) {
+  return v1.map((a) => (a * c))
+}
+
 export function optimise_real_params (p: Plan, start_params: ParamList, J: ConstructionCostFunction, max_iter: number): ParamList {
   /*
      In principle, I could work out the gradient of the cost function analytically,
@@ -163,21 +176,75 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
    3.
 
   */
-  return start_params
+
+  const param_types = get_param_types(p)
+
+  const params = [...start_params]
+
+  const param_ixs = param_types.map((p, ix) => [p, ix])
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const bool_ixs = param_ixs.filter(([p, _]) => (p === geom.ParamType.Boolean)).map((_, ix) => (ix))
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const real_ixs = param_ixs.filter(([p, _]) => (p !== geom.ParamType.Boolean)).map((_, ix) => (ix))
+
+  function rebuild_params (v) {
+    const out = [...start_params]
+    real_ixs.forEach((orig_ix, ix) => { out[orig_ix] = v[ix] })
+    return out
+  }
+
+  function K (v) {
+    return J(execute_plan_at(p, rebuild_params(v)))
+  }
+
+  function random_perturbation_vector () {
+    return real_ixs.map(() => (Math.floor(Math.random() * 2) * 2 - 1))
+  }
+
+  let v = start_params.filter((v, ix) => (real_ixs.includes(ix)))
+  let iter = 0
+
+  // these constants control the step size (a)
+  // a := a_par / (i + 1 + big_a_par) ** alpha
+  const a_par = 0.001
+  const big_a_par = max_iter / 2
+  const alpha = 0.602
+
+  // the constants control the perturbation vector scale (c)
+  // c := c_par / (i + 1) ^ gamma
+  const c_par = 0.001
+  const gamma = 0.4
+
+  while (iter < max_iter) {
+    // Get the starting vector of the real params
+
+    const dv = random_perturbation_vector()
+    const a = a_par / (iter + 1 + big_a_par) ** alpha
+    const c = c_par / (iter + 1) ** gamma
+    const c_dv = v_mul(dv, c)
+    const diff = K(v_add(v, c_dv)) - K(v_sub(v, c_dv))
+    const grad = c_dv.map((v) => (diff / (2 * v)))
+    v = v_add(v, v_mul(grad, a))
+    iter += 1
+  }
+
+  return rebuild_params(v)
 }
 
 export function optimise_params (p: Plan, start_params: ParamList, J: ConstructionCostFunction): ParamList {
   // Get a half-way reasonable arrangement of the real params
-  let params = optimise_real_params(p, start_params, J, 50)
+  let params = optimise_real_params(p, start_params, J, 10)
   // Now find a good combo of boolean params
-  params = optimise_bool_params(p, start_params, J)
+  params = optimise_bool_params(p, params, J)
   // Now do a proper optimisation of the real params
-  return optimise_real_params(p, params, J, 10000)
+  return optimise_real_params(p, params, J, 1000)
 }
 
 export function execute_plan (p: Plan): Record<string, geom.Geom> {
   const J = test_cost
   const start_params = get_random_params(p)
+  console.log('Start plan cost: ', J(execute_plan_at(p, start_params)))
   const params = optimise_params(p, start_params, J)
+  console.log('Optimised plan cost: ', J(execute_plan_at(p, params)))
   return execute_plan_at(p, params)
 }
