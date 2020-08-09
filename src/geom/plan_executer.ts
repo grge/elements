@@ -83,7 +83,7 @@ export function test_cost (geoms: ConstructedGeoms): number {
 
   // the pairwise cost is minimal when d == 4 increases very fast as d approaches 0,
   // and increase quadratically for d > 4
-  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 20) ** 2))
+  const pairwise_costs = pd.map(([_, d]) => (1 / d + (d - 15) ** 2))
   const mutually_seperated = pairwise_costs.reduce((a, b) => (a + b), 0) / pairwise_costs.length
   const close_to_zero = points.map((p) => (Math.sqrt((p.x ** 2 + p.y ** 2)))).reduce((a, b) => (a + b), 0) / points.length
   return mutually_seperated + close_to_zero * 2
@@ -202,7 +202,7 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
 
   // these constants control the step size (a)
   // a := a_par / (i + 1 + big_a_par) ^ alpha
-  const a_par = 0.05
+  const a_par = 0.01
   const big_a_par = 0
   const alpha = 0.602
 
@@ -212,7 +212,7 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
   const gamma = 0.1
 
   let diff = 10000
-  while ((iter < max_iter) && (diff > 0.000001)) {
+  while ((iter < max_iter) && (Math.abs(diff) > 0.0000001)) {
     // Get the starting vector of the real params
 
     const dv = random_perturbation_vector()
@@ -229,12 +229,10 @@ export function optimise_real_params (p: Plan, start_params: ParamList, J: Const
 }
 
 export function optimise_params (p: Plan, start_params: ParamList, J: ConstructionCostFunction): ParamList {
-  // Get a half-way reasonable arrangement of the real params
-  let params = optimise_real_params(p, start_params, J, 10)
-  // Now find a good combo of boolean params
-  params = optimise_bool_params(p, params, J)
-  // Now do a proper optimisation of the real params
-  return optimise_real_params(p, params, J, 5000)
+  let params = optimise_bool_params(p, start_params, J)
+  params = optimise_real_params(p, params, J, 100, 0)
+  params = optimise_bool_params(p, start_params, J)
+  return optimise_real_params(p, params, J, 1000, 0)
 }
 
 export function execute_plan (p: Plan): Record<string, geom.Geom> {

@@ -59,6 +59,31 @@ function merge_geom_sets (g1: ConstructableGeomSet, g2: ConstructableGeomSet): C
 }
 
 function build_geom_set_from_circle_relation (r: Relation): ConstructableGeomSet {
+  /*
+  This could be done a bit more declaratively. E.g.
+
+  The relation:
+    circle A B C
+
+  Implies the following construction methods:
+    circle-ABC <- circle_from_center_and_radius A B
+    circle-ABC <- circle_from_center_and_radius A C
+    point-A <- point_from_circle_center circle-ABC
+    point-B <- point_on_circle circle-ABC
+    point-C <- point_on_circle circle-ABC
+
+  Given this type of information, geom sets could be constructed from relations
+  a bit more generically, and with fewer loops.
+
+  But... what about a variable arguments. This would require more syntax.
+  e.g. circle A B C D ... X Y
+
+  circle C *X {
+    circle-C*X <- circle_from_center_and_radius(C, C[0]])
+  }
+
+  */
+
   const var_names = r.vars.map((v) => (v.name))
   const name = r.name + '-' + var_names.join('')
   const type = r.name

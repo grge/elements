@@ -33,4 +33,8 @@ export default class Editor extends Vue {
   resize none
   font-size 30px
   padding 1em
+  color white
+  font-weight bolder
+  font-family monospace
+
 </style>

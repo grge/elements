@@ -12,7 +12,7 @@ import Geoms from '@/components/Geoms.vue'
 
 import { parse } from '@/parser/parser'
 import { geom_set_from_conjunction, build_construction_plan } from '@/geom/planner'
-import { execute_plan_at, get_random_params, test_cost, optimise_real_params } from '@/geom/plan_executer'
+import { execute_plan_at, get_random_params, test_cost, optimise_real_params, optimise_params } from '@/geom/plan_executer'
 import { circle_from_center_and_radius } from '../geom/geom'
 
 export default {
@@ -22,34 +22,21 @@ export default {
       geoms: {},
       params: [],
       plan: null,
-      source: '',
-      timer: '',
-      optimize_iterations: 0
+      source: ''
     }
   },
   methods: {
     updateSource (text) {
-      clearInterval(this.$data.timer)
       this.$data.source = text
       const ast = parse(this.$data.source)
       const geom_set = geom_set_from_conjunction(ast)
       this.$data.plan = build_construction_plan(geom_set)
       this.$data.params = get_random_params(this.$data.plan)
-      console.log('Start plan cost: ', test_cost(execute_plan_at(this.$data.plan, this.$data.params)))
-      this.updateGeoms()
-      this.timer = setInterval(this.optimizeStep, 10)
-    },
-    optimizeStep () {
-      this.$data.params = optimise_real_params(this.$data.plan, this.$data.params, test_cost, 2, this.$data.optimize_iterations)
-      console.log('Step plan cost: ', test_cost(execute_plan_at(this.$data.plan, this.$data.params)))
-      this.$data.optimize_iterations += 2
+      this.$data.params = optimise_params(this.$data.plan, this.$data.params, test_cost)
       this.updateGeoms()
     },
     updateGeoms () {
       this.$data.geoms = execute_plan_at(this.$data.plan, this.$data.params)
-    },
-    beforeDestroy () {
-      clearInterval(this.timer)
     }
   },
   components: {
