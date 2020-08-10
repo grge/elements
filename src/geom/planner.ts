@@ -283,24 +283,24 @@ function get_extensions_from_node (node: Node, constr_methods: ConstructableGeom
   return out
 }
 
+function graph_extension_compare (a: GraphExtension, b: GraphExtension): number {
+  const a_cost = a.cost + a.remaining_cost
+  const b_cost = b.cost + b.remaining_cost
+
+  if (a_cost === b_cost) {
+    // break ties by searching depth first
+    const a_len = make_geom_names_from_node_id(a.out_node_id).length
+    const b_len = make_geom_names_from_node_id(b.out_node_id).length
+    return a_len - b_len
+  } else {
+    return b_cost - a_cost
+  }
+}
+
 export function build_construction_plan (constr_methods: ConstructableGeomSet): Plan {
   const nodes = {}
 
-  const q = new PriorityQueue((a, b) => {
-    const a_cost = a.cost + a.remaining_cost
-    const b_cost = b.cost + b.remaining_cost
-
-    if (a_cost === b_cost) {
-      // break ties by searching depth first
-      const a_len = make_geom_names_from_node_id(a.out_node_id).length
-      const b_len = make_geom_names_from_node_id(b.out_node_id).length
-      return a_len - b_len
-    } else {
-      return b_cost - a_cost
-    }
-  })
-
-  const budget = Infinity
+  const q = new PriorityQueue(graph_extension_compare)
   const dim = get_min_remaining_dimension(constr_methods, [])
   nodes[''] = { id: '', cost: 0, remaining_cost: dim, plan: [] }
   const end_node_id = make_node_id_from_geom_names(Object.keys(constr_methods))
@@ -312,20 +312,18 @@ export function build_construction_plan (constr_methods: ConstructableGeomSet): 
     i++
     const ext: GraphExtension = q.dequeue()
 
-    if (ext.cost <= budget) {
-      if (!(ext.out_node_id in nodes)) {
-        nodes[ext.out_node_id] = {
-          id: ext.out_node_id,
-          cost: ext.cost,
-          plan: [...nodes[ext.in_node_id].plan, ext.constr_method]
-        }
+    if (!(ext.out_node_id in nodes)) {
+      nodes[ext.out_node_id] = {
+        id: ext.out_node_id,
+        cost: ext.cost,
+        plan: [...nodes[ext.in_node_id].plan, ext.constr_method]
       }
+    }
 
-      if (ext.out_node_id === end_node_id) {
-        return nodes[end_node_id].plan
-      } else {
-        get_extensions_from_node(nodes[ext.out_node_id], constr_methods).forEach(q.enqueue)
-      }
+    if (ext.out_node_id === end_node_id) {
+      return nodes[end_node_id].plan
+    } else {
+      get_extensions_from_node(nodes[ext.out_node_id], constr_methods).forEach(q.enqueue)
     }
   }
   throw Error('Could not find a construction plan')

@@ -47,14 +47,6 @@ function find_plan(construction_methods, start_path:Plan, dimension:number):Plan
 
 function trim_plan(old_plan:Plan, new_geoms): new_plan {}
 
-// executer.ts
-
-function get_params(plan, existing_params, existing_geoms): params {}
-
-function optimise_plan(plan, starting_params, cost_function): params {}
-
-function execute_plan(plan, params): geoms {}
-
 */
 
 type ConstructedGeoms = Record<string, geom.Geom>
