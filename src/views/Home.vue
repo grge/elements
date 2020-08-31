@@ -11,9 +11,8 @@ import Editor from '@/components/Editor.vue'
 import Geoms from '@/components/Geoms.vue'
 
 import { parse } from '@/parser/parser'
-import { geom_set_from_conjunction, build_construction_plan } from '@/geom/planner'
+import { geom_set_from_conjunction, greedy_planner } from '@/geom/planner'
 import { execute_plan_at, get_random_params, test_cost, optimise_real_params, optimise_params } from '@/geom/plan_executer'
-import { circle_from_center_and_radius } from '../geom/geom'
 
 export default {
   name: 'Home',
@@ -30,9 +29,13 @@ export default {
       this.$data.source = text
       const ast = parse(this.$data.source)
       const geom_set = geom_set_from_conjunction(ast)
-      this.$data.plan = build_construction_plan(geom_set)
+      this.$data.plan = greedy_planner(geom_set)
       this.$data.params = get_random_params(this.$data.plan)
       this.$data.params = optimise_params(this.$data.plan, this.$data.params, test_cost)
+      this.$data.plan.forEach((el) => {
+        console.log(el.constructor.name, el.in_geom_names, el.out_geom_name)
+      })
+      console.log(this.$data.plan)
       this.updateGeoms()
     },
     updateGeoms () {

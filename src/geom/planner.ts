@@ -121,6 +121,14 @@ function build_geom_set_from_circle_relation (r: Relation): ConstructableGeomSet
       g[pi].constr_methods.push(
         { constructor: geom.point_on_circle, in_geom_names: [name], out_geom_name: pi }
       )
+      for (let j = i; j < var_names.length; j++) {
+        if (i !== j) {
+          const pj = 'point-' + var_names[j]
+          g[name].constr_methods.push(
+            { constructor: geom.circle_from_two_points_and_radius, in_geom_names: [pi, pj], out_geom_name: name }
+          )
+        }
+      }
     }
   }
   return g
@@ -327,4 +335,21 @@ export function build_construction_plan (constr_methods: ConstructableGeomSet): 
     }
   }
   throw Error('Could not find a construction plan')
+}
+
+export function greedy_planner (constr_methods: ConstructableGeomSet): Plan {
+  const end_node_id = make_node_id_from_geom_names(Object.keys(constr_methods))
+  const nodes = {}
+  let node_id = ''
+  nodes[node_id] = { id: node_id, cost: 0, remaining_cost: 0, plan: [] }
+  while (node_id !== end_node_id) {
+    const ext = get_extensions_from_node(nodes[node_id], constr_methods).sort((a, b) => (a.cost - b.cost))[0]
+    node_id = ext.out_node_id
+    nodes[node_id] = {
+      id: node_id,
+      cost: ext.cost,
+      plan: [...nodes[ext.in_node_id].plan, ext.constr_method]
+    }
+  }
+  return nodes[end_node_id].plan
 }

@@ -111,6 +111,35 @@ circle_from_two_points.param_types = []
 circle_from_two_points.dimension = 0
 
 /*
+Construct a Circle from two existing Points on the circumference, and a radius.
+*/
+export const circle_from_two_points_and_radius: GeomConstructor =
+    function circle_from_two_points_and_radius (geoms: [Point, Point], params: [number, boolean]): Circle {
+      const [p, q] = geoms
+      const [r, b] = params
+      const mx = (p.x + q.x) / 2
+      const my = (p.y + q.y) / 2
+      const pq_dist = Math.sqrt((q.x - p.x) ** 2 + (q.y - p.y) ** 2)
+      if (b) {
+        return {
+          Cx: mx + Math.sqrt(r ** 2 - (pq_dist / 2) ** 2) * (p.y - q.y) / pq_dist,
+          Cy: my + Math.sqrt(r ** 2 - (pq_dist / 2) ** 2) * (q.x - p.x) / pq_dist,
+          r: r
+        }
+      } else {
+        return {
+          Cx: mx - Math.sqrt(r ** 2 - (pq_dist / 2) ** 2) * (p.y - q.y) / pq_dist,
+          Cy: my - Math.sqrt(r ** 2 - (pq_dist / 2) ** 2) * (q.x - p.x) / pq_dist,
+          r: r
+        }
+      }
+    }
+
+circle_from_two_points_and_radius.infer_params = (): [] => []
+circle_from_two_points_and_radius.param_types = [ParamType.NonNegativeReal, ParamType.Boolean]
+circle_from_two_points_and_radius.dimension = 1
+
+/*
 Construct a Point at the center of an existing Circle
 */
 export const point_from_circle_center: GeomConstructor =
