@@ -1,0 +1,332 @@
+import { parseRules, type TopLevel, type Rule } from './language/parser'
+import { KnowledgeBase, type GroundPredicate } from './kb/inference'
+import { extractProblem } from './geometry/extraction'
+import { canonicalise } from './geometry/canonicalization'
+import type { GeometryProblem, WitnessModel } from './geometry/constraints'
+import type { PredicateEntry, UserClause } from './composables/useKB'
+import type { Plan, ConstructionStep } from './geometry/planner'
+import type { Circle, Line } from './geometry/constraints'
+
+export interface ClauseView {
+  id: string
+  source: string
+  namespace: 'tarski' | 'euclidean' | 'user'
+  readOnly: boolean
+}
+
+export interface PlannerView {
+  steps: any[]
+  params: number[]
+  dof: number
+}
+
+function emptyProblem(): GeometryProblem {
+  return {
+    points: new Set<string>(),
+    constraints: [],
+    lines: [],
+    circles: [],
+  }
+}
+
+function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
+  return {
+    points: new Set(problems.flatMap(p => Array.from(p.points))),
+    constraints: problems.flatMap(p => p.constraints),
+    lines: problems.flatMap(p => p.lines),
+    circles: problems.flatMap(p => p.circles),
+  }
+}
+
+// This belongs in language semantics (or a language→geometry adapter), not in the UI.
+export function buildKnowledgeBase(baseKB: KnowledgeBase, parsed: TopLevel[]): KnowledgeBase {
+  const rules = parsed
+    .filter((item): item is Extract<TopLevel, { kind: 'rule' }> => item.kind === 'rule')
+    .map(item => item.rule)
+
+  return baseKB.extend(rules)
+}
+
+// This belongs in language semantics, since conjunction / multiple goals should not be merged by Vue.
+export function extractProblemFromTopLevel(parsed: TopLevel[], kb: KnowledgeBase): GeometryProblem | null {
+  const goals = parsed
+    .filter((item): item is Extract<TopLevel, { kind: 'goal' }> => item.kind === 'goal')
+    .map(item => item.pred as GroundPredicate)
+
+  if (goals.length === 0) return null
+
+  const merged = mergeProblems(goals.map(goal => extractProblem(goal, kb)))
+  canonicalise(merged)
+  return merged
+}
+
+// This belongs either in the KB/composable layer or in a dedicated editing model, not in MainView.
+export function findClauseForPredicate(
+  predName: string,
+  clausesForPredicate: (name: string) => ClauseView[],
+): ClauseView | null {
+  const clauses = clausesForPredicate(predName)
+  if (clauses.length === 0) return null
+  if (clauses.length === 1) return clauses[0]
+  return { ...clauses[0], source: clauses.map(c => c.source).join('\n\n') }
+}
+
+// This belongs in the KB/composable layer or an editing model, not in MainView.
+export function findUserClauseForPredicate(predName: string, userClauses: UserClause[]): UserClause | null {
+  return userClauses.find(c => {
+    try {
+      return parseRules(c.source).some(r => r.head.name === predName)
+    } catch {
+      return false
+    }
+  }) ?? null
+}
+
+export function isPredicateReadOnly(predName: string, predicates: PredicateEntry[]): boolean {
+  const pred = predicates.find(p => p.name === predName)
+  return pred?.readOnly ?? true
+}
+
+function predicateToGoalSource(pred: { name: string; args: string[] }): string {
+  return `${pred.name} ${pred.args.join(' ')}`
+}
+
+// This belongs in language semantics / editing semantics, not in MainView.
+// Predicate mode should not force Vue to understand rule/clause selection.
+export function diagramSourceForMode(
+  mode: 'scratchpad' | 'predicate',
+  scratchpadSource: string,
+  currentClause: string,
+): string {
+  if (mode === 'scratchpad') return scratchpadSource
+  if (!currentClause.trim()) return ''
+
+  try {
+    const rules = parseRules(currentClause)
+    const firstRule = rules[0]
+    if (!firstRule) return ''
+    return predicateToGoalSource(firstRule.head)
+  } catch {
+    return ''
+  }
+}
+
+export interface RenderTransform {
+  minX: number
+  minY: number
+  scale: number
+  offsetX: number
+  offsetY: number
+}
+
+// This belongs with the renderer or a renderer/UI bridge, not in a Vue component.
+export function computeRenderTransform(
+  witness: WitnessModel,
+  width = 400,
+  height = 400,
+  padding = 40,
+): RenderTransform | null {
+  const coords = witness.coords
+  if (!coords.size) return null
+
+  const xs = [...coords.values()].map(([x]) => x)
+  const ys = [...coords.values()].map(([, y]) => y)
+  const minX = Math.min(...xs), maxX = Math.max(...xs)
+  const minY = Math.min(...ys), maxY = Math.max(...ys)
+  const rangeX = Math.max(maxX - minX, 1e-3)
+  const rangeY = Math.max(maxY - minY, 1e-3)
+  const scale = Math.min((width - padding * 2) / rangeX, (height - padding * 2) / rangeY)
+  const offsetX = padding + ((width - padding * 2) - rangeX * scale) / 2
+  const offsetY = padding + ((height - padding * 2) - rangeY * scale) / 2
+
+  return { minX, minY, scale, offsetX, offsetY }
+}
+
+// This belongs with the renderer or a renderer/UI bridge, not in a Vue component.
+export function screenToWorld(
+  x: number,
+  y: number,
+  transform: RenderTransform,
+): [number, number] {
+  return [
+    (x - transform.offsetX) / transform.scale + transform.minX,
+    (y - transform.offsetY) / transform.scale + transform.minY,
+  ]
+}
+
+function stepParamArity(step: ConstructionStep): number {
+  switch (step.kind) {
+    case 'free':
+      return 2
+    case 'point-on-line':
+    case 'point-on-circle':
+      return 1
+    default:
+      return 0
+  }
+}
+
+function stepParamOffset(plan: Plan, pointName: string): number | null {
+  let offset = 0
+  for (const step of plan) {
+    if (step.point === pointName) return offset
+    offset += stepParamArity(step)
+  }
+  return null
+}
+
+function getLineAnchorPoints(step: Extract<ConstructionStep, { kind: 'point-on-line' }>, coords: Map<string, [number, number]>): [[number, number], [number, number]] | null {
+  const pts = [...step.line.points].slice(0, 2).map(p => coords.get(p))
+  return pts.length === 2 && pts[0] && pts[1] ? [pts[0], pts[1]] : null
+}
+
+export interface PlannerDragResult {
+  params: number[]
+  draggable: boolean
+}
+
+// This belongs with planner/UI interaction semantics, not in a Vue component.
+export function dragPlannerPoint(
+  plan: Plan,
+  params: number[],
+  coords: Map<string, [number, number]>,
+  pointName: string,
+  world: [number, number],
+): PlannerDragResult {
+  const step = plan.find(s => s.point === pointName)
+  if (!step) return { params, draggable: false }
+
+  const offset = stepParamOffset(plan, pointName)
+  if (offset === null) return { params, draggable: false }
+
+  const next = [...params]
+  const [x, y] = world
+
+  switch (step.kind) {
+    case 'free':
+      next[offset] = x
+      next[offset + 1] = y
+      return { params: next, draggable: true }
+
+    case 'point-on-line': {
+      const anchors = getLineAnchorPoints(step, coords)
+      if (!anchors) return { params, draggable: false }
+      const [[x1, y1], [x2, y2]] = anchors
+      const dx = x2 - x1
+      const dy = y2 - y1
+      const d = dx * dx + dy * dy
+      const t = d > 1e-10 ? ((x - x1) * dx + (y - y1) * dy) / d : 0
+      next[offset] = t
+      return { params: next, draggable: true }
+    }
+
+    case 'point-on-circle': {
+      const center = coords.get(step.circle.center)
+      if (!center) return { params, draggable: false }
+      next[offset] = Math.atan2(y - center[1], x - center[0])
+      return { params: next, draggable: true }
+    }
+
+    default:
+      return { params, draggable: false }
+  }
+}
+
+function f(n: number): string { return n.toFixed(2) }
+
+function renderLineElements(problem: GeometryProblem, coords: Map<string, [number, number]>, tx: (n: number) => number, ty: (n: number) => number, scale: number, width: number, height: number): string[] {
+  const els: string[] = []
+  for (const line of problem.lines) {
+    const pts = [...line.points].map(p => coords.get(p)!)
+    if (pts.length < 2) continue
+    const [p1, p2] = pts
+    const dx = p2[0] - p1[0], dy = p2[1] - p1[1]
+    const len = Math.sqrt(dx * dx + dy * dy)
+    if (len < 1e-9) continue
+    const ux = dx / len, uy = dy / len
+    const ext = (width + height) / scale
+    const x1 = tx(p1[0] - ux * ext), y1 = ty(p1[1] - uy * ext)
+    const x2 = tx(p1[0] + ux * ext), y2 = ty(p1[1] + uy * ext)
+    els.push(`<line x1="${f(x1)}" y1="${f(y1)}" x2="${f(x2)}" y2="${f(y2)}" stroke="#7ec8e3" stroke-width="1.5" opacity="0.7"/>`)
+  }
+  return els
+}
+
+function renderCircleElements(problem: GeometryProblem, coords: Map<string, [number, number]>, tx: (n: number) => number, ty: (n: number) => number, scale: number): string[] {
+  const els: string[] = []
+  for (const circle of problem.circles) {
+    const center = coords.get(circle.center)!
+    const pts = [...circle.points].map(p => coords.get(p)!)
+    if (!pts.length) continue
+    const radii = pts.map(([px, py]) => Math.hypot(px - center[0], py - center[1]))
+    const r = radii.reduce((a, b) => a + b, 0) / radii.length * scale
+    els.push(`<circle cx="${f(tx(center[0]))}" cy="${f(ty(center[1]))}" r="${f(r)}" fill="none" stroke="#e0b0ff" stroke-width="1.5" opacity="0.7"/>`)
+  }
+  return els
+}
+
+// This belongs with the renderer or a renderer/UI bridge, not in a Vue component.
+export function renderSVGWithTransform(
+  problem: GeometryProblem,
+  witness: WitnessModel,
+  transform: RenderTransform,
+  width = 400,
+  height = 400,
+  pointRadius = 4,
+  plan?: Plan,
+): string {
+  const coords = witness.coords
+  if (!coords.size) return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"></svg>`
+
+  const tx = (wx: number) => transform.offsetX + (wx - transform.minX) * transform.scale
+  const ty = (wy: number) => transform.offsetY + (wy - transform.minY) * transform.scale
+
+  const els: string[] = []
+  els.push(...renderGridElements(transform, width, height))
+  els.push(...renderLineElements(problem, coords, tx, ty, transform.scale, width, height))
+  els.push(...renderCircleElements(problem, coords, tx, ty, transform.scale))
+
+  const pointStepIndex = new Map<string, number>()
+  if (plan) for (let i = 0; i < plan.length; i++) pointStepIndex.set(plan[i].point, i)
+
+  for (const [name, [wx, wy]] of coords) {
+    const x = tx(wx), y = ty(wy)
+    els.push(`<circle data-point="${name}" data-wx="${wx}" data-wy="${wy}" cx="${f(x)}" cy="${f(y)}" r="${pointRadius}" fill="#ff6b6b" style="cursor:grab"/>`)
+    els.push(`<text x="${f(x + 6)}" y="${f(y - 6)}" font-family="monospace" font-size="13" fill="#e0e0ff">${name}</text>`)
+    if (plan && pointStepIndex.has(name)) {
+      const step = pointStepIndex.get(name)!
+      els.push(`<text x="${f(x + 8)}" y="${f(y + 8)}" font-family="monospace" font-size="9" fill="#888888"><tspan baseline-shift="super">${step}</tspan></text>`)
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="background:transparent">\n${els.join('\n')}\n</svg>`
+}
+eight = 400,
+  pointRadius = 4,
+  plan?: Plan,
+): string {
+  const coords = witness.coords
+  if (!coords.size) return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"></svg>`
+
+  const tx = (wx: number) => transform.offsetX + (wx - transform.minX) * transform.scale
+  const ty = (wy: number) => transform.offsetY + (wy - transform.minY) * transform.scale
+
+  const els: string[] = []
+  els.push(...renderLineElements(problem, coords, tx, ty, transform.scale, width, height))
+  els.push(...renderCircleElements(problem, coords, tx, ty, transform.scale))
+
+  const pointStepIndex = new Map<string, number>()
+  if (plan) for (let i = 0; i < plan.length; i++) pointStepIndex.set(plan[i].point, i)
+
+  for (const [name, [wx, wy]] of coords) {
+    const x = tx(wx), y = ty(wy)
+    els.push(`<circle data-point="${name}" data-wx="${wx}" data-wy="${wy}" cx="${f(x)}" cy="${f(y)}" r="${pointRadius}" fill="#ff6b6b" style="cursor:grab"/>`)
+    els.push(`<text x="${f(x + 6)}" y="${f(y - 6)}" font-family="monospace" font-size="13" fill="#e0e0ff">${name}</text>`)
+    if (plan && pointStepIndex.has(name)) {
+      const step = pointStepIndex.get(name)!
+      els.push(`<text x="${f(x + 8)}" y="${f(y + 8)}" font-family="monospace" font-size="9" fill="#888888"><tspan baseline-shift="super">${step}</tspan></text>`)
+    }
+  }
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="background:transparent">\n${els.join('\n')}\n</svg>`
+}
