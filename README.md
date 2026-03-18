@@ -193,6 +193,12 @@ npm run build    # production build
 ### Knowledge Base
 - **"Save to library"** — promote scratchpad clauses into user/ namespace with one click.
 - **`.geo` refinement** — naming and arity conventions could be tidied once visibility design is settled.
+- **CodeMirror 6 editor** — replace the textarea with a proper embedded editor. The EL2 lexer
+  (`src/language/lexer.ts`) can be adapted directly as a CodeMirror language extension — token
+  types map cleanly to CM6 highlight tags. This would unlock inline ✓/✗ decorations (marks
+  alongside the `?` line itself rather than in a separate gutter column), predicate name
+  completions sourced from `useKB()`, and hover tooltips showing arity/namespace.
+  Estimated effort: ~10–16 hours.
 
 ### Proofs
 - **Proof traces** — show the backward-chaining derivation for a proven lemma, not just ✓/✗.
