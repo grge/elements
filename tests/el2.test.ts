@@ -242,6 +242,30 @@ describe('construction planner', () => {
     }
   })
 
+  it('executes a line-line-intersection plan correctly', () => {
+    const { problem, witness } = solveGoal('line-line-intersection a b c d i')
+    const result = plan(problem, witness)
+    expect(result).not.toBeNull()
+    if (result) {
+      const params = extractParams(result.plan, witness, problem)
+      const coords = executePlan(result.plan, params, problem)
+      expect(coords).not.toBeNull()
+      if (coords) {
+        const i = coords.get('i')
+        expect(i).toBeDefined()
+        if (i) {
+          const [ix, iy] = i
+          const [[ax, ay], [bx, by]] = ['a', 'b'].map(p => coords.get(p)!) as [[number, number], [number, number]]
+          const [[cx, cy], [dx, dy]] = ['c', 'd'].map(p => coords.get(p)!) as [[number, number], [number, number]]
+          const area1 = (bx - ax) * (iy - ay) - (by - ay) * (ix - ax)
+          const area2 = (dx - cx) * (iy - cy) - (dy - cy) * (ix - cx)
+          expect(Math.abs(area1)).toBeLessThan(1e-6)
+          expect(Math.abs(area2)).toBeLessThan(1e-6)
+        }
+      }
+    }
+  })
+
   it('plan covers all points in problem', () => {
     const { problem, witness } = solveGoal('copy-segment a b c d')
     const result = plan(problem, witness)

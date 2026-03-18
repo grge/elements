@@ -209,8 +209,11 @@ function solve2x2(a: number, b: number, e: number, c: number, d: number, f: numb
 }
 
 function getLinePoints(line: Line, coords: Map<string, [number, number]>): [[number, number], [number, number]] | null {
-  const pts = [...line.points].slice(0, 2).map(p => coords.get(p))
-  return pts.length === 2 && pts[0] && pts[1] ? [pts[0], pts[1]] : null
+  const pts = [...line.points]
+    .map(p => coords.get(p))
+    .filter((p): p is [number, number] => !!p)
+    .slice(0, 2)
+  return pts.length === 2 ? [pts[0], pts[1]] : null
 }
 
 function lineLineIntersection(l1: Line, l2: Line, coords: Map<string, [number, number]>): [number, number] | null {
@@ -219,8 +222,8 @@ function lineLineIntersection(l1: Line, l2: Line, coords: Map<string, [number, n
   if (!pts1 || !pts2) return null
   const [[x1, y1], [x2, y2]] = pts1
   const [[x3, y3], [x4, y4]] = pts2
-  return solve2x2(x2 - x1, -(y2 - y1), (x2 - x1) * y1 - (y2 - y1) * x1,
-                  x4 - x3, -(y4 - y3), (x4 - x3) * y3 - (y4 - y3) * x3)
+  return solve2x2(y2 - y1, -(x2 - x1), (y2 - y1) * x1 - (x2 - x1) * y1,
+                  y4 - y3, -(x4 - x3), (y4 - y3) * x3 - (x4 - x3) * y3)
 }
 
 function circleCircleIntersection(c1: Circle, c2: Circle, coords: Map<string, [number, number]>, which: boolean): [number, number] | null {
