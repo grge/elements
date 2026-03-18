@@ -103,6 +103,15 @@ const predicates = computed<PredicateEntry[]>(() => {
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
 })
 
+const lemmaPredicates = computed<PredicateEntry[]>(() => {
+  const seen = new Map<string, PredicateEntry>()
+  for (const l of builtinLemmas) {
+    if (!seen.has(l.head.name))
+      seen.set(l.head.name, { name: l.head.name, namespace: 'lemmas', readOnly: true, arity: l.head.args.length })
+  }
+  return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name))
+})
+
 // ── Mutations ──────────────────────────────────────────────────────────
 
 function addUserClause(source: string): UserClause {
@@ -136,12 +145,17 @@ function clausesForPredicate(name: string) {
     .filter(r => r.head.name === name)
     .map(r => ({ id: `foundation:${r.head.name}:${Math.random()}`, source: ruleToSource(r), namespace: namespaceOf[name] ?? 'euclid' as Namespace, readOnly: true }))
 
+  // Lemma clauses (read-only, shown grouped by head predicate)
+  const lemmas = builtinLemmas
+    .filter(l => l.head.name === name)
+    .map(l => ({ id: `lemma:${l.head.name}:${Math.random()}`, source: lemmaToSource(l), namespace: 'lemmas' as Namespace, readOnly: true }))
+
   // User clauses
   const user = userClauses.value
     .filter(c => { try { return parseRules(c.source).some(r => r.head.name === name) } catch { return false } })
     .map(c => ({ ...c, readOnly: false }))
 
-  return [...foundation, ...user]
+  return [...foundation, ...lemmas, ...user]
 }
 
 function ruleToSource(r: any): string {
@@ -153,12 +167,20 @@ function ruleToSource(r: any): string {
     : `${head}:\n    ${body}`
 }
 
+function lemmaToSource(l: any): string {
+  const head = `${l.head.name} ${l.head.args.join(' ')}`
+  if (!l.hypotheses || l.hypotheses.length === 0) return `? ${head}: -`
+  const hyps = l.hypotheses.map((p: any) => `${p.name} ${p.args.join(' ')}`).join(', ')
+  return `? ${head}: ${hyps}`
+}
+
 // ── Singleton export ───────────────────────────────────────────────────
 
 export function useKB() {
   return {
     kb,
     predicates,
+    lemmaPredicates,
     userClauses,
     builtinLemmas,
     addUserClause,

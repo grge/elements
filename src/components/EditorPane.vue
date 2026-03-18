@@ -36,8 +36,8 @@
         />
       </div>
 
-      <!-- Verification marks for scratchpad -->
-      <div v-if="mode === 'scratchpad'" class="gutter">
+      <!-- Verification marks for scratchpad and lemma predicate view -->
+      <div v-if="mode === 'scratchpad' || namespace === 'lemmas'" class="gutter">
         <div
           v-for="(mark, i) in verificationMarks"
           :key="i"
@@ -65,6 +65,7 @@ const props = defineProps<{
   source: string
   currentClause: string
   readOnly: boolean
+  namespace?: string
 }>()
 
 defineEmits<{
@@ -78,10 +79,13 @@ const { kb } = useKB()
 
 // Verification marks for scratchpad mode
 const verificationMarks = computed(() => {
-  if (props.mode !== 'scratchpad' || !props.source.trim() || !kb.value) return []
+  const isLemmaView = props.mode === 'predicate' && props.namespace === 'lemmas'
+  const text = isLemmaView ? props.currentClause : props.source
+  if (props.mode === 'scratchpad' ? !props.source.trim() : !isLemmaView || !text.trim()) return []
+  if (!kb.value) return []
 
   try {
-    const parsed = parseSource(props.source)
+    const parsed = parseSource(text)
     const marks: Array<{ line: number; type: 'verified' | 'failed' | 'unknown'; message: string }> = []
 
     parsed.forEach((item, i) => {

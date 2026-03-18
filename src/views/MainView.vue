@@ -20,6 +20,7 @@
       :source="source"
       :current-clause="currentClause"
       :read-only="isPredicateReadOnly(selectedPred)"
+      :namespace="namespaceOf(selectedPred)"
       @update:source="source = $event"
       @update:current-clause="currentClause = $event"
       @save="savePredicate"
@@ -80,7 +81,7 @@ function isPredicateReadOnly(predName: string): boolean {
 const usePlanner = ref(true)
 
 // Knowledge base
-const { kb, predicates, userClauses, addUserClause, updateUserClause, deleteUserClause, clausesForPredicate } = useKB()
+const { kb, predicates, userClauses, addUserClause, updateUserClause, deleteUserClause, clausesForPredicate, namespaceOf } = useKB()
 
 // Mode switching
 function selectScratchpad() {

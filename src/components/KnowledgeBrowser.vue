@@ -19,13 +19,17 @@
       </div>
       <template v-if="showLemmas">
         <div
-          v-for="(lemma, i) in builtinLemmas"
-          :key="i"
-          class="browser-item lemma-item"
+          v-for="p in lemmaPredicates"
+          :key="p.name"
+          class="browser-item"
+          :class="{ active: mode === 'predicate' && selectedPred === p.name }"
+          @click="$emit('selectPredicate', p.name)"
         >
-          <span class="lemma-head">? {{ lemma.head.name }} {{ lemma.head.args.join(' ') }}</span>
+          <span class="pred-name">{{ p.name }}</span>
+          <span class="pred-arity">/{{ p.arity }}</span>
+          <span class="pred-lock">🔒</span>
         </div>
-        <div v-if="!builtinLemmas.length" class="empty-ns">empty</div>
+        <div v-if="!lemmaPredicates.length" class="empty-ns">empty</div>
       </template>
 
       <!-- Namespace groups -->
@@ -71,7 +75,7 @@ defineEmits<{
   newUserClause: []
 }>()
 
-const { predicates, builtinLemmas } = useKB()
+const { predicates, lemmaPredicates, builtinLemmas } = useKB()
 const namespaces: Namespace[] = ['core', 'euclid', 'user']
 
 // Filter predicates by namespace - UI logic belongs here, not in composable
