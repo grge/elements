@@ -1,7 +1,13 @@
 /**
- * EL2 Geometry — A* construction planner.
+ * EL2 Geometry — greedy construction planner.
  * Given a GeometryProblem, produces a construction plan (sequence of ConstructionSteps)
  * with optional witness-based resolution of intersection choices.
+ *
+ * Strategy: at each step, pick the unplaced point with the lowest degree of freedom
+ * (most constrained by already-placed points), breaking ties by "unlock potential"
+ * (how many new constraints become drawable after placing this point).
+ * This is a greedy heuristic — not a search. A proper A* or beam-search planner
+ * could be added later if benchmarking shows it would help.
  */
 
 import type { GeometryProblem, WitnessModel, Line, Circle } from './constraints'
