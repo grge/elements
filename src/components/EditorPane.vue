@@ -38,8 +38,8 @@
         spellcheck="false"
       />
 
-      <!-- Verification gutter: sits alongside textarea, never overlaps scrollbar -->
-      <div v-if="mode === 'scratchpad' || namespace === 'lemmas'" class="gutter" ref="gutterRef">
+      <!-- Verification gutter: shown whenever the text contains lemma (?) lines -->
+      <div v-if="verificationMarks.length > 0" class="gutter" ref="gutterRef">
         <div
           v-for="(mark, i) in verificationMarks"
           :key="i"
@@ -103,10 +103,8 @@ function gutterTop(lineIndex: number): number {
 
 // Verification marks for scratchpad mode
 const verificationMarks = computed(() => {
-  const isLemmaView = props.mode === 'predicate' && props.namespace === 'lemmas'
-  const text = isLemmaView ? props.currentClause : props.source
-  if (props.mode === 'scratchpad' ? !props.source.trim() : !isLemmaView || !text.trim()) return []
-  if (!kb.value) return []
+  const text = props.mode === 'predicate' ? props.currentClause : props.source
+  if (!text.trim() || !kb.value) return []
 
   try {
     // Find the real line numbers of each '?' line in the source
