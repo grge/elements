@@ -35,14 +35,14 @@ eq-triangle a b c:
 })
 
   it('full kb eq-triangle', async () => {
-    const { default: tarski } = await import('../src/language/tarski.geo?raw')
-    const { default: euclid } = await import('../src/language/euclidean.geo?raw')
+    const { default: core } = await import('../src/language/core.geo?raw')
+    const { default: euclid } = await import('../src/language/euclid.geo?raw')
     const { parseRules } = await import('../src/language/parser')
     const { KnowledgeBase } = await import('../src/kb/inference')
     const { extractProblem } = await import('../src/geometry/extraction')
     const { canonicalise } = await import('../src/geometry/canonicalization')
     const { plan } = await import('../src/geometry/planner')
-    const rules = [...parseRules(tarski), ...parseRules(euclid)]
+    const rules = [...parseRules(core), ...parseRules(euclid)]
     const kb = new KnowledgeBase(rules)
     const goal = { name: 'eq-triangle', args: ['a','b','c'] }
     const problem = extractProblem(goal, kb)
@@ -55,14 +55,14 @@ eq-triangle a b c:
   })
 
   it('circle-line-intersection plan', async () => {
-    const { default: tarski } = await import('../src/language/tarski.geo?raw')
-    const { default: euclid } = await import('../src/language/euclidean.geo?raw')
+    const { default: core } = await import('../src/language/core.geo?raw')
+    const { default: euclid } = await import('../src/language/euclid.geo?raw')
     const { parseRules } = await import('../src/language/parser')
     const { KnowledgeBase } = await import('../src/kb/inference')
     const { extractProblem } = await import('../src/geometry/extraction')
     const { canonicalise } = await import('../src/geometry/canonicalization')
     const { plan } = await import('../src/geometry/planner')
-    const rules = [...parseRules(tarski), ...parseRules(euclid)]
+    const rules = [...parseRules(core), ...parseRules(euclid)]
     const kb = new KnowledgeBase(rules)
     const goal = { name: 'circle-line-intersection', args: ['o','a','b','c','i'] }
     const problem = extractProblem(goal, kb)

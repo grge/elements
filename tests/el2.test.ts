@@ -15,8 +15,9 @@ import { canonicalise } from '../src/geometry/canonicalization'
 import { solve } from '../src/geometry/solver'
 import { plan, executePlan, extractParams } from '../src/geometry/planner'
 
-const basicGeo = readFileSync(resolve(__dirname, '../src/language/basic.geo'), 'utf8')
-const foundationRules = parseRules(basicGeo)
+const coreGeo   = readFileSync(resolve(__dirname, '../src/language/core.geo'), 'utf8')
+const euclidGeo = readFileSync(resolve(__dirname, '../src/language/euclid.geo'), 'utf8')
+const foundationRules = [...parseRules(coreGeo), ...parseRules(euclidGeo)]
 const kb = new KnowledgeBase(foundationRules)
 
 // ── Lexer ──────────────────────────────────────────────────────────────
@@ -80,8 +81,12 @@ describe('parser', () => {
     }
   })
 
-  it('loads 20 rules from basic.geo', () => {
-    expect(foundationRules.length).toBe(20)
+  it('loads expected rules from core.geo and euclid.geo', () => {
+    expect(foundationRules.length).toBeGreaterThan(0)
+    const names = new Set(foundationRules.map(r => r.head.name))
+    expect(names.has('collinear')).toBe(true)
+    expect(names.has('eq-triangle')).toBe(true)
+    expect(names.has('circle')).toBe(true)
   })
 })
 

@@ -10,7 +10,7 @@ import type { Circle, Line } from './geometry/constraints'
 export interface ClauseView {
   id: string
   source: string
-  namespace: 'tarski' | 'euclidean' | 'user'
+  namespace: 'core' | 'euclid' | 'user'
   readOnly: boolean
 }
 

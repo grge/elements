@@ -6,7 +6,10 @@ import { extractProblem } from '../src/geometry/extraction'
 import { canonicalise } from '../src/geometry/canonicalization'
 import { solve } from '../src/geometry/solver'
 
-const kb = new KnowledgeBase(parseRules(readFileSync(resolve(__dirname, '../src/language/basic.geo'), 'utf8')))
+const kb = new KnowledgeBase([
+  ...parseRules(readFileSync(resolve(__dirname, '../src/language/core.geo'), 'utf8')),
+  ...parseRules(readFileSync(resolve(__dirname, '../src/language/euclid.geo'), 'utf8')),
+])
 
 function run(label: string, goalStr: string, n = 8) {
   const goals = parseGoals(goalStr)

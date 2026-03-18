@@ -1,13 +1,15 @@
-# Euclidean geometry — constraint layer and constructions
+# Euclidean constructions — expanded via backward chaining to primitives.
+#
+# Primitives: collinear, between, eq-lines
+# The circle predicate is defined here in terms of eq-lines.
 
-# ------ constraint layer
+# ------ circle constraint
 
 circle a b c: eq-lines a b a c
-collinear a b c: between a b c
-collinear a b c: between b c a
-collinear a b c: between c a b
 
-# ------ 0-dof constraints
+# ------ intersection constructions
+# Note: these may be removed once the planner/solver no longer need them
+# as named predicates; currently kept for KB browsing and scratchpad use.
 
 circle-circle-intersection o a p b i:
     circle o a i
@@ -21,7 +23,7 @@ circle-line-intersection o a b c i:
     circle o a i
     collinear b c i
 
-# ------ Constructions / Postulates
+# ------ constructions
 
 # P1 — equilateral triangle
 eq-triangle a b c:

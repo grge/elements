@@ -56,7 +56,7 @@ defineEmits<{
 }>()
 
 const { predicates } = useKB()
-const namespaces: Namespace[] = ['tarski', 'euclidean', 'user']
+const namespaces: Namespace[] = ['core', 'euclid', 'user']
 
 // Filter predicates by namespace - UI logic belongs here, not in composable
 function predicatesInNS(ns: Namespace) {
@@ -65,8 +65,8 @@ function predicatesInNS(ns: Namespace) {
 
 // Namespace collapse state
 const collapsed = ref<Record<Namespace, boolean>>({
-  tarski: false,
-  euclidean: false,
+  core: false,
+  euclid: false,
   user: false
 })
 

@@ -2,8 +2,8 @@
  * useKB — knowledge base composable.
  *
  * Three namespace layers:
- *   tarski/    read-only, bundled
- *   euclidean/ read-only, bundled
+ *   core/      read-only, bundled (inference rules)
+ *   euclid/    read-only, bundled (constructions)
  *   user/      editable, localStorage
  *
  * Exposes:
@@ -16,10 +16,10 @@
 import { ref, computed } from 'vue'
 import { parseRules } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
-import tarskiGeo    from '../language/tarski.geo?raw'
-import euclideanGeo from '../language/euclidean.geo?raw'
+import coreGeo   from '../language/core.geo?raw'
+import euclidGeo from '../language/euclid.geo?raw'
 
-export type Namespace = 'tarski' | 'euclidean' | 'user'
+export type Namespace = 'core' | 'euclid' | 'user'
 
 export interface UserClause {
   id: string
@@ -29,13 +29,13 @@ export interface UserClause {
 
 // ── Foundation rules (parse once) ────────────────────────────────────
 
-const tarskiRules    = parseRules(tarskiGeo)
-const euclideanRules = parseRules(euclideanGeo)
+const coreRules   = parseRules(coreGeo)
+const euclidRules = parseRules(euclidGeo)
 
 // Build index of which predicate name lives in which namespace
 const namespaceOf: Record<string, Namespace> = {}
-for (const r of tarskiRules)    namespaceOf[r.head.name] = 'tarski'
-for (const r of euclideanRules) namespaceOf[r.head.name] = 'euclidean'
+for (const r of coreRules)   namespaceOf[r.head.name] = 'core'
+for (const r of euclidRules) namespaceOf[r.head.name] = 'euclid'
 
 // ── localStorage persistence ──────────────────────────────────────────
 
@@ -63,7 +63,7 @@ const kb = computed<KnowledgeBase>(() => {
   const userRules = userClauses.value.flatMap(c => {
     try { return parseRules(c.source) } catch { return [] }
   })
-  return new KnowledgeBase([...tarskiRules, ...euclideanRules, ...userRules])
+  return new KnowledgeBase([...coreRules, ...euclidRules, ...userRules])
 })
 
 // ── Predicate index ────────────────────────────────────────────────────
@@ -78,13 +78,13 @@ export interface PredicateEntry {
 const predicates = computed<PredicateEntry[]>(() => {
   const seen = new Map<string, PredicateEntry>()
 
-  for (const r of tarskiRules) {
+  for (const r of coreRules) {
     if (!seen.has(r.head.name))
-      seen.set(r.head.name, { name: r.head.name, namespace: 'tarski', readOnly: true, arity: r.head.args.length })
+      seen.set(r.head.name, { name: r.head.name, namespace: 'core', readOnly: true, arity: r.head.args.length })
   }
-  for (const r of euclideanRules) {
+  for (const r of euclidRules) {
     if (!seen.has(r.head.name))
-      seen.set(r.head.name, { name: r.head.name, namespace: 'euclidean', readOnly: true, arity: r.head.args.length })
+      seen.set(r.head.name, { name: r.head.name, namespace: 'euclid', readOnly: true, arity: r.head.args.length })
   }
   for (const c of userClauses.value) {
     try {
@@ -128,9 +128,9 @@ function deleteUserClause(id: string) {
 
 function clausesForPredicate(name: string) {
   // Foundation clauses (read-only source text reconstructed from rules)
-  const foundation = [...tarskiRules, ...euclideanRules]
+  const foundation = [...coreRules, ...euclidRules]
     .filter(r => r.head.name === name)
-    .map(r => ({ id: `foundation:${r.head.name}:${Math.random()}`, source: ruleToSource(r), namespace: namespaceOf[name] ?? 'euclidean' as Namespace, readOnly: true }))
+    .map(r => ({ id: `foundation:${r.head.name}:${Math.random()}`, source: ruleToSource(r), namespace: namespaceOf[name] ?? 'euclid' as Namespace, readOnly: true }))
 
   // User clauses
   const user = userClauses.value

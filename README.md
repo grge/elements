@@ -38,10 +38,10 @@ Horn clause source text
      ├──────────────────────────┐
      ▼                          ▼
 ┌──────────────┐       ┌─────────────────────┐
-│  Numerical   │       │  Construction        │
-│  Solver      │       │  Planner             │
-│  (Adam GD,   │       │  (greedy DOF,        │
-│  always runs)│       │  may fail/timeout)   │
+│  Numerical   │       │  Construction       │
+│  Solver      │       │  Planner            │
+│  (Adam GD,   │       │  (greedy DOF,       │
+│  always runs)│       │  may fail/timeout)  │
 └──────────────┘       └─────────────────────┘
      │                          │
      └───────────┬──────────────┘
