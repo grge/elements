@@ -212,21 +212,25 @@ export function forwardClosure(
   kb: KnowledgeBase,
   seedFacts: GroundPredicate[],
   maxSteps?: number,
+  goalKey?: string,
 ): GroundPredicate[] {
   const facts = new Map<string, GroundPredicate>()
   const index = new Map<string, GroundPredicate[]>()
   const agenda: GroundPredicate[] = []
 
-  function addFact(f: GroundPredicate) {
+  function addFact(f: GroundPredicate): boolean {
     const key = groundKey(f)
-    if (facts.has(key)) return
+    if (facts.has(key)) return false
     facts.set(key, f)
     if (!index.has(f.name)) index.set(f.name, [])
     index.get(f.name)!.push(f)
     agenda.push(f)
+    return key === goalKey  // true signals early-exit
   }
 
-  for (const f of seedFacts) addFact(f)
+  for (const f of seedFacts) {
+    if (addFact(f)) return [...facts.values()]
+  }
 
   let steps = 0
   while (agenda.length > 0 && (maxSteps === undefined || steps < maxSteps)) {
@@ -235,7 +239,7 @@ export function forwardClosure(
     for (const rule of kb.rulesWithBody(fact.name)) {
       for (const s of bodySatisfied(rule.body, index, emptySubst())) {
         const head = applySubst(s, rule.head)
-        addFact(head)
+        if (addFact(head)) return [...facts.values()]
       }
     }
     steps++

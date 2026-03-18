@@ -89,9 +89,10 @@ const verificationMarks = computed(() => {
         try {
           const lemma = item.lemma
           const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
-          const closed = forwardClosure(kb.value, seeds, 2000)
+          const goal: GroundPredicate = { name: lemma.head.name, args: lemma.head.args }
+          const goalKey = groundKey(goal)
+          const closed = forwardClosure(kb.value, seeds, 2000, goalKey)
           const factSet = new Set(closed.map(f => groundKey(f)))
-          const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
           const result = factSet.has(goalKey)
           marks.push({
             line: i,

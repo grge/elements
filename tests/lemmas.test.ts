@@ -43,11 +43,10 @@ const expectedFalse = new Set([
 
 function checkLemma(lemma: typeof lemmas[0]): boolean {
   const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
-  const closed = forwardClosure(kb, seeds, 2000)
+  const goal = { name: lemma.head.name, args: lemma.head.args }
+  const closed = forwardClosure(kb, seeds, 2000, groundKey(goal))
   const factSet = new Set(closed.map(f => groundKey(f)))
-  const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
-  if (factSet.has(goalKey)) return true
-  return false
+  return factSet.has(groundKey(goal))
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
