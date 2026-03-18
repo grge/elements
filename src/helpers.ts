@@ -234,6 +234,37 @@ export function dragPlannerPoint(
 
 function f(n: number): string { return n.toFixed(2) }
 
+function renderGridElements(transform: RenderTransform, width: number, height: number): string[] {
+  const els: string[] = []
+  const minorStep = 0.5
+  const majorEvery = 4
+  const worldLeft = transform.minX - transform.offsetX / transform.scale
+  const worldRight = transform.minX + (width - transform.offsetX) / transform.scale
+  const worldTop = transform.minY - transform.offsetY / transform.scale
+  const worldBottom = transform.minY + (height - transform.offsetY) / transform.scale
+  const startX = Math.floor(worldLeft / minorStep) * minorStep
+  const endX = Math.ceil(worldRight / minorStep) * minorStep
+  const startY = Math.floor(worldTop / minorStep) * minorStep
+  const endY = Math.ceil(worldBottom / minorStep) * minorStep
+  const tx = (wx: number) => transform.offsetX + (wx - transform.minX) * transform.scale
+  const ty = (wy: number) => transform.offsetY + (wy - transform.minY) * transform.scale
+  let gxIndex = 0
+  for (let gx = startX; gx <= endX + 1e-9; gx += minorStep) {
+    const x = tx(gx)
+    const major = gxIndex % majorEvery === 0
+    els.push(`<line x1="${f(x)}" y1="0" x2="${f(x)}" y2="${height}" stroke="#7ec8e3" stroke-width="1" opacity="${major ? '0.10' : '0.04'}"/>`)
+    gxIndex++
+  }
+  let gyIndex = 0
+  for (let gy = startY; gy <= endY + 1e-9; gy += minorStep) {
+    const y = ty(gy)
+    const major = gyIndex % majorEvery === 0
+    els.push(`<line x1="0" y1="${f(y)}" x2="${width}" y2="${f(y)}" stroke="#7ec8e3" stroke-width="1" opacity="${major ? '0.10' : '0.04'}"/>`)
+    gyIndex++
+  }
+  return els
+}
+
 function renderLineElements(problem: GeometryProblem, coords: Map<string, [number, number]>, tx: (n: number) => number, ty: (n: number) => number, scale: number, width: number, height: number): string[] {
   const els: string[] = []
   for (const line of problem.lines) {
@@ -283,35 +314,6 @@ export function renderSVGWithTransform(
 
   const els: string[] = []
   els.push(...renderGridElements(transform, width, height))
-  els.push(...renderLineElements(problem, coords, tx, ty, transform.scale, width, height))
-  els.push(...renderCircleElements(problem, coords, tx, ty, transform.scale))
-
-  const pointStepIndex = new Map<string, number>()
-  if (plan) for (let i = 0; i < plan.length; i++) pointStepIndex.set(plan[i].point, i)
-
-  for (const [name, [wx, wy]] of coords) {
-    const x = tx(wx), y = ty(wy)
-    els.push(`<circle data-point="${name}" data-wx="${wx}" data-wy="${wy}" cx="${f(x)}" cy="${f(y)}" r="${pointRadius}" fill="#ff6b6b" style="cursor:grab"/>`)
-    els.push(`<text x="${f(x + 6)}" y="${f(y - 6)}" font-family="monospace" font-size="13" fill="#e0e0ff">${name}</text>`)
-    if (plan && pointStepIndex.has(name)) {
-      const step = pointStepIndex.get(name)!
-      els.push(`<text x="${f(x + 8)}" y="${f(y + 8)}" font-family="monospace" font-size="9" fill="#888888"><tspan baseline-shift="super">${step}</tspan></text>`)
-    }
-  }
-
-  return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" style="background:transparent">\n${els.join('\n')}\n</svg>`
-}
-eight = 400,
-  pointRadius = 4,
-  plan?: Plan,
-): string {
-  const coords = witness.coords
-  if (!coords.size) return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}"></svg>`
-
-  const tx = (wx: number) => transform.offsetX + (wx - transform.minX) * transform.scale
-  const ty = (wy: number) => transform.offsetY + (wy - transform.minY) * transform.scale
-
-  const els: string[] = []
   els.push(...renderLineElements(problem, coords, tx, ty, transform.scale, width, height))
   els.push(...renderCircleElements(problem, coords, tx, ty, transform.scale))
 

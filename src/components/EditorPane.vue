@@ -87,7 +87,7 @@ const verificationMarks = computed(() => {
     parsed.forEach((item, i) => {
       if (item.kind === 'lemma') {
         try {
-          const result = prove(kb.value, item.predicate)
+          const result = prove(item.lemma.head, kb.value)
           marks.push({
             line: i,
             type: result ? 'verified' : 'failed',

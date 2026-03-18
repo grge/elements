@@ -13,7 +13,7 @@
       </div>
 
       <!-- Namespace groups -->
-      <template v-for="ns in ['tarski', 'euclidean', 'user']" :key="ns">
+      <template v-for="ns in namespaces" :key="ns">
         <div class="ns-header" @click="toggleNS(ns)">
           <span class="ns-toggle">{{ collapsed[ns] ? '▶' : '▼' }}</span>
           {{ ns }}/
@@ -56,6 +56,7 @@ defineEmits<{
 }>()
 
 const { predicates } = useKB()
+const namespaces: Namespace[] = ['tarski', 'euclidean', 'user']
 
 // Filter predicates by namespace - UI logic belongs here, not in composable
 function predicatesInNS(ns: Namespace) {

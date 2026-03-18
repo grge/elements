@@ -157,11 +157,12 @@ function startInteraction(e: MouseEvent) {
   const target = e.target as HTMLElement | null
   const pointName = target?.dataset?.point
   if (!pointName) return
+  const point = pointName
 
   const witness = activeWitness.value
   const svgEl = target?.closest('svg') as SVGElement | null
-  const rect = svgEl?.getBoundingClientRect()
-  if (!witness || !rect) return
+  if (!witness || !svgEl) return
+  const rect = svgEl.getBoundingClientRect()
 
   const transform = computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding())
   if (!transform) return
@@ -172,27 +173,27 @@ function startInteraction(e: MouseEvent) {
     const displayY = ev.clientY - rect.top
     const localX = displayX * (viewportWidth.value / rect.width)
     const localY = displayY * (viewportHeight.value / rect.height)
-    const world = screenToWorld(localX, localY, transform)
+    const world = screenToWorld(localX, localY, transform!)
 
     if (props.usePlanner && props.plan) {
       const currentParams = plannerParams.value ?? [...props.plan.params]
-      const currentCoords = draggedWitness.value?.coords ?? baseWitness.value?.coords ?? witness.coords
-      const result = dragPlannerPoint(props.plan.steps, currentParams, currentCoords, pointName, world)
+      const currentCoords = draggedWitness.value?.coords ?? baseWitness.value?.coords ?? witness!.coords
+      const result = dragPlannerPoint(props.plan.steps, currentParams, currentCoords, point, world)
       if (!result.draggable) return
       const coords = executePlan(props.plan.steps, result.params, props.problem)
       if (!coords) return
       plannerParams.value = result.params
-      draggedWitness.value = { coords, energy: witness.energy }
+      draggedWitness.value = { coords, energy: witness!.energy }
       return
     }
 
-    const warmStart = new Map(witness.coords)
-    warmStart.set(pointName, world)
+    const warmStart = new Map(witness!.coords)
+    warmStart.set(point, world)
 
     try {
       draggedWitness.value = solve(props.problem, 6, warmStart)
     } catch {
-      draggedWitness.value = { coords: warmStart, energy: witness.energy }
+      draggedWitness.value = { coords: warmStart, energy: witness!.energy }
     }
   }
 
@@ -278,8 +279,6 @@ function formatStep(step: ConstructionStep): string {
       return `${step.point} = intersection of circles ${step.c1.center}${pts(step.c1.points)}, ${step.c2.center}${pts(step.c2.points)}`
     case 'circle-line-intersection':
       return `${step.point} = intersection of circle ${step.circle.center}${pts(step.circle.points)}, line ${pts(step.line.points)}`
-    default:
-      return `${step.kind}`
   }
 }
 </script>

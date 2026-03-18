@@ -63,7 +63,7 @@ class Parser {
 
   parse(): TopLevel[] {
     const result: TopLevel[] = []
-    while (this.current.type !== TokenType.EOF) {
+    while (true) {
       this.consume(TokenType.NEWLINE, TokenType.INDENT, TokenType.DEDENT)
       if (this.current.type === TokenType.EOF) break
 
@@ -87,7 +87,6 @@ class Parser {
       const body = this.parseBody()
       return { kind: 'rule', rule: { head, body } }
     } else {
-      // No colon — it's a bare goal
       return { kind: 'goal', pred: head }
     }
   }
@@ -104,13 +103,11 @@ class Parser {
   }
 
   private parseBody(): Predicate[] {
-    // Explicit empty body
     if (this.current.type === TokenType.DASH) {
       this.advance()
       return []
     }
 
-    // Skip newline to see what's next
     if (this.current.type === TokenType.NEWLINE) {
       this.advance()
     }
@@ -126,7 +123,8 @@ class Parser {
     const body: Predicate[] = []
     while (this.current.type === TokenType.IDENTIFIER) {
       body.push(this.parsePredicate())
-      if (this.current.type === TokenType.COMMA) this.advance()
+      if ((this.current.type as TokenType) !== TokenType.COMMA) break
+      this.advance()
     }
     return body
   }
@@ -139,7 +137,8 @@ class Parser {
       this.consume(TokenType.INDENT)
       if (this.current.type !== TokenType.IDENTIFIER) break
       body.push(this.parsePredicate())
-      while (this.current.type === TokenType.COMMA) {
+      while (true) {
+        if ((this.current.type as TokenType) !== TokenType.COMMA) break
         this.advance()
         if (this.current.type === TokenType.IDENTIFIER) body.push(this.parsePredicate())
       }
@@ -155,7 +154,7 @@ class Parser {
     const name = this.advance().value
     const args: string[] = []
 
-    while (this.current.type === TokenType.IDENTIFIER && !this.atBoundary()) {
+    while (this.current.type === TokenType.IDENTIFIER) {
       args.push(this.advance().value)
     }
 
@@ -170,13 +169,6 @@ class Parser {
 
     return { name, args }
   }
-
-  private atBoundary(): boolean {
-    return [
-      TokenType.COLON, TokenType.COMMA, TokenType.NEWLINE,
-      TokenType.DASH, TokenType.DEDENT, TokenType.EOF, TokenType.QUESTION,
-    ].includes(this.current.type)
-  }
 }
 
 // ── Public API ────────────────────────────────────────────────────────
@@ -185,14 +177,12 @@ export function parseSource(text: string): TopLevel[] {
   return new Parser(tokenize(text)).parse()
 }
 
-/** Extract only Rules from a source string (e.g. loading basic.geo) */
 export function parseRules(text: string): Rule[] {
   return parseSource(text)
     .filter((t): t is { kind: 'rule'; rule: Rule } => t.kind === 'rule')
     .map(t => t.rule)
 }
 
-/** Extract only goal predicates from a source string */
 export function parseGoals(text: string): Predicate[] {
   return parseSource(text)
     .filter((t): t is { kind: 'goal'; pred: Predicate } => t.kind === 'goal')
