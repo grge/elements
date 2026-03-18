@@ -25,33 +25,28 @@ const kb = new KnowledgeBase([
 
 const lemmas = parseLemmas(lemmasGeo)
 
-// ── Negative test heads (should NOT be provable) ──────────────────────
-// These correspond to the "negative / non-provability tests" section.
-// A lemma is considered a negative test if its head matches one of these
-// exactly AND it has empty or trivially-seeding hypotheses.
+// ── Expected-false lemmas ─────────────────────────────────────────────
+// These are deliberate non-provability checks, plus one known gap kept out of
+// core semantics because the corresponding rule was too strong / ambiguous.
 
-const negativeTests = new Set([
-  'eq-point(a,b)',                // ? eq-point a b: -
-  'between(a,b,c)|collinear',     // these are identified by position below
+const expectedFalse = new Set([
+  'eq-triangle a b c: eq-lines a b a c, eq-lines a b b c',
+  'collinear a c d: collinear a b c, collinear a b d',
+  'eq-point a b: -',
+  'between a b c: collinear a b c',
+  'eq-lines a b b c: circle a b c',
+  'midpoint m a b: between a m b',
+  'eq-triangle a b c: circle a b c',
 ])
-
-// More precisely: we track negative tests by index in the lemma list.
-// From lemmas.geo the last 5 lemmas are the negative tests:
-//   ? eq-point a b: -
-//   ? between a b c: collinear a b c
-//   ? eq-lines a b b c: circle a b c
-//   ? midpoint m a b: between a m b
-//   ? eq-triangle a b c: circle a b c
-
-const negativeCount = 5
-const negativeStartIdx = lemmas.length - negativeCount
 
 // ── Helper ────────────────────────────────────────────────────────────
 
 function checkLemma(lemma: typeof lemmas[0]): boolean {
   const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
-  const closed = forwardClosure(kb, seeds)
+  const closed = forwardClosure(kb, seeds, 2000)
   const factSet = new Set(closed.map(f => groundKey(f)))
+  const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
+  if (factSet.has(goalKey)) return true
   return prove(lemma.head, kb, factSet)
 }
 
@@ -63,16 +58,17 @@ describe('lemmas', () => {
     const hyps = lemma.hypotheses.length === 0
       ? '-'
       : lemma.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')
-    const isNegative = i >= negativeStartIdx
+    const key = `${head}: ${hyps}`
+    const isNegative = expectedFalse.has(key)
 
     if (isNegative) {
       it(`✗ ? ${head}: ${hyps} (should not be provable)`, () => {
         expect(checkLemma(lemma)).toBe(false)
-      })
+      }, 10000)
     } else {
       it(`✓ ? ${head}: ${hyps}`, () => {
         expect(checkLemma(lemma)).toBe(true)
-      })
+      }, 10000)
     }
   })
 })

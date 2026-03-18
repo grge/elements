@@ -114,6 +114,7 @@ export function prove(
 ): boolean {
   const cacheGood = new Set<string>()
   const cacheBad  = new Set<string>()
+  const visiting  = new Set<string>()
 
   function dfs(g: GroundPredicate, d: number): boolean {
     if (d === 0) return false
@@ -122,25 +123,31 @@ export function prove(
     if (facts.has(key))      return true
     if (cacheGood.has(key))  return true
     if (cacheBad.has(key))   return false
+    if (visiting.has(key))   return false
 
-    for (const rule of kb.rulesWithHead(g.name)) {
-      const s = unify(g, rule.head, emptySubst())
-      if (s === null) continue
+    visiting.add(key)
+    try {
+      for (const rule of kb.rulesWithHead(g.name)) {
+        const s = unify(g, rule.head, emptySubst())
+        if (s === null) continue
 
-      // Axiom (empty body) — succeeds immediately
-      if (rule.body.length === 0) {
-        cacheGood.add(key)
-        return true
+        // Axiom (empty body) — succeeds immediately
+        if (rule.body.length === 0) {
+          cacheGood.add(key)
+          return true
+        }
+
+        if (rule.body.every(b => dfs(applySubst(s, b), d - 1))) {
+          cacheGood.add(key)
+          return true
+        }
       }
 
-      if (rule.body.every(b => dfs(applySubst(s, b), d - 1))) {
-        cacheGood.add(key)
-        return true
-      }
+      cacheBad.add(key)
+      return false
+    } finally {
+      visiting.delete(key)
     }
-
-    cacheBad.add(key)
-    return false
   }
 
   return dfs(goal, depth)

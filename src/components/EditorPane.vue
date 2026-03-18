@@ -87,7 +87,12 @@ const verificationMarks = computed(() => {
     parsed.forEach((item, i) => {
       if (item.kind === 'lemma') {
         try {
-          const result = prove(item.lemma.head, kb.value)
+          const lemma = item.lemma
+          const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
+          const closed = forwardClosure(kb.value, seeds, 2000)
+          const factSet = new Set(closed.map(f => groundKey(f)))
+          const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
+          const result = factSet.has(goalKey) || prove(lemma.head, kb.value, factSet)
           marks.push({
             line: i,
             type: result ? 'verified' : 'failed',
