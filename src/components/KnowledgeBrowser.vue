@@ -12,44 +12,24 @@
         ✏ Scratchpad
       </div>
 
-      <!-- Lemmas section -->
-      <div class="ns-header" @click="showLemmas = !showLemmas">
-        <span class="ns-toggle">{{ showLemmas ? '▼' : '▶' }}</span>
-        lemmas/ 🔒
-      </div>
-      <template v-if="showLemmas">
-        <div
-          v-for="p in lemmaPredicates"
-          :key="p.name"
-          class="browser-item"
-          :class="{ active: mode === 'predicate' && selectedPred === p.name }"
-          @click="$emit('selectPredicate', p.name, 'lemmas')"
-        >
-          <span class="pred-name">{{ p.name }}</span>
-          <span class="pred-arity">/{{ p.arity }}</span>
-          <span class="pred-lock">🔒</span>
-        </div>
-        <div v-if="!lemmaPredicates.length" class="empty-ns">empty</div>
-      </template>
-
       <!-- Namespace groups -->
       <template v-for="ns in namespaces" :key="ns">
         <div class="ns-header" @click="toggleNS(ns)">
           <span class="ns-toggle">{{ collapsed[ns] ? '▶' : '▼' }}</span>
           {{ ns }}/
           <span v-if="ns === 'user'" class="ns-add" @click.stop="$emit('newUserClause')">＋</span>
+          <span v-else class="pred-lock">🔒</span>
         </div>
         <template v-if="!collapsed[ns]">
           <div
             v-for="p in predicatesInNS(ns)"
             :key="p.name"
             class="browser-item"
-            :class="{ active: mode === 'predicate' && selectedPred === p.name }"
+            :class="{ active: mode === 'predicate' && selectedPred === p.name && selectedNs === ns }"
             @click="$emit('selectPredicate', p.name, ns)"
           >
             <span class="pred-name">{{ p.name }}</span>
             <span class="pred-arity">/{{ p.arity }}</span>
-            <span v-if="p.readOnly" class="pred-lock">🔒</span>
           </div>
           <div v-if="predicatesInNS(ns).length === 0" class="empty-ns">empty</div>
         </template>
@@ -67,6 +47,7 @@ import type { Namespace } from '../composables/useKB'
 defineProps<{
   mode: 'scratchpad' | 'predicate'
   selectedPred: string
+  selectedNs: string
 }>()
 
 defineEmits<{
@@ -75,16 +56,9 @@ defineEmits<{
   newUserClause: []
 }>()
 
-const { predicates, lemmaPredicates, builtinLemmas } = useKB()
-const namespaces: Namespace[] = ['core', 'euclid', 'user']
+const { predicatesInNS } = useKB()
+const namespaces: Namespace[] = ['core', 'euclid', 'lemmas', 'user']
 
-// Filter predicates by namespace - UI logic belongs here, not in composable
-function predicatesInNS(ns: Namespace) {
-  return predicates.value.filter(p => p.namespace === ns)
-}
-
-// Namespace collapse state
-const showLemmas = ref(true)
 const collapsed = ref<Record<Namespace, boolean>>({
   core: false,
   euclid: false,

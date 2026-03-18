@@ -5,6 +5,7 @@
     <KnowledgeBrowser 
       :mode="mode" 
       :selected-pred="selectedPred"
+      :selected-ns="selectedNamespace"
       @select-scratchpad="selectScratchpad"
       @select-predicate="selectPredicate"
       @new-user-clause="newUserClause"
@@ -94,7 +95,7 @@ function selectPredicate(predName: string, ns: string) {
   mode.value = 'predicate'
   selectedPred.value = predName
   selectedNamespace.value = ns
-  const clauses = clausesForPredicate(predName).filter(c => c.namespace === ns)
+  const clauses = clausesForPredicate(predName, ns as any)
   currentClause.value = clauses.map(c => c.source).join('\n\n')
 }
 
