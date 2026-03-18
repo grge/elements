@@ -1,9 +1,9 @@
-# elements2
+# elements
 
 A browser-based interactive environment for Euclidean geometry, grounded in formal logic.
 
-You write geometric relations in a relational language (EL2 Horn clauses); the system infers
-the constraint structure, draws a diagram, verifies lemmas, and produces an explicit ruler-and-compass
+You write geometric relations in a Horn clause language; the system infers the constraint
+structure, draws a diagram, verifies lemmas, and produces an explicit ruler-and-compass
 construction plan that you can interact with by dragging.
 
 The closest analogy is a Smalltalk class browser: the browser is also the editor, definitions are
@@ -14,7 +14,7 @@ live, and the system is always in a runnable state.
 ## Architecture
 
 ```
-EL2 source text
+Horn clause source text
      │
      ▼
 ┌─────────────────────────────────────────────────────┐
@@ -55,23 +55,28 @@ EL2 source text
 
 | File | Purpose |
 |------|---------|
-| `src/el2/lexer.ts` | Tokeniser (port of el2/lexer.py) |
-| `src/el2/parser.ts` | Parser — rules, goals, lemmas; returns `TopLevel[]` |
-| `src/el2/inference.ts` | `KnowledgeBase`, `prove()`, `expandUnique()`, `forwardClosure()` |
-| `src/el2/geometry/constraints.ts` | Shared types: `GeometryProblem`, `WitnessModel`, `Line`, `Circle` |
-| `src/el2/geometry/extraction.ts` | Expand a goal via KB to primitive constraints |
-| `src/el2/geometry/canonicalization.ts` | UnionFind merge → canonical Lines and Circles |
-| `src/el2/geometry/solver.ts` | Adam gradient descent solver, multi-restart, warm-start |
-| `src/el2/geometry/planner.ts` | Greedy construction planner, `executePlan()`, `extractParams()` |
-| `src/el2/geometry/renderer.ts` | SVG renderer with optional step annotations |
-| `src/el2/tarski.geo` | Tarski axioms as EL2 Horn clauses (read-only) |
-| `src/el2/euclidean.geo` | Named Euclidean constructions (read-only) |
+| `src/language/lexer.ts` | Tokeniser |
+| `src/language/parser.ts` | Parser — rules, goals, lemmas; returns `TopLevel[]` |
+| `src/language/basic.geo` | Basic geometric predicates as Horn clauses |
+| `src/language/tarski.geo` | Tarski axioms as Horn clauses (read-only) |
+| `src/language/euclidean.geo` | Named Euclidean constructions (read-only) |
+| `src/kb/inference.ts` | `KnowledgeBase`, `prove()`, `expandUnique()`, `forwardClosure()` |
+| `src/geometry/constraints.ts` | Shared types: `GeometryProblem`, `WitnessModel`, `Line`, `Circle` |
+| `src/geometry/extraction.ts` | Expand a goal via KB to primitive constraints |
+| `src/geometry/canonicalization.ts` | UnionFind merge → canonical Lines and Circles |
+| `src/geometry/solver.ts` | Adam gradient descent solver, multi-restart, warm-start |
+| `src/geometry/planner.ts` | Greedy construction planner, `executePlan()`, `extractParams()` |
+| `src/geometry/renderer.ts` | SVG renderer with optional step annotations |
 | `src/composables/useKB.ts` | Reactive KB composable, namespace tree, localStorage persistence |
-| `src/views/Scratchpad.vue` | Main three-panel UI |
+| `src/helpers.ts` | Staging area for pipeline glue and renderer/UI bridge utilities |
+| `src/views/MainView.vue` | Main three-panel layout |
+| `src/components/KnowledgeBrowser.vue` | Left panel: predicate browser |
+| `src/components/EditorPane.vue` | Middle panel: clause editor + lemma gutter |
+| `src/components/DiagramPane.vue` | Right panel: SVG diagram + construction plan |
 
 ---
 
-## The Language (EL2)
+## The Language
 
 Full Horn clause syntax. Both inline and indented-body forms are equivalent:
 
@@ -91,12 +96,12 @@ eq-triangle a b c:
 ? collinear a b c: between a b c
 ```
 
-**Primitives** — expanded to by the inference engine, consumed directly by the geometry pipeline:
+**Primitives** — the inference engine expands goals down to these; the geometry pipeline consumes them directly:
 
 - `collinear A B C`
 - `between A B C`
-- `on-circle CENTER RADIUS_PT TARGET_PT`
-- `eq-dist A B C D`
+- `circle CENTER RADIUS_PT TARGET_PT`
+- `eq-lines A B C D`
 
 ---
 
@@ -104,22 +109,19 @@ eq-triangle a b c:
 
 Three-panel layout: **Predicate Browser** | **Clause Editor** | **Diagram**.
 
-**Predicate Browser** (left): namespace tree (tarski/ collapsed, euclidean/ and user/ open).
-Click a predicate to load its clauses and render its diagram. ✏ Scratchpad entry at top. `＋` to add
+**Predicate Browser** (left): namespace tree (tarski/, euclidean/, user/).
+Click a predicate to load its source and render its diagram. ✏ Scratchpad entry at top. `＋` to add
 a new user clause.
 
-**Clause Editor** (middle): EL2 source for the selected predicate or scratchpad. Foundation clauses
-are read-only (greyed). User clauses auto-save after 800ms debounce. Lemma lines (`?`) show ✓/✗
-marks in the right gutter.
+**Clause Editor** (middle): Horn clause source for the selected predicate or scratchpad. Foundation
+clauses are read-only (🔒). Lemma lines (`?`) show ✓/✗ marks in the right gutter.
 
 **Diagram** (right): SVG diagram of the current construction.
-- Solver: **📐 planner** (greedy DOF-based construction plan, interactive) or **~ numerical** (Adam
-  gradient descent fallback). Toggle via the icon in the panel header.
+- Toggle **📐** to switch between the greedy construction planner and the numerical solver.
 - When the planner succeeds, a step list is shown below the diagram and points are annotated with
   their step index.
-- **Drag** free points and constrained points to explore the construction interactively. Intersection
-  points (0 DOF) are fixed by their constraints and cannot be dragged.
-- **Scroll** to zoom, **drag background** to pan.
+- **Drag** free points and 1-DOF constrained points to explore the construction interactively.
+  Intersection points (0 DOF) are fixed by their constraints and cannot be dragged.
 
 ---
 
@@ -139,29 +141,28 @@ construction steps, each with an explicit degree of freedom:
 
 **Algorithm:** greedy, O(n²). At each step, pick the lowest-DOF unplaced point given currently
 placed objects. When all remaining points are free (DOF=2), prefer the one that would unlock the
-most constraints (maximise "unlock potential"). Boolean intersection choices are resolved by
-comparing both solutions against the numerical witness.
+most constraints. Boolean intersection choices are resolved by comparing both solutions against
+the numerical witness.
 
 **Interaction:** `extractParams()` converts a numerical witness into plan parameters. Dragging a
-point updates its parameter(s) in-place and re-executes the plan forward from that step, keeping
-all downstream constraints satisfied.
+point updates its parameter(s) and re-executes the plan forward, keeping all downstream
+constraints satisfied.
 
 ---
 
 ## Numerical Solver
 
-Adam gradient descent with multi-restart and warm-start caching.
+Adam gradient descent with multi-restart and warm-start.
 
 Energy terms:
 - **Gauge fix** — anchor first two points to reduce translation/rotation symmetry
 - **Collinearity** — anchor-pair formulation: perpendicular distance from line through first two sorted points
-- **Circle** — deviation from mean radius for each `on-circle` group
-- **Equal distance** — L2 penalty on `eq-dist` pairs
+- **Circle** — deviation from mean radius for each on-circle group
+- **Equal distance** — L2 penalty on eq-dist pairs
 - **Betweenness** — ordering penalty + collinearity
 - **Separation** — repulsion between pairs not sharing a line/circle constraint
 
-The solver is always the fallback. When the planner fails or times out, the numerical witness is
-used directly.
+The solver is always the fallback when the planner fails or times out.
 
 ---
 
@@ -169,8 +170,9 @@ used directly.
 
 ```bash
 npm install
-npm run dev      # dev server (default port 5173)
+npm run dev      # dev server
 npm test         # vitest test suite
+npm run build    # production build
 ```
 
 ---
@@ -178,42 +180,33 @@ npm test         # vitest test suite
 ## Possible Next Steps
 
 ### Rendering & Visibility
-- **Surface filtering** — a predicate's args are its surface; internal points introduced during
-  expansion should be hidden by default. The renderer has all points; it just needs a
-  `visible: Set<string>` mask derived from the top-level goal args. E.g. `copy-segment a b c d`
-  creates 8 intermediate points but should only surface 4.
-- **Lemma-driven decorations** — e.g. `? eq-dist a b c d: copy-segment a b c d` would let the
-  renderer draw tick marks on the two equal segments. Predicates carry visual annotations
-  derived from their proven lemmas, rather than drawing all intermediate geometry.
-- **Hover/click interactivity** — click a point → popover showing its name, which constructions
-  it belongs to, its coordinates. Click a line → collinear points. Click a circle → center,
-  radius point, circumference points. All data is already in `GeometryProblem`.
+- **Surface filtering** — hide internal points introduced during inference expansion; only show the
+  points named in the top-level goal args.
+- **Lemma-driven decorations** — proven lemmas like `eq-dist` could drive tick marks on equal
+  segments rather than drawing all intermediate geometry.
 
 ### Dragging
-- **Always-2-DOF dragging** — when drag starts on point P, re-run the planner with P forced
-  free to get a fresh plan; use that for the drag session. Downstream 0-DOF points remain fixed
-  by their constraints. One plan rebuild on drag-start rather than N plans held simultaneously.
-- **Undo/redo for drag** — record param history so drag can be undone.
+- **Always-2-DOF dragging** — when dragging starts on a 0-DOF intersection point, re-run the
+  planner with that point forced free to get a fresh interactive plan.
+- **Undo/redo for drag** — record param history.
 
 ### Knowledge Base
-- **Dead code cleanup** — `src/geom/` is the old elements codebase, never removed; `basic.geo`
-  is superseded. Audit imports and remove anything not in the live pipeline.
-- **`.geo` refinement** — arities sometimes awkward, naming inconsistent. Careful pass once
-  visibility design is settled.
-- **"Save to library" from scratchpad** — promote scratchpad clauses into user/ namespace with one click.
+- **"Save to library"** — promote scratchpad clauses into user/ namespace with one click.
+- **`.geo` refinement** — naming and arity conventions could be tidied once visibility design is settled.
 
 ### Proofs
 - **Proof traces** — show the backward-chaining derivation for a proven lemma, not just ✓/✗.
 
+### Planner
+- **Search-based planner** — the current greedy planner works well for typical constructions but
+  could fail on under-constrained or ambiguous problems. A proper search (beam search, A*, etc.)
+  with backtracking would handle harder cases; benchmarking would show whether it's worthwhile.
+
 ### Solver
+- **Web Worker** — move Adam off the main thread for large problems.
 - **Stronger objective** — harder constructions involving circle+line intersections and
-  over-constrained betweenness still have reliability issues (see Python el2 notes).
-- **Web Worker** — move solver off the main thread for large problems.
+  over-constrained betweenness still have occasional reliability issues.
 
 ### Misc
 - **Construction animation** — step through the plan sequentially, highlighting each step.
-- **Export** — SVG download, or export construction as clean EL2 source.
-- **Prolog-style predicate/arity disambiguation** — currently predicates have a single canonical
-  arity; allowing the same name at multiple arities would require parser changes.
-- **Connection to EL2 Python** — the TypeScript pipeline is a port of the Python `el2` package;
-  they could share `.geo` files or a common KB format.
+- **SVG export** — download the current diagram.
