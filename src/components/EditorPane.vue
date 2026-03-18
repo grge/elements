@@ -83,11 +83,20 @@ const verificationMarks = computed(() => {
   if (!kb.value) return []
 
   try {
+    // Find the real line numbers of each '?' line in the source
+    const lines = text.split('\n')
+    const lemmaLineNumbers = lines
+      .map((l, i) => ({ i, isLemma: l.trimStart().startsWith('?') }))
+      .filter(x => x.isLemma)
+      .map(x => x.i)
+
     const parsed = parseSource(text)
     const marks: Array<{ line: number; type: 'verified' | 'failed' | 'unknown'; message: string }> = []
 
-    parsed.forEach((item, i) => {
+    let lemmaIndex = 0
+    parsed.forEach((item) => {
       if (item.kind === 'lemma') {
+        const lineNum = lemmaLineNumbers[lemmaIndex++] ?? 0
         try {
           const lemma = item.lemma
           const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
@@ -97,13 +106,13 @@ const verificationMarks = computed(() => {
           const factSet = new Set(closed.map(f => groundKey(f)))
           const result = factSet.has(goalKey)
           marks.push({
-            line: i,
+            line: lineNum,
             type: result ? 'verified' : 'failed',
             message: result ? 'Verified ✓' : 'Cannot prove ✗'
           })
         } catch (error) {
           marks.push({
-            line: i,
+            line: lineNum,
             type: 'failed',
             message: `Error: ${error}`
           })
