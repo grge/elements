@@ -145,6 +145,11 @@ function clausesForPredicate(name: string) {
     .filter(r => r.head.name === name)
     .map(r => ({ id: `foundation:${r.head.name}:${Math.random()}`, source: ruleToSource(r), namespace: namespaceOf[name] ?? 'euclid' as Namespace, readOnly: true }))
 
+  // Lemma auxiliary horn clauses (e.g. midpoint definition in lemmas.geo)
+  const lemmaHorn = lemmaRules
+    .filter(r => r.head.name === name)
+    .map(r => ({ id: `lemma-rule:${r.head.name}:${Math.random()}`, source: ruleToSource(r), namespace: 'lemmas' as Namespace, readOnly: true }))
+
   // Lemma clauses (read-only, shown grouped by head predicate)
   const lemmas = builtinLemmas
     .filter(l => l.head.name === name)
@@ -155,7 +160,7 @@ function clausesForPredicate(name: string) {
     .filter(c => { try { return parseRules(c.source).some(r => r.head.name === name) } catch { return false } })
     .map(c => ({ ...c, readOnly: false }))
 
-  return [...foundation, ...lemmas, ...user]
+  return [...foundation, ...lemmaHorn, ...lemmas, ...user]
 }
 
 function ruleToSource(r: any): string {
