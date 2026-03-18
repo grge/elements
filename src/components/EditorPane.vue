@@ -92,7 +92,7 @@ const verificationMarks = computed(() => {
           const closed = forwardClosure(kb.value, seeds, 2000)
           const factSet = new Set(closed.map(f => groundKey(f)))
           const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
-          const result = factSet.has(goalKey) || prove(lemma.head, kb.value, factSet)
+          const result = factSet.has(goalKey)
           marks.push({
             line: i,
             type: result ? 'verified' : 'failed',

@@ -47,7 +47,7 @@ function checkLemma(lemma: typeof lemmas[0]): boolean {
   const factSet = new Set(closed.map(f => groundKey(f)))
   const goalKey = groundKey({ name: lemma.head.name, args: lemma.head.args })
   if (factSet.has(goalKey)) return true
-  return prove(lemma.head, kb, factSet)
+  return false
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
