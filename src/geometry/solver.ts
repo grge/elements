@@ -100,15 +100,12 @@ function circleGrad(circles: Circle[], x: Coords, g: Grad, cidx: CoordIdx, w = 1
       e += w * dr * dr
       if (r < 1e-10) continue
       const dx = x[pi*2]-x[ci*2], dy = x[pi*2+1]-x[ci*2+1]
-      // d(r_i)/d(p_i) = (dx,dy)/r_i
-      // d(mean)/d(p_i) = (dx,dy)/(n*r_i)
-      // d(dr)/d(p_i) = (1 - 1/n) * (dx,dy)/r_i
-      const kp = 2 * w * dr * (1 - 1/n) / r
+      // Full derivative: dE/d(p_i) = 2w(r_i - mean) * d(r_i)/d(p_i)
+      // The mean-dependence terms cancel because sum(r_i - mean) = 0.
+      const kp = 2 * w * dr / r
       g[pi*2]   += kp * dx;  g[pi*2+1] += kp * dy
-      // d(r_i)/d(center) = -(dx,dy)/r_i
-      // d(mean)/d(center) = sum_j d(r_j)/d(center)/n
-      // We accumulate per-point contribution to center grad:
-      const kc = -2 * w * dr / (n * r)
+      // dE/d(center) accumulates -2w(r_i - mean) * d(r_i)/d(center) for each i
+      const kc = -2 * w * dr / r
       g[ci*2]   += kc * dx;  g[ci*2+1] += kc * dy
     }
   }
