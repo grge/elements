@@ -23,7 +23,7 @@
           :key="p.name"
           class="browser-item"
           :class="{ active: mode === 'predicate' && selectedPred === p.name }"
-          @click="$emit('selectPredicate', p.name)"
+          @click="$emit('selectPredicate', p.name, 'lemmas')"
         >
           <span class="pred-name">{{ p.name }}</span>
           <span class="pred-arity">/{{ p.arity }}</span>
@@ -45,7 +45,7 @@
             :key="p.name"
             class="browser-item"
             :class="{ active: mode === 'predicate' && selectedPred === p.name }"
-            @click="$emit('selectPredicate', p.name)"
+            @click="$emit('selectPredicate', p.name, ns)"
           >
             <span class="pred-name">{{ p.name }}</span>
             <span class="pred-arity">/{{ p.arity }}</span>
@@ -71,7 +71,7 @@ defineProps<{
 
 defineEmits<{
   selectScratchpad: []
-  selectPredicate: [name: string]
+  selectPredicate: [name: string, namespace: string]
   newUserClause: []
 }>()
 

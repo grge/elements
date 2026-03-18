@@ -20,7 +20,7 @@
       :source="source"
       :current-clause="currentClause"
       :read-only="isPredicateReadOnly(selectedPred)"
-      :namespace="namespaceOf(selectedPred)"
+      :namespace="selectedNamespace"
       @update:source="source = $event"
       @update:current-clause="currentClause = $event"
       @save="savePredicate"
@@ -53,7 +53,6 @@ import { useKB } from '../composables/useKB'
 import {
   buildKnowledgeBase,
   extractProblemFromTopLevel,
-  findClauseForPredicate,
   findUserClauseForPredicate,
   isPredicateReadOnly as predicateReadOnly,
   diagramSourceForMode,
@@ -67,6 +66,7 @@ const editorPct = ref(35)
 type Mode = 'scratchpad' | 'predicate'
 const mode = ref<Mode>('scratchpad')
 const selectedPred = ref('')
+const selectedNamespace = ref('')
 
 // Content state
 const source = ref(`circle a b c
@@ -81,19 +81,21 @@ function isPredicateReadOnly(predName: string): boolean {
 const usePlanner = ref(true)
 
 // Knowledge base
-const { kb, predicates, userClauses, addUserClause, updateUserClause, deleteUserClause, clausesForPredicate, namespaceOf } = useKB()
+const { kb, predicates, userClauses, addUserClause, updateUserClause, deleteUserClause, clausesForPredicate } = useKB()
 
 // Mode switching
 function selectScratchpad() {
   mode.value = 'scratchpad'
   selectedPred.value = ''
+  selectedNamespace.value = ''
 }
 
-function selectPredicate(predName: string) {
+function selectPredicate(predName: string, ns: string) {
   mode.value = 'predicate'
   selectedPred.value = predName
-  const clause = findClauseForPredicate(predName, clausesForPredicate)
-  currentClause.value = clause?.source || ''
+  selectedNamespace.value = ns
+  const clauses = clausesForPredicate(predName).filter(c => c.namespace === ns)
+  currentClause.value = clauses.map(c => c.source).join('\n\n')
 }
 
 function newUserClause() {
@@ -101,7 +103,7 @@ function newUserClause() {
   if (name && /^[a-zA-Z][a-zA-Z0-9_-]*$/.test(name)) {
     const text = `${name} x y: `
     addUserClause(text)
-    selectPredicate(name)
+    selectPredicate(name, 'user')
   }
 }
 
