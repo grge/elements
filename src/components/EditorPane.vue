@@ -15,35 +15,33 @@
     </div>
 
     <div class="editor-container">
-      <div class="editor-wrapper">
-        <textarea
-          v-if="mode === 'scratchpad'"
-          :value="source"
-          @input="$emit('update:source', ($event.target as HTMLTextAreaElement).value)"
-          class="editor"
-          placeholder="Enter geometry goals..."
-          spellcheck="false"
-        />
-        <textarea
-          v-else
-          :value="currentClause"
-          @input="$emit('update:currentClause', ($event.target as HTMLTextAreaElement).value)"
-          :readonly="readOnly"
-          class="editor"
-          :class="{ readonly: readOnly }"
-          placeholder="Enter rule or lemma..."
-          spellcheck="false"
-        />
-      </div>
+      <textarea
+        v-if="mode === 'scratchpad'"
+        :value="source"
+        @input="$emit('update:source', ($event.target as HTMLTextAreaElement).value)"
+        class="editor"
+        placeholder="Enter geometry goals..."
+        spellcheck="false"
+      />
+      <textarea
+        v-else
+        :value="currentClause"
+        @input="$emit('update:currentClause', ($event.target as HTMLTextAreaElement).value)"
+        :readonly="readOnly"
+        class="editor"
+        :class="{ readonly: readOnly }"
+        placeholder="Enter rule or lemma..."
+        spellcheck="false"
+      />
 
-      <!-- Verification marks for scratchpad and lemma predicate view -->
+      <!-- Verification gutter: sits alongside textarea, never overlaps scrollbar -->
       <div v-if="mode === 'scratchpad' || namespace === 'lemmas'" class="gutter">
         <div
           v-for="(mark, i) in verificationMarks"
           :key="i"
           class="gutter-mark"
           :class="mark.type"
-          :style="{ top: `${mark.line * 1.4 + 0.5}em` }"
+          :style="{ top: `calc(1em + ${mark.line} * 1.4em)` }"
           :title="mark.message"
         >
           {{ mark.type === 'verified' ? '✓' : mark.type === 'failed' ? '✗' : '?' }}
@@ -170,18 +168,13 @@ const verificationMarks = computed(() => {
 
 .editor-container {
   flex: 1;
-  position: relative;
+  display: flex;
+  flex-direction: row;
   overflow: hidden;
 }
 
-.editor-wrapper {
-  height: 100%;
-  position: relative;
-}
-
 .editor {
-  width: 100%;
-  height: 100%;
+  flex: 1;
   background: none;
   border: none;
   color: #c8c8e8;
@@ -189,9 +182,9 @@ const verificationMarks = computed(() => {
   font-size: 13px;
   line-height: 1.4;
   padding: 1em;
-  padding-right: 2.5em; /* space for gutter */
   outline: none;
   resize: none;
+  overflow-y: auto;
 }
 
 .editor::placeholder {
@@ -214,20 +207,18 @@ const verificationMarks = computed(() => {
 }
 
 .gutter {
-  position: absolute;
-  top: 0;
-  right: 0;
+  position: relative;
   width: 2em;
-  height: 100%;
-  pointer-events: none;
-  padding: 1em 0.5em;
+  flex-shrink: 0;
+  overflow: hidden;
+  padding-top: 1em;
 }
 
 .gutter-mark {
   position: absolute;
-  right: 0.5em;
+  right: 0.3em;
   font-size: 11px;
-  line-height: 1;
+  line-height: 1.4em;
 }
 
 .gutter-mark.verified {
