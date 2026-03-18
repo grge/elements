@@ -14,12 +14,14 @@
  */
 
 import { ref, computed } from 'vue'
-import { parseRules } from '../language/parser'
+import { parseRules, parseLemmas, type Lemma } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
 import coreGeo   from '../language/core.geo?raw'
 import euclidGeo from '../language/euclid.geo?raw'
+import lemmasGeo from '../language/lemmas.geo?raw'
 
-export type Namespace = 'core' | 'euclid' | 'user'
+export type Namespace = 'core' | 'euclid' | 'lemmas' | 'user'
+export type { Lemma }
 
 export interface UserClause {
   id: string
@@ -31,6 +33,8 @@ export interface UserClause {
 
 const coreRules   = parseRules(coreGeo)
 const euclidRules = parseRules(euclidGeo)
+const lemmaRules  = parseRules(lemmasGeo)  // auxiliary rules like 'midpoint'
+export const builtinLemmas: Lemma[] = parseLemmas(lemmasGeo)
 
 // Build index of which predicate name lives in which namespace
 const namespaceOf: Record<string, Namespace> = {}
@@ -63,7 +67,7 @@ const kb = computed<KnowledgeBase>(() => {
   const userRules = userClauses.value.flatMap(c => {
     try { return parseRules(c.source) } catch { return [] }
   })
-  return new KnowledgeBase([...coreRules, ...euclidRules, ...userRules])
+  return new KnowledgeBase([...coreRules, ...euclidRules, ...lemmaRules, ...userRules])
 })
 
 // ── Predicate index ────────────────────────────────────────────────────
@@ -156,6 +160,7 @@ export function useKB() {
     kb,
     predicates,
     userClauses,
+    builtinLemmas,
     addUserClause,
     updateUserClause,
     deleteUserClause,

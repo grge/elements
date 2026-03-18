@@ -57,7 +57,7 @@
 import { computed } from 'vue'
 import { parseSource } from '../language/parser'
 import { useKB } from '../composables/useKB'
-import { prove } from '../kb/inference'
+import { prove, forwardClosure, groundKey, type GroundPredicate } from '../kb/inference'
 
 const props = defineProps<{
   mode: 'scratchpad' | 'predicate'

@@ -12,6 +12,22 @@
         ✏ Scratchpad
       </div>
 
+      <!-- Lemmas section -->
+      <div class="ns-header" @click="showLemmas = !showLemmas">
+        <span class="ns-toggle">{{ showLemmas ? '▼' : '▶' }}</span>
+        lemmas/ 🔒
+      </div>
+      <template v-if="showLemmas">
+        <div
+          v-for="(lemma, i) in builtinLemmas"
+          :key="i"
+          class="browser-item lemma-item"
+        >
+          <span class="lemma-head">? {{ lemma.head.name }} {{ lemma.head.args.join(' ') }}</span>
+        </div>
+        <div v-if="!builtinLemmas.length" class="empty-ns">empty</div>
+      </template>
+
       <!-- Namespace groups -->
       <template v-for="ns in namespaces" :key="ns">
         <div class="ns-header" @click="toggleNS(ns)">
@@ -55,7 +71,7 @@ defineEmits<{
   newUserClause: []
 }>()
 
-const { predicates } = useKB()
+const { predicates, builtinLemmas } = useKB()
 const namespaces: Namespace[] = ['core', 'euclid', 'user']
 
 // Filter predicates by namespace - UI logic belongs here, not in composable
@@ -64,9 +80,11 @@ function predicatesInNS(ns: Namespace) {
 }
 
 // Namespace collapse state
+const showLemmas = ref(true)
 const collapsed = ref<Record<Namespace, boolean>>({
   core: false,
   euclid: false,
+  lemmas: false,
   user: false
 })
 
@@ -178,5 +196,14 @@ function toggleNS(ns: Namespace) {
   color: #666;
   font-size: 11px;
   font-style: italic;
+}
+
+.lemma-item {
+  cursor: default;
+}
+
+.lemma-head {
+  color: #9a9acf;
+  font-size: 11px;
 }
 </style>

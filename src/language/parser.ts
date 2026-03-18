@@ -188,3 +188,9 @@ export function parseGoals(text: string): Predicate[] {
     .filter((t): t is { kind: 'goal'; pred: Predicate } => t.kind === 'goal')
     .map(t => t.pred)
 }
+
+export function parseLemmas(text: string): Lemma[] {
+  return parseSource(text)
+    .filter((t): t is { kind: 'lemma'; lemma: Lemma } => t.kind === 'lemma')
+    .map(t => t.lemma)
+}
