@@ -193,7 +193,12 @@ function buildConstrainedPairs(problem: GeometryProblem, cidx: CoordIdx): Set<st
   }
   for (const circle of problem.circles) {
     const ci = cidx.get(circle.center)!
-    for (const p of circle.points) pair(ci, cidx.get(p)!)
+    const cpts = [...circle.points].map(p => cidx.get(p)!)
+    for (const cp of cpts) pair(ci, cp)
+    // also exempt circumference-to-circumference pairs on the same circle
+    for (let i = 0; i < cpts.length; i++)
+      for (let j = i + 1; j < cpts.length; j++)
+        pair(cpts[i], cpts[j])
   }
   return s
 }
