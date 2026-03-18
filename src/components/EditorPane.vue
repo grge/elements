@@ -19,6 +19,8 @@
         v-if="mode === 'scratchpad'"
         :value="source"
         @input="$emit('update:source', ($event.target as HTMLTextAreaElement).value)"
+        @scroll="onScroll"
+        ref="editorRef"
         class="editor"
         placeholder="Enter geometry goals..."
         spellcheck="false"
@@ -27,6 +29,8 @@
         v-else
         :value="currentClause"
         @input="$emit('update:currentClause', ($event.target as HTMLTextAreaElement).value)"
+        @scroll="onScroll"
+        ref="editorRef"
         :readonly="readOnly"
         class="editor"
         :class="{ readonly: readOnly }"
@@ -35,13 +39,13 @@
       />
 
       <!-- Verification gutter: sits alongside textarea, never overlaps scrollbar -->
-      <div v-if="mode === 'scratchpad' || namespace === 'lemmas'" class="gutter">
+      <div v-if="mode === 'scratchpad' || namespace === 'lemmas'" class="gutter" ref="gutterRef">
         <div
           v-for="(mark, i) in verificationMarks"
           :key="i"
           class="gutter-mark"
           :class="mark.type"
-          :style="{ top: `calc(1em + ${mark.line} * 1.4em)` }"
+          :style="{ top: `${gutterTop(mark.line)}px` }"
           :title="mark.message"
         >
           {{ mark.type === 'verified' ? '✓' : mark.type === 'failed' ? '✗' : '?' }}
@@ -52,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { parseSource } from '../language/parser'
 import { useKB } from '../composables/useKB'
 import { prove, forwardClosure, groundKey, type GroundPredicate } from '../kb/inference'
@@ -74,6 +78,28 @@ defineEmits<{
 }>()
 
 const { kb } = useKB()
+
+// Textarea and gutter refs for scroll sync
+const editorRef = ref<HTMLTextAreaElement | null>(null)
+const gutterRef = ref<HTMLDivElement | null>(null)
+const scrollTop = ref(0)
+
+function onScroll(e: Event) {
+  scrollTop.value = (e.target as HTMLTextAreaElement).scrollTop
+}
+
+// Compute mark top position in px, matching textarea font metrics exactly.
+// Textarea uses font-size 13px, line-height 1.4 (= 18.2px), padding-top 16px (1em at 16px base).
+// We measure the actual padding from the element if available, otherwise use known constants.
+const FONT_SIZE = 13   // px — must match .editor CSS
+const LINE_HEIGHT = FONT_SIZE * 1.4  // 18.2px
+
+function gutterTop(lineIndex: number): number {
+  const paddingTop = editorRef.value
+    ? parseFloat(getComputedStyle(editorRef.value).paddingTop)
+    : 13  // fallback: 1em at 13px
+  return paddingTop + lineIndex * LINE_HEIGHT - scrollTop.value
+}
 
 // Verification marks for scratchpad mode
 const verificationMarks = computed(() => {
@@ -220,7 +246,6 @@ const verificationMarks = computed(() => {
   width: 2em;
   flex-shrink: 0;
   overflow: hidden;
-  padding-top: 1em;
 }
 
 .gutter-mark {
