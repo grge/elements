@@ -1,118 +1,61 @@
 # Future Tasks
 
-This document consolidates deferred work and possible next steps after the current implementation round.
+- Clean up and polish `MainView.vue` and the remaining UI glue.
 
-It combines:
-- remaining deferred / future notes from `IMPLEMENTATION_PROGRESS.md`
-- the older “Possible Next Steps” list from `README.md`
+- Continue moving stable concepts out of `helpers.ts` into more appropriate homes as their boundaries become clearer. In particular, keep distinguishing between UI bridge code, renderer bridge code, and KB/editor logic rather than letting `helpers.ts` become a junk drawer again.
 
-The idea is to keep one future-facing backlog instead of scattering todo notes across multiple docs.
+- Replace the provisional proof-universe bootstrap via synthetic `__object__` facts with a cleaner explicit initial-universe mechanism.
 
----
+- Decide whether rich parser metadata (`docComment`, `otherComments`, `sourceRef`) should be preserved more uniformly through helper APIs rather than being dropped by `parseRules()` / `parseLemmas()`.
 
-## 1. Cleanup & Consolidation
+- Introduce a long-lived worker-side KB snapshot / versioning model for verification instead of rebuilding `KnowledgeBase` from serialized `Rule[]` on every request.
 
-### Runtime / UI cleanup
-- Further cleanup/polish around `MainView.vue` and remaining UI glue
-- Continue moving stable helper concepts out of `helpers.ts` into more appropriate homes when their boundaries are clear
-- Audit whether any remaining helper functions are really UI bridge code, renderer bridge code, or KB/editor logic
+- Add worker-side caching where it is clearly safe and worthwhile.
 
-### Proof-state cleanup
-- Replace the provisional proof-universe bootstrap via synthetic `__object__` facts with a cleaner explicit initial-universe mechanism
+- Move the numerical solver off the main thread for larger problems.
 
-### Parser / metadata cleanup
-- Consider whether rich parser metadata (`docComment`, `otherComments`, `sourceRef`) should be preserved more uniformly through helper APIs rather than being dropped by `parseRules()` / `parseLemmas()` projections
+- Revisit the geometry frontier and extraction semantics now that the runtime→geometry path has been unified.
 
----
+- Reduce or better structure geometry predicate hard-coding where appropriate.
 
-## 2. Performance & Worker Improvements
+- Reassess whether the current geometry frontier (`circle`, `between`, `collinear`, `eq-lines`, etc.) is the best long-term boundary for the drawing system.
 
-### Verification worker
-- Introduce a long-lived worker-side KB snapshot / versioning model instead of rebuilding `KnowledgeBase` from serialized `Rule[]` for every verification request
-- Add worker-side caching where it is clearly safe and worthwhile
+- Add surface filtering so internal points introduced during inference expansion can be hidden when appropriate and only top-level relevant points are shown.
 
-### Solver worker
-- Move the numerical solver off the main thread for larger problems
+- Use proven relations like `eq-dist` to drive visual annotations (for example tick marks) rather than exposing all intermediate structure.
 
----
+- Replace the textarea editor with something richer such as CodeMirror 6.
 
-## 3. Drawing / Geometry Redesign
+- Use the existing lexer/parser infrastructure as the basis for syntax highlighting.
 
-### Geometry frontier / extraction redesign
-- Revisit the geometry frontier and extraction semantics now that the runtime→geometry path has been unified
-- Reduce or better structure geometry predicate hard-coding where appropriate
-- Reassess whether the current geometry frontier (`circle`, `between`, `collinear`, `eq-lines`, etc.) is the best long-term boundary for the drawing system
+- Add inline query decorations rather than relying only on the separate gutter.
 
-### Visibility / rendering semantics
-- Surface filtering: hide internal points introduced during inference expansion and show only points named at the relevant top-level surface when appropriate
-- Lemma-driven decorations: use proven relations like `eq-dist` to drive visual annotations (e.g. tick marks) rather than exposing all intermediate structure
+- Add predicate-name completions from `useKB()`.
 
----
+- Add hover tooltips with arity, namespace, and provenance.
 
-## 4. UI / Editor Improvements
+- Add undo/redo for interactive dragging.
 
-### Editor
-- Replace the textarea with a richer editor such as CodeMirror 6
-- Use the existing lexer/parser infrastructure as the basis for syntax highlighting
-- Inline query decorations rather than separate gutter-only marks
-- Predicate-name completions from `useKB()`
-- Hover tooltips with arity / namespace / provenance
+- Add construction animation / step-by-step playback.
 
-### Interaction polish
-- Undo/redo for interactive dragging
-- Construction animation / step-by-step playback
-- SVG export
+- Add proof traces so proven queried clauses show derivation structure rather than only ✓/✗.
 
----
+- Consider compiling verified lemmas back into the knowledge base as Horn clauses for reuse, while weighing that against KB bloat and debugging complexity.
 
-## 5. Proofs / Language Evolution
+- Consider moving from “single arity per predicate name” to a true multi-arity predicate model (`foo/1` distinct from `foo/2`). This would simplify or remove some of the current arity-consistency machinery, but it is a language-design decision rather than just an implementation tweak.
 
-### Proofs
-- Proof traces: show derivation structure for proven queried clauses, not just ✓/✗
+- Explore search-based planner variants (beam search, A*, backtracking, etc.) for harder or more ambiguous constructions, and benchmark whether they are worth the added complexity compared with the current greedy planner.
 
-### Lemma compilation
-- Consider compiling verified lemmas back into the knowledge base as Horn clauses for reuse
-- Weigh this against KB bloat and debugging complexity
+- Improve solver reliability for harder circle-line, over-constrained, and betweenness-heavy constructions.
 
-### Multi-arity predicate model
-- Consider moving from “single arity per predicate name” to a true multi-arity predicate model (`foo/1` distinct from `foo/2`)
-- This would simplify or remove some current arity-consistency machinery, but it is a language-design decision, not just an implementation tweak
+- Revisit objective terms and constraint weighting if needed.
 
----
+- Support always-2-DOF dragging: when dragging starts on a currently 0-DOF point, re-run planning with that point forced free to obtain a new interactive plan.
 
-## 6. Planner / Solver Evolution
+- Improve interactive plan adaptation for exploration-heavy use.
 
-### Planner
-- Explore search-based planner variants (beam search, A*, backtracking, etc.) for harder or more ambiguous constructions
-- Benchmark whether this is worth the added complexity compared with the current greedy planner
+- Add a better “Save to library” flow so scratchpad clauses can be promoted into the user namespace more directly.
 
-### Solver
-- Improve reliability for harder circle-line / over-constrained / betweenness-heavy constructions
-- Revisit objective terms and constraint weighting if needed
+- Continue refining `.geo` conventions once naming and visibility design settle.
 
----
-
-## 7. Interaction / Construction Exploration
-
-- Always-2-DOF dragging: when dragging starts on a currently 0-DOF point, re-run planning with that point forced free to obtain a new interactive plan
-- Better interactive plan adaptation for exploration-heavy use
-
----
-
-## 8. Knowledge Base / Library UX
-
-- “Save to library” flow: promote scratchpad clauses into the user namespace more directly
-- Further `.geo` refinement once naming and visibility design settle
-- Better provenance-aware browsing and editing flows where useful
-
----
-
-## Current status note
-
-The core semantic/runtime implementation round is largely complete. What remains here is mostly:
-- cleanup
-- performance
-- geometry-system redesign
-- richer editor / proof / planner features
-
-So this file should be treated as a next-round backlog, not a list of blockers for the current architecture.
+- Improve provenance-aware browsing and editing flows where useful.
