@@ -18,21 +18,23 @@ Horn clause source text
      │
      ▼
 ┌─────────────────────────────────────────────────────┐
-│  Knowledge Base (three namespaces)                  │
+│  Knowledge Base + Runtime                           │
 │                                                     │
-│  tarski/     Tarski's axioms as Horn clauses        │
-│  euclidean/  Named constructions (circle, eq-dist…) │
-│  user/       User-defined predicates (localStorage) │
+│  core/      foundational inference rules            │
+│  euclid/    named constructions                     │
+│  lemmas/    builtin queried clauses / examples      │
+│  user/      user-defined predicates (localStorage)  │
 └─────────────────────────────────────────────────────┘
      │
-     ▼  expand via backward chaining (inference.ts)
-┌────────────────────────┐
-│  Primitive constraints │  collinear, between, on-circle, eq-dist
-└────────────────────────┘
+     ▼  unfold / closure / checker (kb/)
+┌──────────────────────────────┐
+│  Runtime ground facts        │
+│  + app-side geometry bridge  │
+└──────────────────────────────┘
      │
-     ▼  merge & deduplicate (canonicalization.ts)
+     ▼  translate to GeometryProblem (geometry/extraction.ts)
 ┌──────────────────────┐
-│  Canonical geometry  │  Line objects, Circle objects, residual constraints
+│  Canonical geometry  │  lines, circles, residual constraints
 └──────────────────────┘
      │
      ├──────────────────────────┐
@@ -40,14 +42,13 @@ Horn clause source text
 ┌──────────────┐       ┌─────────────────────┐
 │  Numerical   │       │  Construction       │
 │  Solver      │       │  Planner            │
-│  (Adam GD,   │       │  (greedy DOF,       │
-│  always runs)│       │  may fail/timeout)  │
+│              │       │                     │
 └──────────────┘       └─────────────────────┘
      │                          │
      └───────────┬──────────────┘
                  ▼
           ┌────────────┐
-          │ SVG render │  points, lines, circles, step annotations
+          │ SVG render │
           └────────────┘
 ```
 
@@ -56,23 +57,23 @@ Horn clause source text
 | File | Purpose |
 |------|---------|
 | `src/language/lexer.ts` | Tokeniser |
-| `src/language/parser.ts` | Parser — rules, goals, lemmas; returns `TopLevel[]` |
-| `src/language/basic.geo` | Basic geometric predicates as Horn clauses |
-| `src/language/tarski.geo` | Tarski axioms as Horn clauses (read-only) |
-| `src/language/euclidean.geo` | Named Euclidean constructions (read-only) |
-| `src/kb/inference.ts` | `KnowledgeBase`, `prove()`, `expandUnique()`, `forwardClosure()` |
+| `src/language/parser.ts` | Parser — rules, goals, ground queries, queried clauses; returns `TopLevel[]` |
+| `src/kb/inference.ts` | `KnowledgeBase`, `unfold()`, `forwardClosure()` |
+| `src/kb/configuration.ts` | Session/runtime configuration and proof-state support |
+| `src/kb/checker.ts` | Queried-clause and ground-query checking |
+| `src/kb/runtime.ts` | Build runtime state from parsed text |
 | `src/geometry/constraints.ts` | Shared types: `GeometryProblem`, `WitnessModel`, `Line`, `Circle` |
-| `src/geometry/extraction.ts` | Expand a goal via KB to primitive constraints |
-| `src/geometry/canonicalization.ts` | UnionFind merge → canonical Lines and Circles |
-| `src/geometry/solver.ts` | Adam gradient descent solver, multi-restart, warm-start |
-| `src/geometry/planner.ts` | Greedy construction planner, `executePlan()`, `extractParams()` |
-| `src/geometry/renderer.ts` | SVG renderer with optional step annotations |
+| `src/geometry/extraction.ts` | Translate runtime facts into a geometry problem |
+| `src/geometry/canonicalization.ts` | UnionFind merge → canonical lines and circles |
+| `src/geometry/solver.ts` | Numerical solver |
+| `src/geometry/planner.ts` | Construction planner, `executePlan()`, `extractParams()` |
 | `src/composables/useKB.ts` | Reactive KB composable, namespace tree, localStorage persistence |
-| `src/helpers.ts` | Staging area for pipeline glue and renderer/UI bridge utilities |
+| `src/helpers.ts` | Remaining renderer/UI bridge utilities |
 | `src/views/MainView.vue` | Main three-panel layout |
 | `src/components/KnowledgeBrowser.vue` | Left panel: predicate browser |
-| `src/components/EditorPane.vue` | Middle panel: clause editor + lemma gutter |
+| `src/components/EditorPane.vue` | Middle panel: clause editor + verification gutter |
 | `src/components/DiagramPane.vue` | Right panel: SVG diagram + construction plan |
+| `src/workers/lemmaCheckWorker.ts` | Worker-based progressive verification |
 
 ---
 
@@ -80,7 +81,7 @@ Horn clause source text
 
 Full Horn clause syntax. Both inline and indented-body forms are equivalent:
 
-```
+```txt
 eq-triangle a b c: circle a b c, circle b a c
 
 eq-triangle a b c:
@@ -88,20 +89,30 @@ eq-triangle a b c:
     circle b a c
 ```
 
-**Goals** are bare predicate lines (no `:`). They are drawn as diagrams.
+**Ground facts** are bare predicate lines (no `:` and no `?`):
 
-**Lemmas** use the `?` prefix — they are verified against the KB using `prove()`:
-
+```txt
+circle a b c
 ```
+
+**Ground queries** use `?` without a body:
+
+```txt
+? eq-lines a b a c
+```
+
+**Queried clauses** use `?` with a body:
+
+```txt
 ? collinear a b c: between a b c
 ```
 
-**Primitives** — the inference engine expands goals down to these; the geometry pipeline consumes them directly:
+Conceptually:
+- axioms are rules with empty bodies
+- theorems are queried clauses with empty bodies
+- the core parser distinction is between ground queries and queried clauses
 
-- `collinear A B C`
-- `between A B C`
-- `circle CENTER RADIUS_PT TARGET_PT`
-- `eq-lines A B C D`
+See `LANGUAGE.md` for the full semantic model.
 
 ---
 
@@ -109,60 +120,44 @@ eq-triangle a b c:
 
 Three-panel layout: **Predicate Browser** | **Clause Editor** | **Diagram**.
 
-**Predicate Browser** (left): namespace tree (tarski/, euclidean/, user/).
-Click a predicate to load its source and render its diagram. ✏ Scratchpad entry at top. `＋` to add
-a new user clause.
+**Predicate Browser** (left): namespace tree (`core/`, `euclid/`, `lemmas/`, `user/`).
+Click a predicate to load its source and render its diagram. Scratchpad entry at top. `＋` to add
+new user clauses.
 
 **Clause Editor** (middle): Horn clause source for the selected predicate or scratchpad. Foundation
-clauses are read-only (🔒). Lemma lines (`?`) show ✓/✗ marks in the right gutter.
+clauses are read-only. Query lines (`?`) are checked in a worker and show progressive `…` / `✓` /
+`✗` marks in the gutter.
 
 **Diagram** (right): SVG diagram of the current construction.
-- Toggle **📐** to switch between the greedy construction planner and the numerical solver.
+- Toggle **📐** to switch between the construction planner and the numerical solver.
 - When the planner succeeds, a step list is shown below the diagram and points are annotated with
   their step index.
-- **Drag** free points and 1-DOF constrained points to explore the construction interactively.
-  Intersection points (0 DOF) are fixed by their constraints and cannot be dragged.
+- Drag free points and 1-DOF constrained points to explore the construction interactively.
 
 ---
 
 ## Construction Planner
 
 The planner takes a canonical `GeometryProblem` and produces a `Plan`: an ordered sequence of
-construction steps, each with an explicit degree of freedom:
+construction steps, each with an explicit degree of freedom.
 
 | Step kind | DOF | Params |
 |-----------|-----|--------|
 | `free` | 2 | `[x, y]` |
-| `point-on-line` | 1 | `[t]` (parametric along line) |
-| `point-on-circle` | 1 | `[θ]` (angle from center) |
+| `point-on-line` | 1 | `[t]` |
+| `point-on-circle` | 1 | `[θ]` |
 | `line-line-intersection` | 0 | — |
 | `circle-circle-intersection` | 0 | `which: boolean` |
 | `circle-line-intersection` | 0 | `which: boolean` |
 
-**Algorithm:** greedy, O(n²). At each step, pick the lowest-DOF unplaced point given currently
-placed objects. When all remaining points are free (DOF=2), prefer the one that would unlock the
-most constraints. Boolean intersection choices are resolved by comparing both solutions against
-the numerical witness.
-
-**Interaction:** `extractParams()` converts a numerical witness into plan parameters. Dragging a
-point updates its parameter(s) and re-executes the plan forward, keeping all downstream
-constraints satisfied.
+The current planner is greedy and operates over the canonical geometry problem.
 
 ---
 
 ## Numerical Solver
 
-Adam gradient descent with multi-restart and warm-start.
-
-Energy terms:
-- **Gauge fix** — anchor first two points to reduce translation/rotation symmetry
-- **Collinearity** — anchor-pair formulation: perpendicular distance from line through first two sorted points
-- **Circle** — deviation from mean radius for each on-circle group
-- **Equal distance** — L2 penalty on eq-dist pairs
-- **Betweenness** — ordering penalty + collinearity
-- **Separation** — repulsion between pairs not sharing a line/circle constraint
-
-The solver is always the fallback when the planner fails or times out.
+The solver uses numerical optimization to find a witness satisfying the geometry constraints and is
+the fallback when planning fails or is disabled.
 
 ---
 
@@ -177,42 +172,6 @@ npm run build    # production build
 
 ---
 
-## Possible Next Steps
+## Future work
 
-### Rendering & Visibility
-- **Surface filtering** — hide internal points introduced during inference expansion; only show the
-  points named in the top-level goal args.
-- **Lemma-driven decorations** — proven lemmas like `eq-dist` could drive tick marks on equal
-  segments rather than drawing all intermediate geometry.
-
-### Dragging
-- **Always-2-DOF dragging** — when dragging starts on a 0-DOF intersection point, re-run the
-  planner with that point forced free to get a fresh interactive plan.
-- **Undo/redo for drag** — record param history.
-
-### Knowledge Base
-- **"Save to library"** — promote scratchpad clauses into user/ namespace with one click.
-- **`.geo` refinement** — naming and arity conventions could be tidied once visibility design is settled.
-- **CodeMirror 6 editor** — replace the textarea with a proper embedded editor. The EL2 lexer
-  (`src/language/lexer.ts`) can be adapted directly as a CodeMirror language extension — token
-  types map cleanly to CM6 highlight tags. This would unlock inline ✓/✗ decorations (marks
-  alongside the `?` line itself rather than in a separate gutter column), predicate name
-  completions sourced from `useKB()`, and hover tooltips showing arity/namespace.
-  Estimated effort: ~10–16 hours.
-
-### Proofs
-- **Proof traces** — show the backward-chaining derivation for a proven lemma, not just ✓/✗.
-
-### Planner
-- **Search-based planner** — the current greedy planner works well for typical constructions but
-  could fail on under-constrained or ambiguous problems. A proper search (beam search, A*, etc.)
-  with backtracking would handle harder cases; benchmarking would show whether it's worthwhile.
-
-### Solver
-- **Web Worker** — move Adam off the main thread for large problems.
-- **Stronger objective** — harder constructions involving circle+line intersections and
-  over-constrained betweenness still have occasional reliability issues.
-
-### Misc
-- **Construction animation** — step through the plan sequentially, highlighting each step.
-- **SVG export** — download the current diagram.
+See `FUTURE_TASKS.md` for the consolidated backlog and deferred work list.

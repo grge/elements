@@ -8,8 +8,8 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 
 import { tokenize, TokenType } from '../src/language/lexer'
-import { parseSource, parseRules, parseGoals } from '../src/language/parser'
-import { KnowledgeBase, prove, expandUnique, forwardClosure, NoRuleError, AmbiguousExpansion } from '../src/kb/inference'
+import { parseSource, parseRules, parseGoals, parseGroundQueries, parseGeoFile, validateConsistentArities } from '../src/language/parser'
+import { KnowledgeBase, prove, unfold, forwardClosure } from '../src/kb/inference'
 import { extractProblem } from '../src/geometry/extraction'
 import { canonicalise } from '../src/geometry/canonicalization'
 import { solve } from '../src/geometry/solver'
@@ -35,7 +35,7 @@ describe('lexer', () => {
     expect(toks[toks.length - 1].type).toBe(TokenType.EOF)
   })
 
-  it('handles question token for lemmas', () => {
+  it('handles question token for queries', () => {
     const toks = tokenize('? foo a')
     expect(toks[0].type).toBe(TokenType.QUESTION)
   })
@@ -55,7 +55,7 @@ describe('parser', () => {
     }
   })
 
-  it('parses an axiom (no body)', () => {
+  it('parses an axiom (no body) as a rule with empty body', () => {
     const items = parseSource('eq-lines a b b a: -')
     expect(items[0].kind).toBe('rule')
     if (items[0].kind === 'rule') {
@@ -72,6 +72,15 @@ describe('parser', () => {
     }
   })
 
+  it('parses a ground query distinctly from a queried clause', () => {
+    const items = parseSource('? eq-lines a b a c')
+    expect(items[0].kind).toBe('ground-query')
+    if (items[0].kind === 'ground-query') {
+      expect(items[0].pred.name).toBe('eq-lines')
+      expect(items[0].pred.args).toEqual(['a', 'b', 'a', 'c'])
+    }
+  })
+
   it('parses a lemma with hypotheses', () => {
     const items = parseSource('? collinear a b c: between a b c')
     expect(items[0].kind).toBe('lemma')
@@ -81,6 +90,48 @@ describe('parser', () => {
     }
   })
 
+  it('parses a theorem as a lemma with empty hypotheses', () => {
+    const items = parseSource('? collinear a a a: -')
+    expect(items[0].kind).toBe('lemma')
+    if (items[0].kind === 'lemma') {
+      expect(items[0].lemma.hypotheses).toHaveLength(0)
+    }
+  })
+
+  it('attaches preceding comment-only lines as a doc comment', () => {
+    const items = parseSource(`# about foo\n# second line\nfoo a: bar a # inline note`)
+    expect(items[0].docComment).toBe('about foo\nsecond line')
+    expect(items[0].otherComments).toEqual(['inline note'])
+  })
+
+  it('does not attach doc comments across blank lines', () => {
+    const items = parseSource(`# far away\n\nfoo a: -`)
+    expect(items[0].docComment).toBeUndefined()
+  })
+
+  it('attaches comments appearing inside an indented body block as otherComments', () => {
+    const items = parseSource(`foo a:\n    bar a # body comment`, 'block.geo')
+    expect(items[0].otherComments).toEqual(['body comment'])
+    expect(items[0].sourceRef).toEqual({ sourceName: 'block.geo', startLine: 1, endLine: 2 })
+  })
+
+  it('rejects commas in indented bodies', () => {
+    expect(() => parseSource(`eq-triangle a b c:\n    circle a b c, circle b a c`)).toThrow(/Indented bodies/)
+  })
+
+  it('rejects ground facts in .geo validation', () => {
+    expect(() => parseGeoFile('circle a b c', 'test.geo')).toThrow(/ground facts/)
+  })
+
+  it('rejects ground queries in .geo validation', () => {
+    expect(() => parseGeoFile('? circle a b c', 'test.geo')).toThrow(/ground queries/)
+  })
+
+  it('parseGroundQueries extracts only bare queried predicates', () => {
+    const queries = parseGroundQueries('? foo a\n? bar a b\n? baz a: qux a')
+    expect(queries.map(q => q.name)).toEqual(['foo', 'bar'])
+  })
+
   it('loads expected rules from core.geo and euclid.geo', () => {
     expect(foundationRules.length).toBeGreaterThan(0)
     const names = new Set(foundationRules.map(r => r.head.name))
@@ -88,37 +139,42 @@ describe('parser', () => {
     expect(names.has('eq-triangle')).toBe(true)
     expect(names.has('circle')).toBe(true)
   })
+
+  it('validates consistent arities across multiple sources', () => {
+    const a = parseGeoFile('foo x y: -', 'a.geo')
+    const b = parseGeoFile('bar q: foo a b', 'b.geo')
+    expect(() => validateConsistentArities([
+      { sourceName: 'a.geo', items: a },
+      { sourceName: 'b.geo', items: b },
+    ])).not.toThrow()
+  })
+
+  it('rejects inconsistent arities across multiple sources', () => {
+    const a = parseGeoFile('foo x y: -', 'a.geo')
+    const b = parseGeoFile('foo q: -', 'b.geo')
+    expect(() => validateConsistentArities([
+      { sourceName: 'a.geo', items: a },
+      { sourceName: 'b.geo', items: b },
+    ])).toThrow(/arity 1.*previously seen with arity 2|arity 2.*previously seen with arity 1/)
+  })
 })
 
 // ── Inference ──────────────────────────────────────────────────────────
 
 describe('inference', () => {
-  it('proves collinear from between fact', () => {
-    const goal = { name: 'collinear', args: ['a','b','c'] }
-    const facts = new Set(['between(a,b,c)'])
-    expect(prove(goal, kb, facts)).toBe(true)
-  })
-
-  it('fails to prove with no facts', () => {
-    const goal = { name: 'collinear', args: ['a','b','c'] }
-    expect(prove(goal, kb)).toBe(false)
-  })
-
-  it('proves axiom directly', () => {
-    const goal = { name: 'eq-lines', args: ['a','b','b','a'] }
-    expect(prove(goal, kb)).toBe(true)
-  })
-
-  it('throws NoRuleError for unknown predicate', () => {
+  it('unfold returns the goal itself when there is no matching rule', () => {
     const goal = { name: 'nonexistent', args: ['a'] }
-    expect(() => expandUnique(goal, kb)).toThrow(NoRuleError)
+    const result = unfold(goal, kb)
+    expect(result.frontier).toEqual([goal])
+    expect(result.expanded).toBe(false)
   })
 
-  it('expands eq-triangle to circle leaves', () => {
+  it('unfold stops at circle leaves when given a stopPred', () => {
     const goal = { name: 'eq-triangle', args: ['a','b','c'] }
-    const leaves = expandUnique(goal, kb, new Set(), p => p.name === 'circle')
-    expect([...leaves]).toContain('circle(a,b,c)')
-    expect([...leaves]).toContain('circle(b,a,c)')
+    const result = unfold(goal, kb, new Set(), { stopPred: p => p.name === 'circle' })
+    const leaves = result.frontier.map(f => `${f.name}(${f.args.join(',')})`)
+    expect(leaves).toContain('circle(a,b,c)')
+    expect(leaves).toContain('circle(b,a,c)')
   })
 
   it('forward closure derives eq-point from eq-lines axiom', () => {

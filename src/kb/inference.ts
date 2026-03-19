@@ -1,5 +1,6 @@
 /**
- * EL2 Inference Engine — unification, backward chaining, forward closure.
+ * EL2 Inference Engine — unification, backward chaining, deterministic unfolding,
+ * and forward closure.
  * Port of el2/inference.py
  */
 
@@ -76,24 +77,63 @@ function applySubst(s: Subst, pred: Predicate): GroundPredicate {
   }
 }
 
+function variablesOf(preds: readonly Predicate[]): Set<string> {
+  return new Set(preds.flatMap(pred => pred.args))
+}
+
+function isConstructiveRule(rule: Rule): boolean {
+  const bodyVars = variablesOf(rule.body)
+  return rule.head.args.every(arg => bodyVars.has(arg))
+}
+
+function headOnlyVariables(rule: Rule): string[] {
+  const bodyVars = variablesOf(rule.body)
+  return [...new Set(rule.head.args.filter(arg => !bodyVars.has(arg)))]
+}
+
+function cartesianTuples(items: readonly string[], arity: number): string[][] {
+  if (arity === 0) return [[]]
+  if (items.length === 0) return []
+  const out: string[][] = []
+  const rest = cartesianTuples(items, arity - 1)
+  for (const item of items) {
+    for (const suffix of rest) out.push([item, ...suffix])
+  }
+  return out
+}
+
+function instantiateOverUniverse(
+  rule: Rule,
+  baseSubst: Subst,
+  universe: ReadonlySet<string>,
+): GroundPredicate[] {
+  const freeVars = headOnlyVariables(rule)
+  if (freeVars.length === 0) return [applySubst(baseSubst, rule.head)]
+
+  const objs = [...universe]
+  const tuples = cartesianTuples(objs, freeVars.length)
+  const out: GroundPredicate[] = []
+  for (const tuple of tuples) {
+    const s = substClone(baseSubst)
+    for (let i = 0; i < freeVars.length; i++) s.set(freeVars[i], tuple[i])
+    out.push(applySubst(s, rule.head))
+  }
+  return out
+}
+
 // ── Unification ───────────────────────────────────────────────────────
 
-/**
- * Unify a ground predicate (goal) with a rule head (pattern).
- * Rule variables are fresh — we only bind rule vars to goal constants.
- * Returns extended substitution or null on failure.
- */
 function unify(goal: GroundPredicate, head: Predicate, s: Subst): Subst | null {
   if (goal.name !== head.name || goal.args.length !== head.args.length) return null
 
   const out = substClone(s)
   for (let i = 0; i < goal.args.length; i++) {
-    const gArg = goal.args[i]   // always a ground constant
-    const hArg = head.args[i]   // a variable name in the rule
+    const gArg = goal.args[i]
+    const hArg = head.args[i]
 
     const bound = out.get(hArg)
     if (bound !== undefined) {
-      if (bound !== gArg) return null  // conflict
+      if (bound !== gArg) return null
     } else {
       out.set(hArg, gArg)
     }
@@ -101,113 +141,78 @@ function unify(goal: GroundPredicate, head: Predicate, s: Subst): Subst | null {
   return out
 }
 
-// ── Backward Chaining ─────────────────────────────────────────────────
-
-/**
- * Depth-first backward chaining. Returns true if goal is provable.
- */
-export function prove(
-  goal: GroundPredicate,
-  kb: KnowledgeBase,
-  facts: Set<string> = new Set(),
-  depth = 1000,
-): boolean {
-  const cacheGood = new Set<string>()
-  const cacheBad  = new Set<string>()
-  const visiting  = new Set<string>()
-
-  function dfs(g: GroundPredicate, d: number): boolean {
-    if (d === 0) return false
-
-    const key = groundKey(g)
-    if (facts.has(key))      return true
-    if (cacheGood.has(key))  return true
-    if (cacheBad.has(key))   return false
-    if (visiting.has(key))   return false
-
-    visiting.add(key)
-    try {
-      for (const rule of kb.rulesWithHead(g.name)) {
-        const s = unify(g, rule.head, emptySubst())
-        if (s === null) continue
-
-        // Axiom (empty body) — succeeds immediately
-        if (rule.body.length === 0) {
-          cacheGood.add(key)
-          return true
-        }
-
-        if (rule.body.every(b => dfs(applySubst(s, b), d - 1))) {
-          cacheGood.add(key)
-          return true
-        }
-      }
-
-      cacheBad.add(key)
-      return false
-    } finally {
-      visiting.delete(key)
-    }
-  }
-
-  return dfs(goal, depth)
-}
-
 // ── Exceptions ────────────────────────────────────────────────────────
 
-export class AmbiguousExpansion extends Error {}
-export class NoRuleError       extends Error {}
-export class DepthExceeded     extends Error {}
+export class DepthExceeded extends Error {}
 
-// ── Deterministic Expansion ───────────────────────────────────────────
+// ── Deterministic Unfolding ───────────────────────────────────────────
+
+export interface UnfoldResult {
+  frontier: GroundPredicate[]
+  expanded: boolean
+}
+
+export interface UnfoldOptions {
+  stopPred?: (p: GroundPredicate) => boolean
+}
 
 /**
- * Expand goal until all leaves satisfy stopPred (i.e. are primitives).
- * Requires exactly one matching rule at each step — raises otherwise.
+ * Deterministically unfold a goal through unique, acyclic, constructive rules.
+ * Always stops on structural conditions:
+ * - cycle
+ * - branch (multiple matching rules)
+ * - non-constructive rule
+ * - no matching rule
+ * - axiom (empty body)
+ *
+ * Optionally also stops early when `stopPred(goal)` is true.
  */
-export function expandUnique(
+export function unfold(
   goal: GroundPredicate,
   kb: KnowledgeBase,
-  facts: Set<string> = new Set(),
-  stopPred: (p: GroundPredicate) => boolean = () => false,
-  depth = 25,
-): Set<string> {
-  if (stopPred(goal) || facts.has(groundKey(goal))) {
-    return new Set([groundKey(goal)])
+  visiting: Set<string> = new Set(),
+  options: UnfoldOptions = {},
+): UnfoldResult {
+  const { stopPred } = options
+  if (stopPred?.(goal)) {
+    return { frontier: [goal], expanded: false }
   }
 
-  const rules = kb.rulesWithHead(goal.name)
+  const key = groundKey(goal)
+  if (visiting.has(key)) {
+    return { frontier: [goal], expanded: false }
+  }
+
   const matches: Array<{ rule: Rule; s: Subst }> = []
-  for (const rule of rules) {
+  for (const rule of kb.rulesWithHead(goal.name)) {
     const s = unify(goal, rule.head, emptySubst())
     if (s !== null) matches.push({ rule, s })
   }
 
-  if (matches.length === 0) throw new NoRuleError(`No rules for ${groundKey(goal)}`)
-  if (matches.length > 1)   throw new AmbiguousExpansion(`Multiple rules for ${groundKey(goal)}`)
-
-  if (depth === 0) throw new DepthExceeded(`Depth exceeded expanding ${groundKey(goal)}`)
+  if (matches.length === 0) return { frontier: [goal], expanded: false }
+  if (matches.length > 1) return { frontier: [goal], expanded: false }
 
   const { rule, s } = matches[0]
 
-  // Axiom — goal is a leaf
-  if (rule.body.length === 0) {
-    return new Set([groundKey(goal)])
+  if (rule.body.length === 0) return { frontier: [goal], expanded: false }
+  if (!isConstructiveRule(rule)) return { frontier: [goal], expanded: false }
+
+  const nextVisiting = new Set(visiting)
+  nextVisiting.add(key)
+
+  const frontier: GroundPredicate[] = []
+  let expandedAny = true
+  for (const bodyPred of rule.body) {
+    const unfolded = unfold(applySubst(s, bodyPred), kb, nextVisiting, options)
+    frontier.push(...unfolded.frontier)
+    expandedAny = expandedAny || unfolded.expanded
   }
 
-  const leaves = new Set<string>()
-  for (const b of rule.body) {
-    const expanded = expandUnique(applySubst(s, b), kb, facts, stopPred, depth - 1)
-    expanded.forEach(l => leaves.add(l))
-  }
-  return leaves
+  return { frontier, expanded: expandedAny }
 }
 
 // ── Forward Closure ───────────────────────────────────────────────────
 
-/**
- * Saturate facts under all rules to a fixpoint.
- */
 export function forwardClosure(
   kb: KnowledgeBase,
   seedFacts: GroundPredicate[],
@@ -217,6 +222,10 @@ export function forwardClosure(
   const facts = new Map<string, GroundPredicate>()
   const index = new Map<string, GroundPredicate[]>()
   const agenda: GroundPredicate[] = []
+  const universe = new Set<string>()
+
+  const axioms = kb.allRules().filter(rule => rule.body.length === 0)
+  const otherRules = kb.allRules().filter(rule => rule.body.length > 0)
 
   function addFact(f: GroundPredicate): boolean {
     const key = groundKey(f)
@@ -225,11 +234,42 @@ export function forwardClosure(
     if (!index.has(f.name)) index.set(f.name, [])
     index.get(f.name)!.push(f)
     agenda.push(f)
-    return key === goalKey  // true signals early-exit
+    return key === goalKey
+  }
+
+  function processNewObjects(names: readonly string[]): boolean {
+    const fresh: string[] = []
+    for (const name of names) {
+      if (!universe.has(name)) {
+        universe.add(name)
+        fresh.push(name)
+      }
+    }
+    if (fresh.length === 0) return false
+
+    for (const rule of axioms) {
+      for (const fact of instantiateOverUniverse(rule, emptySubst(), universe)) {
+        if (addFact(fact)) return true
+      }
+    }
+
+    for (const rule of otherRules) {
+      const freeVars = headOnlyVariables(rule)
+      if (freeVars.length === 0) continue
+      for (const s of bodySatisfied(rule.body, index, emptySubst())) {
+        for (const fact of instantiateOverUniverse(rule, s, universe)) {
+          if (addFact(fact)) return true
+        }
+      }
+    }
+
+    return false
   }
 
   for (const f of seedFacts) {
-    if (addFact(f)) return [...facts.values()]
+    const hitGoal = addFact(f)
+    if (processNewObjects(f.args)) return [...facts.values()]
+    if (hitGoal) return [...facts.values()]
   }
 
   let steps = 0
@@ -237,9 +277,19 @@ export function forwardClosure(
     const fact = agenda.shift()!
 
     for (const rule of kb.rulesWithBody(fact.name)) {
+      if (rule.body.length === 0) continue
+
+      const freeVars = headOnlyVariables(rule)
       for (const s of bodySatisfied(rule.body, index, emptySubst())) {
-        const head = applySubst(s, rule.head)
-        if (addFact(head)) return [...facts.values()]
+        const derived = freeVars.length === 0
+          ? [applySubst(s, rule.head)]
+          : instantiateOverUniverse(rule, s, universe)
+
+        for (const head of derived) {
+          const hitGoal = addFact(head)
+          if (processNewObjects(head.args)) return [...facts.values()]
+          if (hitGoal) return [...facts.values()]
+        }
       }
     }
     steps++

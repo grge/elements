@@ -1,74 +1,12 @@
-import { parseRules, type TopLevel, type Rule } from './language/parser'
-import { KnowledgeBase, type GroundPredicate } from './kb/inference'
-import { extractProblem } from './geometry/extraction'
-import { canonicalise } from './geometry/canonicalization'
-import type { GeometryProblem, WitnessModel } from './geometry/constraints'
+import { parseRules } from './language/parser'
 import type { PredicateEntry, UserClause } from './composables/useKB'
 import type { Plan, ConstructionStep } from './geometry/planner'
-import type { Circle, Line } from './geometry/constraints'
-
-export interface ClauseView {
-  id: string
-  source: string
-  namespace: 'core' | 'euclid' | 'lemmas' | 'user'
-  readOnly: boolean
-}
+import type { GeometryProblem, WitnessModel } from './geometry/constraints'
 
 export interface PlannerView {
   steps: any[]
   params: number[]
   dof: number
-}
-
-function emptyProblem(): GeometryProblem {
-  return {
-    points: new Set<string>(),
-    constraints: [],
-    lines: [],
-    circles: [],
-  }
-}
-
-function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
-  return {
-    points: new Set(problems.flatMap(p => Array.from(p.points))),
-    constraints: problems.flatMap(p => p.constraints),
-    lines: problems.flatMap(p => p.lines),
-    circles: problems.flatMap(p => p.circles),
-  }
-}
-
-// This belongs in language semantics (or a language→geometry adapter), not in the UI.
-export function buildKnowledgeBase(baseKB: KnowledgeBase, parsed: TopLevel[]): KnowledgeBase {
-  const rules = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'rule' }> => item.kind === 'rule')
-    .map(item => item.rule)
-
-  return baseKB.extend(rules)
-}
-
-// This belongs in language semantics, since conjunction / multiple goals should not be merged by Vue.
-export function extractProblemFromTopLevel(parsed: TopLevel[], kb: KnowledgeBase): GeometryProblem | null {
-  const goals = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'goal' }> => item.kind === 'goal')
-    .map(item => item.pred as GroundPredicate)
-
-  if (goals.length === 0) return null
-
-  const merged = mergeProblems(goals.map(goal => extractProblem(goal, kb)))
-  canonicalise(merged)
-  return merged
-}
-
-// This belongs either in the KB/composable layer or in a dedicated editing model, not in MainView.
-export function findClauseForPredicate(
-  predName: string,
-  clausesForPredicate: (name: string) => ClauseView[],
-): ClauseView | null {
-  const clauses = clausesForPredicate(predName)
-  if (clauses.length === 0) return null
-  if (clauses.length === 1) return clauses[0]
-  return { ...clauses[0], source: clauses.map(c => c.source).join('\n\n') }
 }
 
 // This belongs in the KB/composable layer or an editing model, not in MainView.
@@ -85,30 +23,6 @@ export function findUserClauseForPredicate(predName: string, userClauses: UserCl
 export function isPredicateReadOnly(predName: string, predicates: PredicateEntry[]): boolean {
   const pred = predicates.find(p => p.name === predName)
   return pred?.readOnly ?? true
-}
-
-function predicateToGoalSource(pred: { name: string; args: string[] }): string {
-  return `${pred.name} ${pred.args.join(' ')}`
-}
-
-// This belongs in language semantics / editing semantics, not in MainView.
-// Predicate mode should not force Vue to understand rule/clause selection.
-export function diagramSourceForMode(
-  mode: 'scratchpad' | 'predicate',
-  scratchpadSource: string,
-  currentClause: string,
-): string {
-  if (mode === 'scratchpad') return scratchpadSource
-  if (!currentClause.trim()) return ''
-
-  try {
-    const rules = parseRules(currentClause)
-    const firstRule = rules[0]
-    if (!firstRule) return ''
-    return predicateToGoalSource(firstRule.head)
-  } catch {
-    return ''
-  }
 }
 
 export interface RenderTransform {

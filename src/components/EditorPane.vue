@@ -4,7 +4,6 @@
       <span v-if="mode === 'scratchpad'">Scratchpad</span>
       <span v-else>{{ selectedPred }}</span>
       
-      <!-- Predicate actions -->
       <div v-if="mode === 'predicate' && !readOnly" class="pred-actions">
         <button @click="$emit('save')" class="btn-save" title="Save">💾</button>
         <button @click="$emit('delete')" class="btn-delete" title="Delete">🗑</button>
@@ -38,7 +37,6 @@
         spellcheck="false"
       />
 
-      <!-- Verification gutter: shown whenever the text contains lemma (?) lines -->
       <div v-if="verificationMarks.length > 0" class="gutter" ref="gutterRef">
         <div
           v-for="(mark, i) in verificationMarks"
@@ -48,7 +46,7 @@
           :style="{ top: `${gutterTop(mark.line)}px` }"
           :title="mark.message"
         >
-          {{ mark.type === 'verified' ? '✓' : mark.type === 'failed' ? '✗' : '?' }}
+          {{ mark.type === 'verified' ? '✓' : mark.type === 'failed' ? '✗' : '…' }}
         </div>
       </div>
     </div>
@@ -56,10 +54,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import { parseSource } from '../language/parser'
+import { computed, ref, watch, onBeforeUnmount } from 'vue'
+import { parseSource, type Rule } from '../language/parser'
 import { useKB } from '../composables/useKB'
-import { prove, forwardClosure, groundKey, type GroundPredicate } from '../kb/inference'
+
+interface VerifyMark {
+  line: number
+  type: 'verified' | 'failed' | 'unknown'
+  message: string
+}
+
+type WorkerMessage =
+  | { requestId: number; kind: 'mark'; mark: VerifyMark }
+  | { requestId: number; kind: 'done' }
+  | { requestId: number; kind: 'error'; message: string }
 
 const props = defineProps<{
   mode: 'scratchpad' | 'predicate'
@@ -79,7 +87,28 @@ defineEmits<{
 
 const { kb } = useKB()
 
-// Textarea and gutter refs for scroll sync
+const worker = new Worker(new URL('../workers/lemmaCheckWorker.ts', import.meta.url), { type: 'module' })
+const lastRequestId = ref(0)
+const verificationMarksState = ref<VerifyMark[]>([])
+
+worker.onmessage = (event: MessageEvent<WorkerMessage>) => {
+  const data = event.data
+  if (data.requestId !== lastRequestId.value) return
+
+  if (data.kind === 'mark') {
+    verificationMarksState.value = verificationMarksState.value.map(mark =>
+      mark.line === data.mark.line ? data.mark : mark
+    )
+    return
+  }
+
+  if (data.kind === 'error') {
+    verificationMarksState.value = verificationMarksState.value.length > 0
+      ? verificationMarksState.value.map((mark, i) => i === 0 ? { ...mark, type: 'failed', message: data.message } : mark)
+      : [{ line: 0, type: 'failed', message: data.message }]
+  }
+}
+
 const editorRef = ref<HTMLTextAreaElement | null>(null)
 const gutterRef = ref<HTMLDivElement | null>(null)
 const scrollTop = ref(0)
@@ -88,67 +117,58 @@ function onScroll(e: Event) {
   scrollTop.value = (e.target as HTMLTextAreaElement).scrollTop
 }
 
-// Compute mark top position in px, matching textarea font metrics exactly.
-// Textarea uses font-size 13px, line-height 1.4 (= 18.2px), padding-top 16px (1em at 16px base).
-// We measure the actual padding from the element if available, otherwise use known constants.
-const FONT_SIZE = 13   // px — must match .editor CSS
-const LINE_HEIGHT = FONT_SIZE * 1.4  // 18.2px
+const FONT_SIZE = 13
+const LINE_HEIGHT = FONT_SIZE * 1.4
 
 function gutterTop(lineIndex: number): number {
   const paddingTop = editorRef.value
     ? parseFloat(getComputedStyle(editorRef.value).paddingTop)
-    : 13  // fallback: 1em at 13px
+    : 13
   return paddingTop + lineIndex * LINE_HEIGHT - scrollTop.value
 }
 
-// Verification marks for scratchpad mode
-const verificationMarks = computed(() => {
-  const text = props.mode === 'predicate' ? props.currentClause : props.source
-  if (!text.trim() || !kb.value) return []
+const textForVerification = computed(() => props.mode === 'predicate' ? props.currentClause : props.source)
+
+function pendingMarksFor(text: string): VerifyMark[] {
+  const lines = text.split('\n')
+  return lines
+    .map((l, i) => ({ i, isQuery: l.trimStart().startsWith('?') }))
+    .filter(x => x.isQuery)
+    .map(x => ({ line: x.i, type: 'unknown' as const, message: 'Checking…' }))
+}
+
+watch([textForVerification, () => kb.value, () => props.mode], ([text, currentKb, mode]) => {
+  if (!text.trim() || !currentKb) {
+    verificationMarksState.value = []
+    return
+  }
 
   try {
-    // Find the real line numbers of each '?' line in the source
-    const lines = text.split('\n')
-    const lemmaLineNumbers = lines
-      .map((l, i) => ({ i, isLemma: l.trimStart().startsWith('?') }))
-      .filter(x => x.isLemma)
-      .map(x => x.i)
-
     const parsed = parseSource(text)
-    const marks: Array<{ line: number; type: 'verified' | 'failed' | 'unknown'; message: string }> = []
+    const hasQuery = parsed.some(item => item.kind === 'lemma' || item.kind === 'ground-query')
+    if (!hasQuery) {
+      verificationMarksState.value = []
+      return
+    }
 
-    let lemmaIndex = 0
-    parsed.forEach((item) => {
-      if (item.kind === 'lemma') {
-        const lineNum = lemmaLineNumbers[lemmaIndex++] ?? 0
-        try {
-          const lemma = item.lemma
-          const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
-          const goal: GroundPredicate = { name: lemma.head.name, args: lemma.head.args }
-          const goalKey = groundKey(goal)
-          const closed = forwardClosure(kb.value, seeds, 2000, goalKey)
-          const factSet = new Set(closed.map(f => groundKey(f)))
-          const result = factSet.has(goalKey)
-          marks.push({
-            line: lineNum,
-            type: result ? 'verified' : 'failed',
-            message: result ? 'Verified ✓' : 'Cannot prove ✗'
-          })
-        } catch (error) {
-          marks.push({
-            line: lineNum,
-            type: 'failed',
-            message: `Error: ${error}`
-          })
-        }
-      }
+    verificationMarksState.value = pendingMarksFor(text)
+    const requestId = ++lastRequestId.value
+    worker.postMessage({
+      requestId,
+      text,
+      rules: currentKb.allRules() as Rule[],
+      mode,
     })
-
-    return marks
   } catch {
-    return []
+    verificationMarksState.value = []
   }
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  worker.terminate()
 })
+
+const verificationMarks = computed(() => verificationMarksState.value)
 </script>
 
 <style scoped>
@@ -263,5 +283,12 @@ const verificationMarks = computed(() => {
 
 .gutter-mark.unknown {
   color: #888;
+  animation: pulse 1s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.35; }
+  50% { opacity: 1; }
+  100% { opacity: 0.35; }
 }
 </style>

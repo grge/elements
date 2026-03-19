@@ -7,6 +7,7 @@
 
 # ------ eq-lines
 
+eq-point a a: -
 eq-point a b: eq-lines a b c c
 eq-lines a b b a: -
 eq-lines a b e f: eq-lines a b c d, eq-lines c d e f

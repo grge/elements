@@ -9,6 +9,7 @@ export type TokenType =
   | 'DASH'
   | 'COMMA'
   | 'QUESTION'
+  | 'COMMENT'
   | 'NEWLINE'
   | 'INDENT'
   | 'DEDENT'
@@ -20,6 +21,7 @@ export const TokenType = {
   DASH:       'DASH'       as const,
   COMMA:      'COMMA'      as const,
   QUESTION:   'QUESTION'   as const,
+  COMMENT:    'COMMENT'    as const,
   NEWLINE:    'NEWLINE'    as const,
   INDENT:     'INDENT'     as const,
   DEDENT:     'DEDENT'     as const,
@@ -39,8 +41,16 @@ export function tokenize(text: string): Token[] {
 
   for (let lineNum = 1; lineNum <= lines.length; lineNum++) {
     const raw = lines[lineNum - 1]
-    const content = raw.split('#')[0]  // strip comments
-    if (!content.trim()) continue
+    const hash = raw.indexOf('#')
+    const content = hash >= 0 ? raw.slice(0, hash) : raw
+    const comment = hash >= 0 ? raw.slice(hash + 1) : ''
+
+    if (!content.trim()) {
+      if (comment.trim()) {
+        tokens.push({ type: TokenType.COMMENT, value: comment.trim(), line: lineNum })
+      }
+      continue
+    }
 
     const stripped = content.trimStart()
     const indentLevel = content.length - stripped.length
@@ -59,6 +69,9 @@ export function tokenize(text: string): Token[] {
     }
 
     tokenizeLine(stripped, lineNum, tokens)
+    if (comment.trim()) {
+      tokens.push({ type: TokenType.COMMENT, value: comment.trim(), line: lineNum })
+    }
     tokens.push({ type: TokenType.NEWLINE, value: '\n', line: lineNum })
   }
 
@@ -85,7 +98,7 @@ function tokenizeLine(content: string, lineNum: number, out: Token[]): void {
       out.push({ type: TokenType.IDENTIFIER, value: content.slice(start, i), line: lineNum })
       continue
     }
-    i++ // skip unknown
+    i++
   }
 }
 

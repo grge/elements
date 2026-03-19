@@ -13,14 +13,14 @@
  */
 
 import { ref, computed } from 'vue'
-import { parseRules, parseLemmas, type Lemma } from '../language/parser'
+import { parseRules, parseLemmas, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
 import coreGeo   from '../language/core.geo?raw'
 import euclidGeo from '../language/euclid.geo?raw'
 import lemmasGeo from '../language/lemmas.geo?raw'
 
 export type Namespace = 'core' | 'euclid' | 'lemmas' | 'user'
-export type { Lemma }
+export type { Lemma, SourceRef }
 
 export interface UserClause {
   id: string
@@ -35,49 +35,81 @@ export interface PredicateEntry {
   arity: number
 }
 
-// A unified clause item — either a horn clause or a lemma, tagged with namespace
-interface ClauseItem {
+export interface ClauseItem {
   id: string
-  source: string       // reconstructed source text
+  source: string
   predName: string
   namespace: Namespace
   readOnly: boolean
+  sourceRef?: SourceRef
 }
 
-// ── Parse foundation files once ───────────────────────────────────────
+const coreItems = parseGeoFile(coreGeo, 'core.geo')
+const euclidItems = parseGeoFile(euclidGeo, 'euclid.geo')
+const lemmaItems = parseGeoFile(lemmasGeo, 'lemmas.geo')
+validateConsistentArities([
+  { sourceName: 'core.geo', items: coreItems },
+  { sourceName: 'euclid.geo', items: euclidItems },
+  { sourceName: 'lemmas.geo', items: lemmaItems },
+])
 
 const coreRules   = parseRules(coreGeo)
 const euclidRules = parseRules(euclidGeo)
 const lemmaRules  = parseRules(lemmasGeo)
 export const builtinLemmas: Lemma[] = parseLemmas(lemmasGeo)
 
-// Build flat clause index for builtin namespaces (core, euclid, lemmas)
 const builtinClauses: ClauseItem[] = [
-  ...coreRules.map(r   => ({ id: `core:${r.head.name}:${Math.random()}`,   source: ruleToSource(r),   predName: r.head.name, namespace: 'core'   as Namespace, readOnly: true })),
-  ...euclidRules.map(r  => ({ id: `euclid:${r.head.name}:${Math.random()}`, source: ruleToSource(r),   predName: r.head.name, namespace: 'euclid'  as Namespace, readOnly: true })),
-  ...lemmaRules.map(r   => ({ id: `lemmas:${r.head.name}:${Math.random()}`, source: ruleToSource(r),   predName: r.head.name, namespace: 'lemmas'  as Namespace, readOnly: true })),
-  ...builtinLemmas.map(l => ({ id: `lemma:${l.head.name}:${Math.random()}`, source: lemmaToSource(l),  predName: l.head.name, namespace: 'lemmas'  as Namespace, readOnly: true })),
+  ...coreItems.flatMap(item => toClauseItem(item, 'core')),
+  ...euclidItems.flatMap(item => toClauseItem(item, 'euclid')),
+  ...lemmaItems.flatMap(item => toClauseItem(item, 'lemmas')),
 ]
 
-// ── Source reconstruction ─────────────────────────────────────────────
+function withDocComment(source: string, item: TopLevel): string {
+  if (!item.docComment) return source
+  const doc = item.docComment.split('\n').map(line => `# ${line}`).join('\n')
+  return `${doc}\n${source}`
+}
 
-function ruleToSource(r: any): string {
+function ruleToSource(r: Rule): string {
   const head = `${r.head.name} ${r.head.args.join(' ')}`
   if (!r.body || r.body.length === 0) return `${head}: -`
-  const body = r.body.map((p: any) => `${p.name} ${p.args.join(' ')}`).join('\n    ')
+  const body = r.body.map((p) => `${p.name} ${p.args.join(' ')}`).join('\n    ')
   return r.body.length === 1
     ? `${head}: ${r.body[0].name} ${r.body[0].args.join(' ')}`
     : `${head}:\n    ${body}`
 }
 
-function lemmaToSource(l: any): string {
+function lemmaToSource(l: Lemma): string {
   const head = `${l.head.name} ${l.head.args.join(' ')}`
   if (!l.hypotheses || l.hypotheses.length === 0) return `? ${head}: -`
-  const hyps = l.hypotheses.map((p: any) => `${p.name} ${p.args.join(' ')}`).join(', ')
+  const hyps = l.hypotheses.map((p) => `${p.name} ${p.args.join(' ')}`).join(', ')
   return `? ${head}: ${hyps}`
 }
 
-// ── localStorage persistence ──────────────────────────────────────────
+function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
+  switch (item.kind) {
+    case 'rule':
+      return [{
+        id: `${namespace}:${item.rule.head.name}:${Math.random()}`,
+        source: withDocComment(ruleToSource(item.rule), item),
+        predName: item.rule.head.name,
+        namespace,
+        readOnly: true,
+        sourceRef: item.sourceRef,
+      }]
+    case 'lemma':
+      return [{
+        id: `lemma:${item.lemma.head.name}:${Math.random()}`,
+        source: withDocComment(lemmaToSource(item.lemma), item),
+        predName: item.lemma.head.name,
+        namespace,
+        readOnly: true,
+        sourceRef: item.sourceRef,
+      }]
+    default:
+      return []
+  }
+}
 
 const LS_KEY = 'elements2.user_clauses'
 
@@ -93,11 +125,7 @@ function saveUserClauses(clauses: UserClause[]) {
   try { localStorage.setItem(LS_KEY, JSON.stringify(clauses)) } catch {}
 }
 
-// ── Reactive state ────────────────────────────────────────────────────
-
 const userClauses = ref<UserClause[]>(loadUserClauses())
-
-// ── Derived KB ────────────────────────────────────────────────────────
 
 const kb = computed<KnowledgeBase>(() => {
   const userRules = userClauses.value.flatMap(c => {
@@ -106,21 +134,31 @@ const kb = computed<KnowledgeBase>(() => {
   return new KnowledgeBase([...coreRules, ...euclidRules, ...lemmaRules, ...userRules])
 })
 
-// ── Predicate index ───────────────────────────────────────────────────
-
 const predicates = computed<PredicateEntry[]>(() => {
   const seen = new Map<string, PredicateEntry>()
 
   for (const item of builtinClauses) {
-    if (!seen.has(`${item.namespace}:${item.predName}`))
-      seen.set(`${item.namespace}:${item.predName}`, { name: item.predName, namespace: item.namespace, readOnly: true, arity: arityOf(item) })
+    if (!seen.has(`${item.namespace}:${item.predName}`)) {
+      seen.set(`${item.namespace}:${item.predName}`, {
+        name: item.predName,
+        namespace: item.namespace,
+        readOnly: true,
+        arity: arityOf(item),
+      })
+    }
   }
   for (const c of userClauses.value) {
     try {
       for (const r of parseRules(c.source)) {
         const key = `user:${r.head.name}`
-        if (!seen.has(key))
-          seen.set(key, { name: r.head.name, namespace: 'user', readOnly: false, arity: r.head.args.length })
+        if (!seen.has(key)) {
+          seen.set(key, {
+            name: r.head.name,
+            namespace: 'user',
+            readOnly: false,
+            arity: r.head.args.length,
+          })
+        }
       }
     } catch {}
   }
@@ -131,16 +169,14 @@ const predicates = computed<PredicateEntry[]>(() => {
 })
 
 function arityOf(item: ClauseItem): number {
-  // Parse arity from reconstructed source head line
-  const firstLine = item.source.replace(/^\? /, '').split(':')[0].trim()
-  return firstLine.split(/\s+/).length - 1
+  const firstNonCommentLine = item.source.split('\n').find(line => !line.trimStart().startsWith('#')) ?? ''
+  const firstLine = firstNonCommentLine.replace(/^\? /, '').split(':')[0].trim()
+  return firstLine ? firstLine.split(/\s+/).length - 1 : 0
 }
 
 function predicatesInNS(ns: Namespace): PredicateEntry[] {
   return predicates.value.filter(p => p.namespace === ns)
 }
-
-// ── Clause lookup ─────────────────────────────────────────────────────
 
 function clausesForPredicate(name: string, ns: Namespace): ClauseItem[] {
   if (ns === 'user') {
@@ -150,8 +186,6 @@ function clausesForPredicate(name: string, ns: Namespace): ClauseItem[] {
   }
   return builtinClauses.filter(c => c.predName === name && c.namespace === ns)
 }
-
-// ── Mutations ─────────────────────────────────────────────────────────
 
 function addUserClause(source: string): UserClause {
   const clause: UserClause = { id: crypto.randomUUID(), source, namespace: 'user' }
@@ -169,8 +203,6 @@ function deleteUserClause(id: string) {
   userClauses.value = userClauses.value.filter(c => c.id !== id)
   saveUserClauses(userClauses.value)
 }
-
-// ── Singleton export ──────────────────────────────────────────────────
 
 export function useKB() {
   return {
