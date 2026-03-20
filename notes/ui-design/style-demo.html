@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Elements Style System - Sliding Tiles</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Core Palette */
+            --ink: #111317;
+            --paper: #f6f5f2;
+            --white: #ffffff;
+            --blue-700: #1f4fa8;
+            --blue-500: #3f73cf;
+            --blue-300: #89adef;
+            --red-700: #b5342f;
+            --red-500: #dd564f;
+            --red-300: #f19892;
+            --slate-700: #1e2f47;
+            --slate-500: #39547a;
+            --slate-300: #7f99bd;
+
+            /* Border system */
+            --border-main: 3px solid var(--white);
+            --border-soft: 1px solid rgba(255,255,255,0.6);
+            
+            /* Typography */
+            --font-primary: 'Inter', 'Helvetica Neue', sans-serif;
+            --font-code: 'JetBrains Mono', 'Consolas', monospace;
+            
+            /* Animation */
+            --slide-duration: 400ms;
+            --slide-ease: cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0;
+            padding: 0;
+        }
+        
+        html, body { 
+            height: 100vh;
+            overflow: hidden;
+            font-family: var(--font-primary);
+            background: var(--paper);
+        }
+
+        /* Main container with consistent borders */
+        .app-container {
+            height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr;
+            border: var(--border-main);
+            border-bottom: none;
+        }
+
+        /* Top navigation bar */
+        .nav-bar {
+            display: flex;
+            background: var(--white);
+            border-bottom: var(--border-main);
+        }
+
+        .nav-tile {
+            padding: 12px 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            font-size: 12px;
+            cursor: pointer;
+            border-right: var(--border-main);
+            background: var(--white);
+            color: var(--ink);
+            transition: all 200ms ease;
+            white-space: nowrap;
+        }
+
+        .nav-tile:hover {
+            background: var(--blue-300);
+        }
+
+        .nav-tile.active {
+            background: var(--blue-700);
+            color: var(--white);
+        }
+
+        .nav-tile:last-child {
+            border-right: none;
+            flex: 1;
+            opacity: 0.6;
+            cursor: default;
+            font-weight: 500;
+        }
+
+        .nav-tile:last-child:hover {
+            background: var(--white);
+        }
+
+        /* Content area - slides between different tiles */
+        .content-area {
+            position: relative;
+            overflow: hidden;
+            background: var(--paper);
+        }
+
+        .content-tile {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 24px;
+            transition: transform var(--slide-duration) var(--slide-ease);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .content-tile.slide-left {
+            transform: translateX(-100%);
+        }
+
+        .content-tile.slide-right {
+            transform: translateX(100%);
+        }
+
+        .content-tile.slide-up {
+            transform: translateY(-100%);
+        }
+
+        .content-tile.slide-down {
+            transform: translateY(100%);
+        }
+
+        .content-tile.active {
+            transform: translate(0, 0);
+        }
+
+        /* Typography */
+        .tile-title {
+            font-size: 32px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--ink);
+            margin-bottom: 16px;
+            border-bottom: var(--border-main);
+            border-color: var(--ink);
+            padding-bottom: 12px;
+        }
+
+        .tile-subtitle {
+            font-size: 14px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--slate-500);
+            margin-bottom: 24px;
+        }
+
+        /* Grid layouts for each tile */
+        .demo-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+        .demo-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .demo-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+        /* Content-specific styling */
+        .color-swatch {
+            min-height: 100px;
+            padding: 16px;
+            display: flex;
+            align-items: end;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            font-size: 11px;
+            font-weight: 700;
+            border: var(--border-main);
+            position: relative;
+        }
+
+        .typography-showcase {
+            background: var(--white);
+            padding: 24px;
+            border: var(--border-main);
+        }
+
+        .display { font-size: 48px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; line-height: 1; }
+        .title { font-size: 24px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; }
+        .section { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; }
+        .clause { font-family: var(--font-code); font-size: 16px; font-weight: 500; line-height: 1.5; }
+        .annotation { font-size: 12px; color: var(--slate-500); line-height: 1.4; }
+
+        .component-demo {
+            background: var(--white);
+            padding: 24px;
+            border: var(--border-main);
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .predicate-card {
+            min-height: 120px;
+            padding: 16px;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            gap: 12px;
+            text-transform: uppercase;
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            border: var(--border-main);
+            border-color: var(--slate-500);
+            cursor: pointer;
+            transition: transform 200ms ease;
+        }
+
+        .predicate-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .mini-diagram {
+            border: 2px solid currentColor;
+            position: relative;
+            background: currentColor;
+            opacity: 0.1;
+        }
+
+        .mini-diagram::before {
+            content: "";
+            position: absolute;
+            inset: 25% 30%;
+            border: 2px solid currentColor;
+            border-radius: 50%;
+            opacity: 1;
+            background: transparent;
+        }
+
+        /* Hero demo styling */
+        .hero-container {
+            position: relative;
+            min-height: 400px;
+            background: var(--blue-700);
+            border: var(--border-main);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .hero-title {
+            font-size: 64px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--white);
+            text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        }
+
+        .hero-svg {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            opacity: 0.8;
+        }
+
+        /* Navigation tile content */
+        .nav-overview {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            height: 100%;
+        }
+
+        .nav-card {
+            background: var(--white);
+            border: var(--border-main);
+            padding: 24px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            transition: all 200ms ease;
+        }
+
+        .nav-card:hover {
+            background: var(--blue-100);
+            transform: translateY(-4px);
+        }
+
+        .nav-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            margin-bottom: 8px;
+        }
+
+        .nav-card-desc {
+            font-size: 12px;
+            color: var(--slate-500);
+            line-height: 1.4;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .demo-grid-2, .demo-grid-3, .demo-grid-4 { grid-template-columns: 1fr 1fr; }
+            .nav-overview { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 700px) {
+            .demo-grid-2, .demo-grid-3, .demo-grid-4 { grid-template-columns: 1fr; }
+            .nav-overview { grid-template-columns: 1fr; }
+            .nav-bar { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            <div class="nav-tile active" onclick="navigateTo('overview')">ELEMENTS</div>
+            <div class="nav-tile" onclick="navigateTo('hero')">HERO</div>
+            <div class="nav-tile" onclick="navigateTo('colors')">COLORS</div>
+            <div class="nav-tile" onclick="navigateTo('typography')">TYPOGRAPHY</div>
+            <div class="nav-tile" onclick="navigateTo('components')">COMPONENTS</div>
+            <div class="nav-tile" onclick="navigateTo('gallery')">GALLERY</div>
+            <div class="nav-tile">Style System Demo • Sliding Tile Navigation</div>
+        </div>
+
+        <!-- Content Area -->
+        <div class="content-area">
+            <!-- Overview/Navigation Tile -->
+            <div class="content-tile active" id="overview">
+                <div class="tile-title">Elements Style System</div>
+                <div class="tile-subtitle">Navigate through different aspects of the design</div>
+                
+                <div class="nav-overview">
+                    <div class="nav-card" onclick="navigateTo('hero')">
+                        <div class="nav-card-title">Hero Entry</div>
+                        <div class="nav-card-desc">Initial experience with title overlay and geometry</div>
+                    </div>
+                    <div class="nav-card" onclick="navigateTo('colors')">
+                        <div class="nav-card-title">Color Palette</div>
+                        <div class="nav-card-desc">Materialized Byrne-inspired color system</div>
+                    </div>
+                    <div class="nav-card" onclick="navigateTo('typography')">
+                        <div class="nav-card-title">Typography</div>
+                        <div class="nav-card-desc">Scale, hierarchy, and code presentation</div>
+                    </div>
+                    <div class="nav-card" onclick="navigateTo('components')">
+                        <div class="nav-card-title">Components</div>
+                        <div class="nav-card-desc">UI elements, proof indicators, code blocks</div>
+                    </div>
+                    <div class="nav-card" onclick="navigateTo('gallery')">
+                        <div class="nav-card-title">Predicate Gallery</div>
+                        <div class="nav-card-desc">Cards with color permutations</div>
+                    </div>
+                    <div class="nav-card" style="opacity: 0.4;">
+                        <div class="nav-card-title">More Coming</div>
+                        <div class="nav-card-desc">Interactions, animations, layouts</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hero Entry Point Tile -->
+            <div class="content-tile slide-right" id="hero">
+                <div class="tile-title">Hero Entry Point</div>
+                <div class="tile-subtitle">First impression with title overlay</div>
+                
+                <div class="hero-container">
+                    <div class="hero-title">ELEMENTS</div>
+                    <svg class="hero-svg" viewBox="0 0 600 300">
+                        <circle cx="150" cy="200" r="100" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2" />
+                        <circle cx="450" cy="200" r="100" fill="none" stroke="rgba(221,86,79,0.8)" stroke-width="2" />
+                        <line x1="150" y1="200" x2="450" y2="200" stroke="rgba(255,255,255,0.9)" stroke-width="2" />
+                        <line x1="150" y1="200" x2="300" y2="70" stroke="rgba(255,255,255,0.9)" stroke-width="2" />
+                        <line x1="450" y1="200" x2="300" y2="70" stroke="rgba(255,255,255,0.9)" stroke-width="2" />
+                        
+                        <circle cx="150" cy="200" r="8" fill="#dd564f" stroke="white" stroke-width="2" />
+                        <circle cx="450" cy="200" r="8" fill="#dd564f" stroke="white" stroke-width="2" />
+                        <circle cx="300" cy="70" r="8" fill="#dd564f" stroke="white" stroke-width="2" />
+                        
+                        <text x="140" y="225" fill="white" font-family="var(--font-primary)" font-size="16" font-weight="700">A</text>
+                        <text x="460" y="225" fill="white" font-family="var(--font-primary)" font-size="16" font-weight="700">B</text>
+                        <text x="295" y="60" fill="white" font-family="var(--font-primary)" font-size="16" font-weight="700">C</text>
+                    </svg>
+                </div>
+
+                <div class="demo-grid-2" style="margin-top: auto;">
+                    <div style="background: var(--white); padding: 16px; border: var(--border-main);">
+                        <strong>Interaction Sequence:</strong><br>
+                        1. Hero construction fills screen<br>
+                        2. "ELEMENTS" title overlaid<br>
+                        3. User clicks/drags geometry<br>
+                        4. Title fades out<br>
+                        5. Top bar slides in<br>
+                        6. Code view appears
+                    </div>
+                    <div style="background: var(--white); padding: 16px; border: var(--border-main);">
+                        <strong>Design Goals:</strong><br>
+                        • Immediate visual impact<br>
+                        • Clear entry point<br>
+                        • Smooth transition to UI<br>
+                        • Poster-like aesthetic
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colors Tile -->
+            <div class="content-tile slide-down" id="colors">
+                <div class="tile-title">Color System</div>
+                <div class="tile-subtitle">Materialized palette based on Byrne's approach</div>
+                
+                <div class="demo-grid-4">
+                    <div class="color-swatch" style="background:var(--blue-700);color:#fff">
+                        <div>Blue 700<br>#1F4FA8</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--blue-500);color:#fff">
+                        <div>Blue 500<br>#3F73CF</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--blue-300);color:var(--ink)">
+                        <div>Blue 300<br>#89ADEF</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--white);color:var(--ink);border-color:var(--ink)">
+                        <div>White<br>#FFFFFF</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--red-700);color:#fff">
+                        <div>Red 700<br>#B5342F</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--red-500);color:#fff">
+                        <div>Red 500<br>#DD564F</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--red-300);color:var(--ink)">
+                        <div>Red 300<br>#F19892</div>
+                    </div>
+                    <div class="color-swatch" style="background:var(--paper);color:var(--ink)">
+                        <div>Paper<br>#F6F5F2</div>
+                    </div>
+                </div>
+
+                <div class="demo-grid-2">
+                    <div style="background: var(--white); padding: 24px; border: var(--border-main);">
+                        <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Usage Principles</h3>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Blue:</strong> Primary geometric elements, UI accents</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Red:</strong> Secondary elements, errors, points</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Slate:</strong> Text, neutral elements</p>
+                        <p style="font-size: 14px;"><strong>Palette permutations</strong> distinguish contexts</p>
+                    </div>
+                    <div style="background: var(--slate-700); color: white; padding: 24px; border: var(--border-main);">
+                        <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Context Modes</h3>
+                        <p style="margin-bottom: 12px; font-size: 14px;">Default: Blue-dominant</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;">Scratchpad: Purple shift</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;">Error: Red shift</p>
+                        <p style="font-size: 14px;">Gallery: Mixed permutations</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typography Tile -->
+            <div class="content-tile slide-left" id="typography">
+                <div class="tile-title">Typography System</div>
+                <div class="tile-subtitle">Hierarchy without losing graphic voice</div>
+                
+                <div class="demo-grid-2">
+                    <div class="typography-showcase">
+                        <div class="display">ELEMENTS</div>
+                        <div class="title">Eq-Triangle A B C</div>
+                        <div class="section">Construction</div>
+                        <div class="clause">eq-triangle a b c:</div>
+                        <div class="clause">  circle a b c</div>
+                        <div class="clause">  circle b a c</div>
+                        <div class="annotation">Proof trace available • open in boffin panel</div>
+                    </div>
+                    <div style="background: var(--white); padding: 24px; border: var(--border-main);">
+                        <h3 style="margin-bottom: 16px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Scale & Usage</h3>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Display (48px):</strong> Hero titles, main branding</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Title (24px):</strong> Predicate names, sections</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Section (13px):</strong> Category labels</p>
+                        <p style="margin-bottom: 12px; font-size: 14px;"><strong>Clause (16px):</strong> Code content</p>
+                        <p style="font-size: 14px;"><strong>Annotation (12px):</strong> Secondary info</p>
+                    </div>
+                </div>
+
+                <div style="background: var(--blue-700); color: white; padding: 24px; border: var(--border-main); margin-top: auto;">
+                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Typography Principles</h3>
+                    <p style="font-size: 14px; line-height: 1.5;">All-caps for headers and navigation • Code uses monospace in reading/editing modes • Letter-spacing for poster aesthetic • Strong weight hierarchy • Generous line-height for readability</p>
+                </div>
+            </div>
+
+            <!-- Components Tile -->
+            <div class="content-tile slide-up" id="components">
+                <div class="tile-title">Component System</div>
+                <div class="tile-subtitle">UI elements with consistent styling</div>
+                
+                <div class="demo-grid-2">
+                    <div class="component-demo">
+                        <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase;">Code Blocks</h3>
+                        <div style="background: rgba(248,250,252,0.95); padding: 20px; border: var(--border-soft);">
+                            <div style="font-family: var(--font-code); margin-bottom: 4px;">eq-triangle a b c:</div>
+                            <div style="font-family: var(--font-code); margin-bottom: 4px;">  circle a b c</div>
+                            <div style="font-family: var(--font-code);">  circle b a c</div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--slate-500);">Reading mode - floating over diagram</div>
+                    </div>
+                    <div class="component-demo">
+                        <h3 style="font-size: 14px; font-weight: 700; text-transform: uppercase;">With Proof Indicators</h3>
+                        <div style="background: var(--white); padding: 20px; border: 2px solid var(--blue-700);">
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                                <div style="width: 16px; height: 16px; background: var(--blue-700); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">✓</div>
+                                <div style="font-family: var(--font-code);">eq-triangle a b c:</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 4px;">
+                                <div style="width: 16px; height: 16px; background: var(--blue-700); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">✓</div>
+                                <div style="font-family: var(--font-code);">  circle a b c</div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 12px;">
+                                <div style="width: 16px; height: 16px; background: var(--slate-300); color: var(--slate-700); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700;">⋯</div>
+                                <div style="font-family: var(--font-code);">  circle b a c</div>
+                            </div>
+                        </div>
+                        <div style="font-size: 12px; color: var(--slate-500);">Editing mode - margin-locked with gutter</div>
+                    </div>
+                </div>
+
+                <div style="background: var(--paper); padding: 24px; border: var(--border-main); margin-top: auto;">
+                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Component Principles</h3>
+                    <p style="font-size: 14px; line-height: 1.5;">White borders for tiling aesthetic • Consistent padding and spacing • Color-coded states • Hover effects with subtle transforms • Proof indicators in consistent positions • Mode-aware presentations</p>
+                </div>
+            </div>
+
+            <!-- Gallery Tile -->
+            <div class="content-tile slide-down" id="gallery">
+                <div class="tile-title">Predicate Gallery</div>
+                <div class="tile-subtitle">Color permutation examples</div>
+                
+                <div class="demo-grid-4">
+                    <div class="predicate-card" style="background:var(--white);color:var(--ink)">
+                        <div>EQ-TRIANGLE</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Core Construction</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--blue-700);color:#fff">
+                        <div>CIRCLE</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Primitive</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--white);color:var(--red-700)">
+                        <div>EQ-LINES</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Construction</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--ink);color:#f3f3f3">
+                        <div>MIDPOINT</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">User-Defined</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--slate-500);color:#fff">
+                        <div>PARALLEL</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Construction</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--red-500);color:#fff">
+                        <div>CONSTRUCT</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Template</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--white);color:var(--blue-700)">
+                        <div>ANGLE-BISECT</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Construction</div>
+                    </div>
+                    <div class="predicate-card" style="background:var(--blue-300);color:var(--ink)">
+                        <div>PERP-BISECT</div>
+                        <div class="mini-diagram"></div>
+                        <div style="font-size: 10px; opacity: 0.7;">Construction</div>
+                    </div>
+                </div>
+
+                <div style="background: var(--red-700); color: white; padding: 24px; border: var(--border-main); margin-top: auto;">
+                    <h3 style="margin-bottom: 12px; font-size: 16px; font-weight: 700; text-transform: uppercase;">Gallery Principles</h3>
+                    <p style="font-size: 14px; line-height: 1.5;">Each predicate gets unique color permutation • Mini diagrams hint at construction • Categories guide color choices • Hover interactions provide feedback • Cards navigate to predicate views</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTile = 'overview';
+        
+        function navigateTo(tileId) {
+            if (tileId === currentTile) return;
+            
+            // Update nav bar active state
+            document.querySelectorAll('.nav-tile').forEach(tile => {
+                tile.classList.remove('active');
+            });
+            document.querySelector(`[onclick="navigateTo('${tileId}')"]`).classList.add('active');
+            
+            // Hide current tile
+            const current = document.getElementById(currentTile);
+            current.classList.remove('active');
+            
+            // Determine slide direction based on navigation
+            const directions = {
+                overview: { left: [], right: ['hero'], up: [], down: ['colors'] },
+                hero: { left: ['overview'], right: [], up: [], down: ['typography'] },
+                colors: { left: [], right: ['typography'], up: ['overview'], down: ['gallery'] },
+                typography: { left: ['colors'], right: ['components'], up: ['hero'], down: [] },
+                components: { left: ['typography'], right: [], up: [], down: [] },
+                gallery: { left: [], right: [], up: ['colors'], down: [] }
+            };
+            
+            const currentDirs = directions[currentTile];
+            let slideClass = 'slide-right'; // default
+            
+            if (currentDirs.left.includes(tileId)) slideClass = 'slide-left';
+            else if (currentDirs.right.includes(tileId)) slideClass = 'slide-right';
+            else if (currentDirs.up.includes(tileId)) slideClass = 'slide-up';
+            else if (currentDirs.down.includes(tileId)) slideClass = 'slide-down';
+            
+            current.classList.add(slideClass);
+            
+            // Show new tile
+            setTimeout(() => {
+                const next = document.getElementById(tileId);
+                
+                // Remove all slide classes and make active
+                next.classList.remove('slide-left', 'slide-right', 'slide-up', 'slide-down');
+                next.classList.add('active');
+                
+                currentTile = tileId;
+            }, 50);
+        }
+        
+        // Add click handlers for predicate cards
+        document.querySelectorAll('.predicate-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const name = card.querySelector('div').textContent;
+                console.log('Navigate to predicate:', name);
+            });
+        });
+        
+        // Add click handlers for nav cards
+        document.querySelectorAll('.nav-card').forEach(card => {
+            const title = card.querySelector('.nav-card-title').textContent.toLowerCase();
+            const mapping = {
+                'hero entry': 'hero',
+                'color palette': 'colors',
+                'typography': 'typography',
+                'components': 'components',
+                'predicate gallery': 'gallery'
+            };
+            if (mapping[title]) {
+                card.addEventListener('click', () => navigateTo(mapping[title]));
+            }
+        });
+    </script>
+</body>
+</html>

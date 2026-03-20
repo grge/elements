@@ -48,6 +48,8 @@
 
 - Improve solver reliability for harder circle-line, over-constrained, and betweenness-heavy constructions.
 
+- Fix the current `between` pipeline mismatch across extraction, canonicalisation, planning, dragging, and rendering. In particular: ensure betweenness contributes canonical line structure where appropriate, preserve the ordering constraint separately from mere collinearity, and add an explicit visual indication for `between`. See `notes/BETWEEN_DIAGNOSIS.md`.
+
 - Revisit objective terms and constraint weighting if needed.
 
 - Support always-2-DOF dragging: when dragging starts on a currently 0-DOF point, re-run planning with that point forced free to obtain a new interactive plan.

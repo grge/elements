@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Elements UI Style Exploration</title>
+  <style>
+    :root {
+      --ink: #111317;
+      --paper: #f6f5f2;
+      --white: #ffffff;
+
+      /* Stronger, less bland / less ochre */
+      --blue-700: #1f4fa8;
+      --blue-500: #3f73cf;
+      --blue-300: #89adef;
+
+      --red-700: #b5342f;
+      --red-500: #dd564f;
+      --red-300: #f19892;
+
+      --slate-700: #1e2f47;
+      --slate-500: #39547a;
+      --slate-300: #7f99bd;
+
+      --line-strong: 2px;
+      --line-soft: 1px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      font-family: "Inter", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    /* Full-bleed tile system (no floating card page) */
+    .tile {
+      width: 100%;
+      border-top: var(--line-strong) solid var(--ink);
+      padding: 16px 20px;
+    }
+    .tile:first-of-type { border-top: none; }
+
+    .t-white { background: var(--white); }
+    .t-paper { background: var(--paper); }
+    .t-blue  { background: var(--blue-700); color: #fff; }
+    .t-red   { background: var(--red-700); color: #fff; }
+    .t-ink   { background: var(--ink); color: #f3f3f3; }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: auto auto 1fr;
+      border-bottom: var(--line-strong) solid var(--ink);
+    }
+    .topbar > div {
+      padding: 10px 14px;
+      border-right: var(--line-soft) solid rgba(0,0,0,0.35);
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 750;
+      font-size: 12px;
+    }
+    .topbar > div:last-child { border-right: none; opacity: 0.8; font-weight: 600; }
+
+    h1, h2, h3 { margin: 0 0 10px; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.1; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 20px; }
+    h3 { font-size: 13px; }
+    p, li { line-height: 1.45; }
+
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+    .chip {
+      display: inline-block;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-size: 10px;
+      padding: 2px 6px;
+      border: var(--line-soft) solid currentColor;
+    }
+
+    .swatch {
+      min-height: 96px;
+      padding: 10px;
+      display: flex;
+      align-items: end;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      font-size: 11px;
+      font-weight: 700;
+      border: var(--line-soft) solid rgba(0,0,0,0.28);
+    }
+
+    .pair {
+      min-height: 110px;
+      padding: 10px;
+      display: grid;
+      align-content: space-between;
+      border: var(--line-soft) solid rgba(0,0,0,0.22);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .figure {
+      height: 260px;
+      position: relative;
+      overflow: hidden;
+      border: var(--line-soft) solid rgba(0,0,0,0.28);
+      background: var(--blue-700);
+    }
+    .figure.light { background: #fff; }
+    .circle {
+      position: absolute;
+      width: 220px;
+      height: 220px;
+      border-radius: 999px;
+      border: var(--line-strong) solid rgba(255,255,255,0.95);
+    }
+    .figure.light .circle { border-color: var(--ink); }
+    .pt { position: absolute; width: 10px; height: 10px; border-radius: 999px; background: var(--red-500); }
+    .label { position: absolute; font-weight: 800; font-size: 17px; color: var(--red-300); }
+
+    .type-demo {
+      border: var(--line-soft) solid rgba(0,0,0,0.28);
+      background: #fff;
+      padding: 12px;
+    }
+    .display { font-size: 30px; font-weight: 850; text-transform: uppercase; letter-spacing: 0.04em; }
+    .title { font-size: 20px; font-weight: 760; text-transform: uppercase; letter-spacing: 0.04em; }
+    .section { font-size: 13px; font-weight: 730; text-transform: uppercase; letter-spacing: 0.05em; }
+    .clause { font-size: 16px; font-weight: 560; }
+    .annotation { font-size: 13px; color: #444; }
+
+    .index-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+    .card {
+      min-height: 120px;
+      padding: 10px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 8px;
+      text-transform: uppercase;
+      font-size: 11px;
+      font-weight: 750;
+      letter-spacing: 0.04em;
+      border: var(--line-soft) solid rgba(0,0,0,0.25);
+    }
+    .mini { border: var(--line-soft) solid currentColor; position: relative; }
+    .mini::before {
+      content: "";
+      position: absolute;
+      inset: 20% 25%;
+      border: var(--line-soft) solid currentColor;
+      border-radius: 999px;
+      opacity: 0.85;
+    }
+
+    .do-dont { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .good, .bad { padding: 12px; border: var(--line-soft) solid rgba(0,0,0,0.24); }
+    .good { background: #fff; }
+    .bad { background: #eceff3; }
+
+    @media (max-width: 900px) {
+      .grid-2, .grid-3, .grid-4, .index-grid, .do-dont { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 700px) {
+      .grid-2, .grid-3, .grid-4, .index-grid, .do-dont { grid-template-columns: 1fr; }
+      .topbar { grid-template-columns: 1fr; }
+      .topbar > div { border-right: none; border-bottom: var(--line-soft) solid rgba(0,0,0,0.22); }
+    }
+  </style>
+</head>
+<body>
+  <div class="topbar t-white">
+    <div>Elements</div>
+    <div>Style Exploration</div>
+    <div>full-bleed tiles • stronger palette • lighter border language</div>
+  </div>
+
+  <section class="tile t-white">
+    <h1>Keep • Drop • Transform</h1>
+    <div class="grid-3">
+      <div>
+        <h3>Keep</h3>
+        <ul>
+          <li>Bold colour combinations</li>
+          <li>Thicker diagram line style</li>
+          <li>Poster/index energy</li>
+          <li>All-caps identity</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Drop</h3>
+        <ul>
+          <li>Digital-looking primaries</li>
+          <li>Clunky block heaviness</li>
+          <li>Flat one-style typography</li>
+          <li>Missed annotation treatment</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Transform</h3>
+        <ul>
+          <li>Materialized blue/red family</li>
+          <li>Permutation-driven figure/ground</li>
+          <li>Hierarchy without losing graphic voice</li>
+          <li>Detail layers without sludge</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile t-paper">
+    <h2>Palette (No sand family)</h2>
+    <div class="grid-4">
+      <div class="swatch" style="background:var(--blue-700);color:#fff">Blue 700 · #1F4FA8</div>
+      <div class="swatch" style="background:var(--blue-500);color:#fff">Blue 500 · #3F73CF</div>
+      <div class="swatch" style="background:var(--blue-300);color:#111">Blue 300 · #89ADEF</div>
+      <div class="swatch" style="background:var(--slate-700);color:#fff">Slate 700 · #1E2F47</div>
+
+      <div class="swatch" style="background:var(--red-700);color:#fff">Red 700 · #B5342F</div>
+      <div class="swatch" style="background:var(--red-500);color:#fff">Red 500 · #DD564F</div>
+      <div class="swatch" style="background:var(--red-300);color:#111">Red 300 · #F19892</div>
+      <div class="swatch" style="background:#fff;color:#111">White · #FFFFFF</div>
+    </div>
+  </section>
+
+  <section class="tile t-blue">
+    <h2>Permutation Language (Figure / Ground / Highlight)</h2>
+    <div class="grid-4">
+      <div class="pair" style="background:var(--blue-700);color:#fff"><span class="chip">A</span><div>Eq-triangle A B C</div></div>
+      <div class="pair" style="background:#fff;color:var(--blue-700)"><span class="chip">B</span><div>Eq-triangle A B C</div></div>
+      <div class="pair" style="background:var(--red-700);color:#fff"><span class="chip">C</span><div>Eq-lines A B C D</div></div>
+      <div class="pair" style="background:#fff;color:var(--red-700)"><span class="chip">D</span><div>Eq-lines A B C D</div></div>
+      <div class="pair" style="background:var(--ink);color:#f3f3f3"><span class="chip">E</span><div>Midpoint A B M</div></div>
+      <div class="pair" style="background:var(--slate-500);color:#fff"><span class="chip">F</span><div>Circle A B C</div></div>
+      <div class="pair" style="background:#fff;color:var(--ink)"><span class="chip">G</span><div>Parallel A B C D</div></div>
+      <div class="pair" style="background:var(--blue-300);color:#111"><span class="chip">H</span><div>Construct A B C</div></div>
+    </div>
+  </section>
+
+  <section class="tile t-white">
+    <div class="grid-2">
+      <div>
+        <h2>Diagram Weight</h2>
+        <div class="figure">
+          <div class="circle" style="left:42%;top:16%"></div>
+          <div class="circle" style="left:60%;top:16%"></div>
+          <div class="pt" style="left:58%;top:58%"></div>
+          <div class="pt" style="left:68%;top:58%"></div>
+          <div class="pt" style="left:63%;top:25%"></div>
+          <div class="label" style="left:56%;top:61%">A</div>
+          <div class="label" style="left:70%;top:61%">B</div>
+          <div class="label" style="left:64%;top:18%">C</div>
+        </div>
+      </div>
+      <div>
+        <h2>Typography Hierarchy</h2>
+        <div class="type-demo">
+          <div class="display">Elements</div>
+          <div class="title">Eq-Triangle A B C</div>
+          <div class="section">Construction</div>
+          <div class="clause">CIRCLE A B C</div>
+          <div class="clause">CIRCLE B A C</div>
+          <div class="annotation">Proof trace available · open in boffin panel</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="tile t-red">
+    <h2>Index / Catalogue Grid</h2>
+    <div class="index-grid">
+      <div class="card" style="background:#fff;color:var(--ink)"><div>Eq-Triangle</div><div class="mini"></div></div>
+      <div class="card" style="background:var(--blue-700);color:#fff"><div>Circle</div><div class="mini"></div></div>
+      <div class="card" style="background:#fff;color:var(--red-700)"><div>Eq-Lines</div><div class="mini"></div></div>
+      <div class="card" style="background:var(--ink);color:#f3f3f3"><div>Midpoint</div><div class="mini"></div></div>
+      <div class="card" style="background:#fff;color:var(--blue-700)"><div>Parallel</div><div class="mini"></div></div>
+      <div class="card" style="background:var(--slate-500);color:#fff"><div>Angle-Bisect</div><div class="mini"></div></div>
+      <div class="card" style="background:#fff;color:var(--ink)"><div>Perp-Bisect</div><div class="mini"></div></div>
+      <div class="card" style="background:var(--red-500);color:#fff"><div>Construct</div><div class="mini"></div></div>
+    </div>
+  </section>
+
+  <section class="tile t-paper">
+    <h2>Detail Layer: Do / Don’t</h2>
+    <div class="do-dont">
+      <div class="good">
+        <h3>Do</h3>
+        <p><strong>Proof trace</strong></p>
+        <p class="annotation">Step 03 · eq-lines(A,B,C,D) from circle(A,B,C) + circle(B,A,D)</p>
+        <p class="annotation">Step 04 · triangle(C,A,B) congruent to triangle(D,B,A)</p>
+        <p class="annotation">Compact, typographic, planar.</p>
+      </div>
+      <div class="bad">
+        <h3>Don’t</h3>
+        <p class="annotation">Nested boxes, weak hierarchy, and decorative utility chrome that muddies the poster language.</p>
+      </div>
+    </div>
+  </section>
+</body>
+</html>
