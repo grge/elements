@@ -22,6 +22,10 @@
 
 - Add surface filtering so internal points introduced during inference expansion can be hidden when appropriate and only top-level relevant points are shown.
 
+- **Embedded Lemma Syntax**: Add `?` query markers within Horn clause bodies to directly attach derived properties to their originating constructions. This creates tight coupling between constructions and their key properties for both knowledge organization and rendering. See `notes/EMBEDDED_LEMMA_SYNTAX.md`.
+
+- **Progressive Rendering with Weights**: Implement priority-based layered rendering where derived properties (embedded queries) get highest prominence, construction methods get medium prominence, and guide lines are least prominent. Priorities adjust automatically based on construction nesting depth. Requires structured unfold preserving derivation trees, priority-aware canonicalization, and contextual detail revelation via hover/click interactions. See `notes/PROGRESSIVE_RENDERING_WEIGHTS.md`.
+
 - Use proven relations like `eq-dist` to drive visual annotations (for example tick marks) rather than exposing all intermediate structure.
 
 - Replace the textarea editor with something richer such as CodeMirror 6.
