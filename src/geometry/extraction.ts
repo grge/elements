@@ -4,6 +4,7 @@
  */
 
 import { KnowledgeBase, unfold, type GroundPredicate } from '../kb/inference'
+import { FreshNames } from '../kb/names'
 import type { RuntimeState } from '../kb/runtime'
 import type {
   GeometryProblem, Constraint,
@@ -43,6 +44,9 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
         middle: goal.args[1],
         endpoints: [goal.args[0], goal.args[2]],
       } satisfies BetweenConstraint)
+      // Betweenness implies collinearity; state it so the canonical line structure exists
+      // for the planner and renderer. The order constraint above is kept separately.
+      constraints.push({ kind: 'collinear', points: [...goal.args] } satisfies CollinearConstraint)
       break
 
     case 'circle':
@@ -80,9 +84,11 @@ export function extractProblem(goal: GroundPredicate, kb: KnowledgeBase): Geomet
 export function frontierFactsFromRuntime(runtime: RuntimeState): GroundPredicate[] {
   const facts = runtime.configuration.allFacts()
   const frontier = new Map<string, GroundPredicate>()
+  // Shared across facts: two constructions in one drawing must not share auxiliary points.
+  const fresh = new FreshNames()
 
   for (const fact of facts) {
-    for (const pred of unfold(fact, runtime.kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name) }).frontier) {
+    for (const pred of unfold(fact, runtime.kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh }).frontier) {
       frontier.set(`${pred.name}(${pred.args.join(',')})`, pred)
     }
   }
@@ -90,12 +96,17 @@ export function frontierFactsFromRuntime(runtime: RuntimeState): GroundPredicate
   return [...frontier.values()]
 }
 
-export function geometryProblemFromRuntime(runtime: RuntimeState): GeometryProblem | null {
-  const goals = frontierFactsFromRuntime(runtime)
-  if (goals.length === 0) return null
-  const merged = mergeProblems(goals.map(problemFromPrimitive))
+/** Build the canonical problem from drawable facts; facts the renderer cannot draw are skipped. */
+export function geometryProblemFromFacts(facts: readonly GroundPredicate[]): GeometryProblem | null {
+  const drawable = facts.filter(f => GEOMETRY_FRONTIER.has(f.name))
+  if (drawable.length === 0) return null
+  const merged = mergeProblems(drawable.map(problemFromPrimitive))
   canonicalise(merged)
   return merged
+}
+
+export function geometryProblemFromRuntime(runtime: RuntimeState): GeometryProblem | null {
+  return geometryProblemFromFacts(frontierFactsFromRuntime(runtime))
 }
 
 export function seedPredicateHeadFact(head: GroundPredicate): GroundPredicate {
