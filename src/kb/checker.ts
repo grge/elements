@@ -1,6 +1,8 @@
 import type { Lemma, Predicate } from '../language/parser'
 import { Configuration } from './configuration'
-import { forwardClosure, groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
+import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
+import { saturate } from './saturate'
+import { FreshNames } from './names'
 
 export type CheckResult = 'verified' | 'not-provable' | 'invalid-query'
 
@@ -26,11 +28,13 @@ function runCheckPipeline(
   kb: KnowledgeBase,
   maxSteps: number,
 ): CheckResponse {
-  const frontier = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb).frontier))
-  const facts = forwardClosure(kb, frontier, maxSteps, groundKey(goal))
+  // One supply of fresh names for the whole check, so auxiliaries of different hypotheses stay distinct.
+  const fresh = new FreshNames()
+  const frontier = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
+  const sat = saturate(kb, frontier, { goal, maxDerivations: maxSteps * 100 })
   return {
-    result: facts.some(f => groundKey(f) === groundKey(goal)) ? 'verified' : 'not-provable',
-    facts,
+    result: sat.holds(goal) ? 'verified' : 'not-provable',
+    facts: sat.allFacts(),
   }
 }
 

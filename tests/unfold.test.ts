@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseRules } from '../src/language/parser'
 import { KnowledgeBase, unfold, groundKey, type GroundPredicate } from '../src/kb/inference'
+import { FreshNames } from '../src/kb/names'
 
 function keys(preds: GroundPredicate[]): string[] {
   return preds.map(groundKey).sort()
@@ -54,22 +55,39 @@ describe('unfold', () => {
     expect(result.expanded).toBe(false)
   })
 
-  it('stops at non-constructive rules', () => {
+  it('unfolds a head-only variable definition to a fresh existential', () => {
+    // foo x  iff  there is some b with bar b
     const kb = new KnowledgeBase(parseRules(`foo a: bar b`))
-    const goal = { name: 'foo', args: ['x'] }
-    const result = unfold(goal, kb)
-    expect(keys(result.frontier)).toEqual(['foo(x)'])
-    expect(result.expanded).toBe(false)
+    const result = unfold({ name: 'foo', args: ['x'] }, kb)
+    expect(keys(result.frontier)).toEqual(['bar(b#1)'])
   })
 
-  it('stops on cycles', () => {
+  it('never treats recursive clauses as definitions', () => {
     const kb = new KnowledgeBase(parseRules(`
       foo a: bar a
       bar a: foo a
     `))
     const result = unfold({ name: 'foo', args: ['x'] }, kb)
     expect(keys(result.frontier)).toEqual(['foo(x)'])
-    expect(result.expanded).toBe(true)
+    expect(result.expanded).toBe(false)
+  })
+
+  it('gives auxiliary objects fresh names that cannot capture the caller\'s names', () => {
+    const kb = new KnowledgeBase(parseRules(`
+      apex a b: tri d a b
+      tri a b c: side a b, side b c, side a c
+    `))
+    // The caller uses the name d too; the definition's own d must stay distinct from it.
+    const result = unfold({ name: 'apex', args: ['p', 'd'] }, kb)
+    expect(keys(result.frontier)).toEqual(['side(d#1,d)', 'side(d#1,p)', 'side(p,d)'])
+  })
+
+  it('keeps auxiliaries of separate unfoldings apart when they share a name supply', () => {
+    const kb = new KnowledgeBase(parseRules(`apex a b: tri d a b`))
+    const fresh = new FreshNames()
+    const one = unfold({ name: 'apex', args: ['p', 'q'] }, kb, new Set(), { fresh }).frontier
+    const two = unfold({ name: 'apex', args: ['r', 's'] }, kb, new Set(), { fresh }).frontier
+    expect(keys([...one, ...two])).toEqual(['tri(d#1,p,q)', 'tri(d#2,r,s)'])
   })
 
   it('substitutes arguments correctly across multiple layers', () => {

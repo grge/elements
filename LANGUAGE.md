@@ -39,13 +39,16 @@ We define a **configuration** to mean the session-level pair of universe + fact 
 The model-theoretic interpretation is:
 
 ```
-? H : B   holds iff  H ∈ least model of K ∪ {B}
-? H       holds iff  H ∈ least model of K ∪ F,  where F is the current ground fact set
+? H : B   holds iff  H ∈ least model of comp(K) ∪ {B}
+? H       holds iff  H ∈ least model of comp(K) ∪ F,  where F is the current ground fact set
 ```
 
-where `K` denotes the knowledge base.
+where `K` denotes the knowledge base and `comp(K)` reads every **defined** predicate as
+if-and-only-if (see [Definitions](#definitions)): from `eq-triangle a b c` we may conclude
+`circle a b c`, not only the other way round. All other clauses are one-way implications.
 
-Although note that the current checker is a sound but incomplete implementation of this semantics, so failure to prove a lemma does not necessarily mean it is false in the model.
+The checker is a sound but incomplete implementation of this semantics, so failure to prove a lemma
+does not necessarily mean it is false in the model.
 
 ---
 
@@ -59,7 +62,7 @@ The language operates at two levels:
 
 ### Theory/Schema Level
 - **Rules:** `eq-triangle a b c: circle a b c, circle b a c`
-- **Axioms:** `eq-points a a: -`
+- **Axioms:** `eq-point a a: -`
 - **Lemmas:** `? eq-lines a b a c: circle a b c`
 - **Theorems:** `? between a a b: -`
 
@@ -102,12 +105,12 @@ eq-triangle a b c:
 An axiom is a Horn clause with no body. We use `-` to explicitly indicate that there is no body:
 
 ```
-eq-points a a: -
+eq-point a a: -
 ```
 
 This asserts that every point is equal to itself.
 
-**Semantics:** Axioms represent universally quantified rules: for all objects `a`, `eq-points a a` holds.
+**Semantics:** Axioms represent universally quantified rules: for all objects `a`, `eq-point a a` holds.
 
 Axioms are treated as invariants over objects: whenever a new object `x` is introduced, all applicable axiom instances are added automatically.
 
@@ -190,11 +193,43 @@ Consider the Horn clause: `eq-triangle a b c: circle a b c, circle b a c`
 
 **Backward chaining** means starting with a predicate like `eq-triangle a b c` and replacing it with the conjunction `circle a b c, circle b a c`, then repeating this procedure recursively for each predicate in the conjunction until we reach a natural stopping point.
 
-**Definitional predicates** (those with a unique, acyclic clause definition) are automatically unfolded via backward chaining. This can be employed as:
+**Defined predicates** (see [Definitions](#definitions)) are automatically unfolded via backward chaining. This can be employed as:
 - **Proof strategy:** "To prove `eq-triangle a b c`, replace that goal with two new goals: `circle a b c` and `circle b a c`"
 - **Construction strategy:** "To construct a witness for `eq-triangle a b c`, construct witnesses for `circle a b c` and `circle b a c`"
 
-Predicates with multiple Horn clauses, cyclic definitions, or head variables that don't appear in the body represent frontier points where deterministic unfolding stops. These become the foundation for forward chaining.
+Predicates without a definition are where unfolding stops. These become the foundation for forward chaining.
+
+### Definitions
+
+The language has one clause form, but a clause can play two roles: a **definition** (read as
+if-and-only-if) or a one-way **implication**. There is no syntax for the difference; the definition of
+a predicate is recognised:
+
+> A predicate is **defined** by clause `D` when `D` has a non-empty body, `D` is not recursive (the
+> predicate is not reachable from `D`'s own body through the rules), and every other clause for the
+> predicate is provable from `D`. When several clauses qualify, the first in source order is used.
+> Every other predicate is **open**: it is derived, never unfolded.
+
+This is exactly the condition under which the completion of all of a predicate's clauses is a single
+conjunction, i.e. still Horn. Consequences:
+
+- A predicate's only clause is its definition. `tall x: giraffe x` on its own says that being tall
+  *means* being a giraffe; if that is not intended, it is an error in the knowledge base, not in the
+  engine. Write definitions as definitions.
+- Adding a clause that follows from the definition (e.g. the true symmetry
+  `eq-triangle a b c: eq-triangle b c a`) never changes the meaning of anything.
+- Adding a weaker clause (`eq-triangle a b c: circle a b c`) makes it the definition, because that is
+  what the clauses now say together.
+- Genuinely alternative clauses leave the predicate open.
+- Axioms about a predicate in terms of itself (common notion 3 for `eq-lines`) are recursive, so they
+  are never mistaken for definitions.
+
+**Auxiliary objects.** Variables that occur in a definition's body but not its head are existential:
+the definition of `copy-segment a l b c` mentions an apex `d` and a point `g` that exist whenever the
+construction does. Every unfolding gives them fresh names (`d#1`, `g#1`, … shown as `d₁`, `g₁`). `#`
+starts a comment, so these never collide with names a user can write, and two constructions in one
+figure never share auxiliary points. A lemma cannot refer to a construction's auxiliary points: in
+`? eq-lines d a d b: copy-segment a l b c`, `d` is an arbitrary new point.
 
 **Forward chaining** means starting with one or more facts and inferring new facts via Horn clauses. If ground facts successfully unify with the body of a Horn clause in the knowledge base, we can add the corresponding head predicate to our fact set.
 
@@ -204,25 +239,21 @@ Predicates with multiple Horn clauses, cyclic definitions, or head variables tha
 
 ### Lemma Checking Procedure
 
-During lemma checking, the system treats a predicate occurrence as deterministically unfoldable if it matches exactly one clause head and unfolding would not introduce a cycle. Such predicates are expanded by backward chaining. All remaining predicates form the frontier from which forward closure is computed.
+To check a lemma:
 
-In other words, to check a lemma:
+1. **Unfold** every hypothesis through definitions, giving auxiliary objects fresh names, until only
+   open predicates remain (or the goal would repeat).
+2. **Forward chaining:** compute the closure of the unfolded facts under all clauses.
+3. **Check:** verify that the head is in the closure.
 
-1. **Backward chaining:** expand predicates deterministically and acyclically, unfolding definitions until we can't continue
-2. **Stopping conditions:** stop back-chaining on a predicate when we detect:
-   - **Cycle:** the predicate appears earlier in the expansion chain
-   - **Branch:** the predicate is the head of more than one clause
-   - **Non-constructive rule:** the predicate has head variables that don't appear in the body (e.g. `foo a: bar b`): after matching the goal to the head, some body variables remain unbound and unification cannot proceed.
-3. **Forward chaining:** compute the closure from the unfolded set of predicates
-4. **Check:** verify that the head is in the closure
-
-This approach dispenses with the previous notion of "primitive predicates" entirely. The boundary between backward and forward chaining emerges naturally from the structure of the knowledge base itself.
+There is no notion of "primitive predicates": the boundary between unfolding and forward chaining
+comes from the knowledge base itself (which predicates are defined).
 
 In practice we don't need to compute the full closure — we can stop early and return success as soon as we see the head.
 
 ### Axioms and Theorems
 
-Axioms and theorems (clauses with no body) require slightly specialised treatment during inference. An axiom like `eq-points a a: -` would never be invoked during ordinary forward chaining since it has no body to match against. Similarly, a theorem like `? eq-points a a: -` cannot get started via forward chaining since there are no predicates to initiate the inference procedure.
+Axioms and theorems (clauses with no body) require slightly specialised treatment during inference. An axiom like `eq-point a a: -` would never be invoked during ordinary forward chaining since it has no body to match against. Similarly, a theorem like `? eq-point a a: -` cannot get started via forward chaining since there are no predicates to initiate the inference procedure.
 
 To handle these cases:
 1. Introduce abstract objects corresponding to the variables in the theorem's head
@@ -242,7 +273,7 @@ Concretely, forward chaining handles such rules as follows:
 - When a fact matching the body is first derived, assert the head for all currently known objects
 - Whenever a new object is introduced into the universe, re-check whether any such triggered rules apply and assert the corresponding head facts
 
-This is consistent with the axiom treatment: an axiom `eq-points a a: -` is just the degenerate case where the body is empty, so the trigger fires immediately on object introduction rather than waiting for a matching fact.
+This is consistent with the axiom treatment: an axiom `eq-point a a: -` is just the degenerate case where the body is empty, so the trigger fires immediately on object introduction rather than waiting for a matching fact.
 
 ---
 
@@ -282,12 +313,12 @@ Ground queries, by contrast, are checked against the existing session configurat
 
 The previous design had a hardcoded set of "primitive predicates" as the boundary between backward and forward chaining. This was ad hoc and made it difficult to extend the language to new domains. That notion has been dispensed with entirely.
 
-Instead, the boundary emerges naturally from the knowledge base structure:
+Instead, the boundary emerges from the knowledge base: defined predicates are unfolded, open ones are
+not (see [Definitions](#definitions)). The geometry primitives (`collinear`, `between`, `eq-lines`,
+`eq-point`) are simply open predicates: each has several clauses, or only recursive ones.
 
-- **Deterministic unfolding:** backward chain on predicates that have a unique, acyclic definition
-- **Natural stopping points:** stop when encountering cycles or branches (multiple clause heads for the same predicate)
-
-The previous hardcoded predicates (`collinear`, `between`, `eq-lines`) were simply the predicates where branching happened to occur in the geometry knowledge base — a special case of this general principle.
+The drawing layer does have a list of predicates it knows how to draw. That list belongs to the
+renderer, not to the logic.
 
 ## Variable Quantification
 
@@ -302,29 +333,54 @@ The semantics are: "if `bar b` holds for any `b`, then `foo a` holds for any `a`
 
 **Inference behaviour for head-only variables:**
 
-- **Backward chaining:** we refuse to backward chain on a predicate if it has head variables that don't appear in the body — there is no way to construct such an instance. We treat these as branching points where backward chaining stops.
+- **Unfolding:** if `foo a: bar b` is the definition of `foo`, then `foo x` unfolds to `bar b#1`: some
+  `b` with `bar b` exists. The head-only variable `a` simply does not occur in the body.
 - **Forward chaining:** `foo a: bar b` acts more like a triggered invariant. As soon as any instance of `bar b` is seen, `foo a` is added for every existing object `a` — and for any object introduced in the future.
 
-Variables that appear in the body but not the head are common in geometric constructions (e.g. an intermediate construction point that is needed to build a result but not named in the goal). Both forward and backward chaining handle these without difficulty.
+Variables that appear in the body but not the head are common in geometric constructions (an
+intermediate point that is needed to build a result but not named in the goal). When a definition is
+unfolded they become fresh auxiliary objects; see [Definitions](#definitions).
 
 ## Negation and Failure
 
 Only positive Horn clauses are supported; there is no negation-as-failure.
 
-Because backward chaining is deterministic (no branch exploration), a lemma that fails to check does not mean the head is false — only that it is not provable via this procedure. For a stable, well-structured knowledge base, failure may well be actually falsity in every case, but the engine does not guarantee this.
+A lemma that fails to check is not necessarily false, only not provable by this procedure (for
+example, a fact true in every configuration but whose proof needs a case split, or a run that hit the
+derivation budget).
 
 ## Equality
 
-`eq-points` and similar predicates are ordinary predicates — there is no built-in notion of equality, rewriting, or substitution. It is up to the user to write Horn clauses capturing the desired properties (reflexivity, symmetry, transitivity, congruence).
+`eq-point` and similar predicates are ordinary predicates, and their properties are ordinary Horn
+clauses written in the knowledge base (reflexivity, symmetry, transitivity, substitution into other
+predicates). Those clauses are the whole meaning.
+
+For speed, the engine **recognises** such structure by proving it from each predicate's own clauses
+(on fresh constants, so the proof holds for every instance):
+
+- a binary relation that is an equivalence and admits substitution into argument positions of other
+  predicates is used as **the equality**: objects are kept in classes, and those positions are stored
+  as class representatives;
+- a relation of arity 2k that is an equivalence between its first and last k arguments (such as
+  `eq-lines`, on unordered pairs) is kept as classes of argument tuples;
+- a relation invariant under permuting its arguments (such as `between` or `collinear`) is stored in
+  a canonical order.
+
+Clauses that this structure already implies are not fired; all others are. The result is the same
+closure the clauses define, so nothing is privileged: another knowledge base with an equivalence and
+symmetric relations of its own gets the same treatment. See `src/kb/structure.ts` and
+`src/kb/saturate.ts`.
 
 ## Recursion and Termination
 
-Cycle detection in the lemma checking procedure handles recursive definitions naturally. When backward chaining encounters a predicate that appears earlier in the expansion chain, it stops expanding that branch.
+A recursive clause is never a definition, so unfolding cannot loop; recursive clauses are used only
+by forward chaining.
 
 Forward chaining is robust in the presence of recursive rules because, over a finite set of object names, repeated rule application reaches a least fixpoint after finitely many new facts have been added.
 
 ## Lemma Compilation
 
-Once a lemma has been checked, it could be added to the knowledge base as a Horn clause, enabling its reuse in forward chaining and potentially improving inference efficiency. The tradeoff is knowledge base bloat and harder debugging.
-
-This is a likely future direction, but not currently implemented.
+Once a lemma has been checked, it could be added to the knowledge base as a Horn clause, enabling its
+reuse in forward chaining. For a defined predicate this is already safe: a clause that follows from
+the definition never changes the predicate's meaning (see [Definitions](#definitions)). The tradeoff
+is knowledge base bloat and harder debugging. Not currently done automatically.

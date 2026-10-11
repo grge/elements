@@ -9,7 +9,8 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { parseRules, parseLemmas } from '../src/language/parser'
-import { KnowledgeBase, forwardClosure, prove, groundKey, type GroundPredicate } from '../src/kb/inference'
+import { KnowledgeBase } from '../src/kb/inference'
+import { checkLemma } from '../src/kb/checker'
 
 // ── Build KB ──────────────────────────────────────────────────────────
 
@@ -30,7 +31,13 @@ const lemmas = parseLemmas(lemmasGeo)
 // core semantics because the corresponding rule was too strong / ambiguous.
 
 const expectedFalse = new Set([
-  'eq-triangle a b c: eq-lines a b a c, eq-lines a b b c',
+  'eq-point a b: eq-lines a c b c',
+  'eq-lines a l a b: copy-segment a l b c',
+  'eq-lines a e b c: march a b c d e',
+  'between a b d: vesica a b c d',
+  'eq-lines a x a b: cut-segment a b x c d',
+  // Known gap: true only for a != c; the language has no inequality yet.
+  'collinear a b d: between a b c, collinear a c d',
   'collinear a c d: collinear a b c, collinear a b d',
   'eq-point a b: -',
   'between a b c: collinear a b c',
@@ -41,12 +48,8 @@ const expectedFalse = new Set([
 
 // ── Helper ────────────────────────────────────────────────────────────
 
-function checkLemma(lemma: typeof lemmas[0]): boolean {
-  const seeds: GroundPredicate[] = lemma.hypotheses.map(h => ({ name: h.name, args: h.args }))
-  const goal = { name: lemma.head.name, args: lemma.head.args }
-  const closed = forwardClosure(kb, seeds, 2000, groundKey(goal))
-  const factSet = new Set(closed.map(f => groundKey(f)))
-  return factSet.has(groundKey(goal))
+function checkLemmaProvable(lemma: typeof lemmas[0]): boolean {
+  return checkLemma(lemma, kb).result === 'verified'
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────
@@ -62,11 +65,11 @@ describe('lemmas', () => {
 
     if (isNegative) {
       it(`✗ ? ${head}: ${hyps} (should not be provable)`, () => {
-        expect(checkLemma(lemma)).toBe(false)
+        expect(checkLemmaProvable(lemma)).toBe(false)
       }, 10000)
     } else {
       it(`✓ ? ${head}: ${hyps}`, () => {
-        expect(checkLemma(lemma)).toBe(true)
+        expect(checkLemmaProvable(lemma)).toBe(true)
       }, 10000)
     }
   })

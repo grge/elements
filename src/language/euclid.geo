@@ -1,4 +1,4 @@
-# Euclidean constructions — expanded via backward chaining to primitives.
+# Euclidean constructions — expanded to primitives by unfolding.
 #
 # Primitives: collinear, between, eq-lines
 # The circle predicate is defined here in terms of eq-lines.
@@ -30,16 +30,39 @@ eq-triangle a b c:
     circle a b c
     circle b a c
 
-# P2 — from point a, draw line a-b equal to line c-d
-copy-segment a b c d:
-    eq-triangle o a c
-    collinear o a e
-    collinear o a f
-    circle c d x
-    circle o x b
+# I.2 — from point a, draw a segment a-l equal to the segment b-c.
+#
+# Build the equilateral triangle d a b on the segment from a to b. Draw the circle about b
+# through c; it meets the line d-b, extended beyond b, at g. Draw the circle about d through g;
+# it meets the line d-a, extended beyond a, at l. Then a-l = b-g = b-c.
+#
+# `between` (not mere collinearity) chooses the extension of each line, which is what makes the
+# construction work wherever a, b and c happen to lie.
+copy-segment a l b c:
+    eq-triangle d a b
+    circle b c g
+    between d b g
+    circle d g l
+    between d a l
 
-# P3 — from line a-b, cut off segment a-x with length equal to c-d
+# I.3 — from the segment a-b, cut off a-x equal to the shorter segment c-d.
 cut-segment a b x c d:
-    copy-segment a y c d
-    circle a y x
+    copy-segment a l c d
+    circle a l x
     between a x b
+
+# Doubling a segment: extend a-b beyond b to c with b-c = a-b.
+double a b c:
+    circle b a c
+    between a b c
+
+# Two equilateral triangles on opposite sides of a-b: the four sides a-c, b-c, a-d, b-d are equal.
+vesica a b c d:
+    eq-triangle a b c
+    eq-triangle a b d
+
+# Marching a compass along a line: five equally spaced points in order.
+march a b c d e:
+    double a b c
+    double b c d
+    double c d e

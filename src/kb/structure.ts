@@ -1,0 +1,176 @@
+/**
+ * Recognising structure in ordinary rules.
+ *
+ * Some rule sets have a shape that a fast engine can implement with a data structure instead of by
+ * firing the rules: an equivalence relation (union-find), substitution of equals (rewriting to class
+ * representatives), symmetry under permuting arguments (a canonical argument order). Nothing is
+ * declared: each property is PROVEN from the predicate's own rules with the plain reference engine
+ * (`forwardClosure`), on fresh constants. Rules have no constants, so a derivation on fresh constants
+ * is a derivation for every instance; the recognition is exact, not a heuristic.
+ *
+ * The rules stay the meaning. `saturate` uses this structure only to compute the same closure faster,
+ * and skips exactly those rules the structure already implies (see `saturate.ts`).
+ *
+ * Nothing here knows any predicate name; geometry is just one knowledge base that has such structure.
+ */
+
+import type { Rule } from '../language/parser'
+import { KnowledgeBase, forwardClosure, groundKey, type GroundPredicate } from './inference'
+import { fingerprint, Lru } from './rules'
+
+/** A relation between two blocks of k arguments, [0, k) and [k, 2k), that is an equivalence. */
+export interface Equivalence {
+  k: number
+  /** Permutations of a block that preserve the relation (always includes the identity). */
+  blockGroup: number[][]
+}
+
+export interface Structure {
+  arity: Map<string, number>
+  /** Block equivalences, including the equality itself (k = 1). */
+  equivalences: Map<string, Equivalence>
+  /** A binary equivalence whose classes may be substituted into other predicates, if there is one. */
+  equality: string | null
+  /** Per predicate: the argument positions into which equals may be substituted. */
+  congruent: Map<string, boolean[]>
+  /** Per predicate (not an equivalence): permutations of its arguments it is invariant under. */
+  symmetries: Map<string, number[][]>
+}
+
+const MAX_SYMMETRY_ARITY = 5
+const MAX_BLOCK = 4
+
+function permutations(n: number): number[][] {
+  if (n === 0) return [[]]
+  const out: number[][] = []
+  for (const p of permutations(n - 1)) {
+    for (let i = 0; i <= p.length; i++) out.push([...p.slice(0, i), n - 1, ...p.slice(i)])
+  }
+  return out
+}
+
+const isIdentity = (p: number[]) => p.every((x, i) => x === i)
+const consts = (prefix: string, n: number) => Array.from({ length: n }, (_, i) => `${prefix}${i}`)
+const apply = (perm: number[], args: readonly string[]) => perm.map(i => args[i])
+
+// Proofs depend only on the fragment of rules used, so they are shared between knowledge bases that
+// differ elsewhere (e.g. while definitions.ts tries alternative definitions).
+const proofCache = new Lru<boolean>(20_000)
+const structureCache = new Lru<Structure>(16)
+
+function proves(rules: Rule[], seeds: GroundPredicate[], goal: GroundPredicate): boolean {
+  if (rules.length === 0) return false
+  const key = `${fingerprint(rules)}\n⊢ ${seeds.map(groundKey).join(' ')} → ${groundKey(goal)}`
+  const hit = proofCache.get(key)
+  return hit ?? proofCache.set(key, provesUncached(rules, seeds, goal))
+}
+
+function provesUncached(rules: Rule[], seeds: GroundPredicate[], goal: GroundPredicate): boolean {
+  const objects = [...new Set([...seeds.flatMap(s => s.args), ...goal.args])]
+    .map(o => ({ name: '__object__', args: [o] }))
+  const kb = new KnowledgeBase(rules, { definitions: new Map() })
+  const key = groundKey(goal)
+  return forwardClosure(kb, [...seeds, ...objects], 20_000, key).some(f => groundKey(f) === key)
+}
+
+export function analyseStructure(rules: readonly Rule[]): Structure {
+  const key = fingerprint(rules)
+  return structureCache.get(key) ?? structureCache.set(key, analyse(rules))
+}
+
+function analyse(rules: readonly Rule[]): Structure {
+  const arity = new Map<string, number>()
+  for (const r of rules) for (const a of [r.head, ...r.body]) if (!arity.has(a.name)) arity.set(a.name, a.args.length)
+
+  /** Rules for p that mention nothing but p. */
+  const own = (p: string) => rules.filter(r => r.head.name === p && r.body.every(b => b.name === p))
+  const atom = (name: string, args: string[]): GroundPredicate => ({ name, args })
+
+  // ── equivalences on argument blocks ──
+  const equivalences = new Map<string, Equivalence>()
+  for (const [p, n] of arity) {
+    if (n === 0 || n % 2 !== 0) continue
+    const k = n / 2
+    const fragment = own(p)
+    if (fragment.length === 0 || k > MAX_BLOCK) continue
+    const [a, b, c] = [consts('a', k), consts('b', k), consts('c', k)]
+    const isEquivalence =
+      proves(fragment, [], atom(p, [...a, ...a])) &&
+      proves(fragment, [atom(p, [...a, ...b])], atom(p, [...b, ...a])) &&
+      proves(fragment, [atom(p, [...a, ...b]), atom(p, [...b, ...c])], atom(p, [...a, ...c]))
+    if (!isEquivalence) continue
+    const blockGroup = permutations(k).filter(perm =>
+      isIdentity(perm) || proves(fragment, [atom(p, [...a, ...b])], atom(p, [...apply(perm, a), ...b])))
+    equivalences.set(p, { k, blockGroup })
+  }
+
+  // ── the equality: a binary equivalence that other predicates admit substitution for ──
+  const congruenceFor = (eq: string): Map<string, boolean[]> => {
+    const eqRules = own(eq)
+    const out = new Map<string, boolean[]>()
+    for (const [q, n] of arity) {
+      if (q === eq) { out.set(q, [true, true]); continue }
+      const fragment = [
+        ...eqRules,
+        ...rules.filter(r => r.head.name === q && r.body.every(b => b.name === q || b.name === eq)),
+      ]
+      const args = consts('a', n)
+      out.set(q, args.map((_, i) => {
+        const moved = [...args]; moved[i] = 'x'
+        return proves(fragment, [atom(q, args), atom(eq, ['x', args[i]])], atom(q, moved))
+      }))
+    }
+    return out
+  }
+  let equality: string | null = null
+  let congruent = new Map<string, boolean[]>()
+  let best = -1
+  for (const [p, e] of equivalences) {
+    if (e.k !== 1) continue
+    const c = congruenceFor(p)
+    const count = [...c.values()].reduce((s, mask) => s + mask.filter(Boolean).length, 0)
+    if (count > best) { best = count; equality = p; congruent = c }
+  }
+  for (const [p, n] of arity) if (!congruent.has(p)) congruent.set(p, Array(n).fill(false))
+
+  // Substituting into some positions of an argument block but not others would make canonical
+  // forms inconsistent; such relations are left to their rules.
+  for (const p of [...equivalences.keys()]) {
+    if (p === equality) continue
+    const mask = congruent.get(p)!
+    if (!mask.every(m => m === mask[0])) equivalences.delete(p)
+  }
+
+  // ── symmetries of the remaining predicates ──
+  const symmetries = new Map<string, number[][]>()
+  for (const [p, n] of arity) {
+    if (equivalences.has(p) || n < 2 || n > MAX_SYMMETRY_ARITY) continue
+    const fragment = own(p)
+    if (fragment.length === 0) continue
+    const args = consts('a', n)
+    const mask = congruent.get(p)!
+    const group = permutations(n).filter(perm =>
+      // Only permutations that map substitutable positions to substitutable ones.
+      perm.every((j, i) => mask[j] === mask[i]) &&
+      (isIdentity(perm) || proves(fragment, [atom(p, args)], atom(p, apply(perm, args)))))
+    if (group.length > 1) symmetries.set(p, group)
+  }
+
+  return { arity, equivalences, equality, congruent, symmetries }
+}
+
+/** A short human-readable account of what was recognised, for the UI and for debugging. */
+export function describeStructure(s: Structure): string[] {
+  const out: string[] = []
+  if (s.equality) {
+    const into = [...s.congruent].filter(([p, m]) => p !== s.equality && m.some(Boolean))
+      .map(([p, m]) => m.every(Boolean) ? p : `${p} (positions ${m.map((x, i) => x ? i + 1 : 0).filter(Boolean).join(', ')})`)
+    out.push(`${s.equality}: equality${into.length ? `, substitutable into ${into.join(', ')}` : ''}`)
+  }
+  for (const [p, e] of s.equivalences) {
+    if (p === s.equality) continue
+    out.push(`${p}: equivalence between ${e.k}-tuples${e.blockGroup.length > 1 ? ` (${e.blockGroup.length} orderings of a tuple are the same)` : ''}`)
+  }
+  for (const [p, g] of s.symmetries) out.push(`${p}: invariant under ${g.length - 1} argument permutation${g.length > 2 ? 's' : ''}`)
+  return out
+}

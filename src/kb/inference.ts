@@ -1,22 +1,32 @@
 /**
- * EL2 Inference Engine — unification, backward chaining, deterministic unfolding,
- * and forward closure.
- * Port of el2/inference.py
+ * Inference — the knowledge base, unfolding of definitions, and the reference forward closure.
+ *
+ * `forwardClosure` is the plain, generic Datalog-style engine. It is the reference semantics; the
+ * checker uses `saturate` (saturate.ts), which computes the same closure faster.
  */
 
 import type { Predicate, Rule } from '../language/parser'
+import { analyseDefinitions, type DefinitionStatus } from './definitions'
+import { FreshNames } from './names'
 
 // ── Knowledge Base ────────────────────────────────────────────────────
+
+export interface KnowledgeBaseOptions {
+  /** Precomputed definitional status (skips the analysis; used while the analysis itself runs). */
+  definitions?: Map<string, DefinitionStatus>
+}
 
 export class KnowledgeBase {
   private rules: Rule[]
   private byHead: Map<string, Rule[]>
   private byBody: Map<string, Rule[]>
+  private definitionStatus: Map<string, DefinitionStatus> | undefined
 
-  constructor(rules: Rule[]) {
+  constructor(rules: Rule[], options: KnowledgeBaseOptions = {}) {
     this.rules = rules
     this.byHead = new Map()
     this.byBody = new Map()
+    this.definitionStatus = options.definitions
 
     for (const rule of rules) {
       const h = rule.head.name
@@ -44,6 +54,17 @@ export class KnowledgeBase {
 
   extend(rules: Rule[]): KnowledgeBase {
     return new KnowledgeBase([...this.rules, ...rules])
+  }
+
+  /** Definitional status of every predicate with clauses (see definitions.ts). Computed lazily. */
+  definitions(): Map<string, DefinitionStatus> {
+    return this.definitionStatus ??= analyseDefinitions(this.rules)
+  }
+
+  /** The clause that defines `name` (read as if-and-only-if), if it has one. */
+  definitionOf(name: string): Rule | undefined {
+    const status = this.definitions().get(name)
+    return status?.kind === 'definition' ? status.clause : undefined
   }
 }
 
@@ -79,11 +100,6 @@ function applySubst(s: Subst, pred: Predicate): GroundPredicate {
 
 function variablesOf(preds: readonly Predicate[]): Set<string> {
   return new Set(preds.flatMap(pred => pred.args))
-}
-
-function isConstructiveRule(rule: Rule): boolean {
-  const bodyVars = variablesOf(rule.body)
-  return rule.head.args.every(arg => bodyVars.has(arg))
 }
 
 function headOnlyVariables(rule: Rule): string[] {
@@ -145,7 +161,7 @@ function unify(goal: GroundPredicate, head: Predicate, s: Subst): Subst | null {
 
 export class DepthExceeded extends Error {}
 
-// ── Deterministic Unfolding ───────────────────────────────────────────
+// ── Unfolding definitions ─────────────────────────────────────────────
 
 export interface UnfoldResult {
   frontier: GroundPredicate[]
@@ -154,17 +170,20 @@ export interface UnfoldResult {
 
 export interface UnfoldOptions {
   stopPred?: (p: GroundPredicate) => boolean
+  /**
+   * Supply of fresh names for the auxiliary (body-only) objects a definition introduces. Share one
+   * supply across every unfolding in the same proof or drawing, so auxiliaries never collide with
+   * each other; they cannot collide with user names (see names.ts).
+   */
+  fresh?: FreshNames
 }
 
 /**
- * Deterministically unfold a goal through unique, acyclic, constructive rules.
- * Always stops on structural conditions:
- * - cycle
- * - branch (multiple matching rules)
- * - non-constructive rule
- * - no matching rule
- * - axiom (empty body)
+ * Replace a goal by the body of its predicate's definition, recursively, reading definitions as
+ * if-and-only-if. Which clause (if any) defines a predicate is decided by the knowledge base
+ * (definitions.ts); everything without a definition is left in the frontier.
  *
+ * Body-only variables are existentials: each unfolding gives them fresh names.
  * Optionally also stops early when `stopPred(goal)` is true.
  */
 export function unfold(
@@ -174,6 +193,7 @@ export function unfold(
   options: UnfoldOptions = {},
 ): UnfoldResult {
   const { stopPred } = options
+  const fresh = options.fresh ?? new FreshNames()
   if (stopPred?.(goal)) {
     return { frontier: [goal], expanded: false }
   }
@@ -183,32 +203,24 @@ export function unfold(
     return { frontier: [goal], expanded: false }
   }
 
-  const matches: Array<{ rule: Rule; s: Subst }> = []
-  for (const rule of kb.rulesWithHead(goal.name)) {
-    const s = unify(goal, rule.head, emptySubst())
-    if (s !== null) matches.push({ rule, s })
+  const rule = kb.definitionOf(goal.name)
+  if (!rule) return { frontier: [goal], expanded: false }
+
+  const s = unify(goal, rule.head, emptySubst())
+  if (s === null) return { frontier: [goal], expanded: false }
+  for (const v of variablesOf(rule.body)) {
+    if (!s.has(v)) s.set(v, fresh.next(v))
   }
-
-  if (matches.length === 0) return { frontier: [goal], expanded: false }
-  if (matches.length > 1) return { frontier: [goal], expanded: false }
-
-  const { rule, s } = matches[0]
-
-  if (rule.body.length === 0) return { frontier: [goal], expanded: false }
-  if (!isConstructiveRule(rule)) return { frontier: [goal], expanded: false }
 
   const nextVisiting = new Set(visiting)
   nextVisiting.add(key)
 
   const frontier: GroundPredicate[] = []
-  let expandedAny = true
   for (const bodyPred of rule.body) {
-    const unfolded = unfold(applySubst(s, bodyPred), kb, nextVisiting, options)
-    frontier.push(...unfolded.frontier)
-    expandedAny = expandedAny || unfolded.expanded
+    frontier.push(...unfold(applySubst(s, bodyPred), kb, nextVisiting, { ...options, fresh }).frontier)
   }
 
-  return { frontier, expanded: expandedAny }
+  return { frontier, expanded: true }
 }
 
 // ── Forward Closure ───────────────────────────────────────────────────
