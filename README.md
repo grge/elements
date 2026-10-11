@@ -58,7 +58,11 @@ Horn clause source text
 |------|---------|
 | `src/language/lexer.ts` | Tokeniser |
 | `src/language/parser.ts` | Parser — rules, goals, ground queries, queried clauses; returns `TopLevel[]` |
-| `src/kb/inference.ts` | `KnowledgeBase`, `unfold()`, `forwardClosure()` |
+| `src/kb/inference.ts` | `KnowledgeBase`, `unfold()`, reference `forwardClosure()` |
+| `src/kb/definitions.ts` | Which clause (if any) defines each predicate (read as if-and-only-if) |
+| `src/kb/structure.ts` | Equivalences, substitution and symmetries, proven from the rules |
+| `src/kb/saturate.ts` | Fast forward closure using that structure (used by the checker) |
+| `src/kb/names.ts` | Fresh names for auxiliary objects introduced by unfolding |
 | `src/kb/configuration.ts` | Session/runtime configuration and proof-state support |
 | `src/kb/checker.ts` | Queried-clause and ground-query checking |
 | `src/kb/runtime.ts` | Build runtime state from parsed text |
@@ -66,13 +70,13 @@ Horn clause source text
 | `src/geometry/extraction.ts` | Translate runtime facts into a geometry problem |
 | `src/geometry/canonicalization.ts` | UnionFind merge → canonical lines and circles |
 | `src/geometry/solver.ts` | Numerical solver |
-| `src/geometry/planner.ts` | Construction planner, `executePlan()`, `extractParams()` |
 | `src/composables/useKB.ts` | Reactive KB composable, namespace tree, localStorage persistence |
 | `src/helpers.ts` | Remaining renderer/UI bridge utilities |
-| `src/views/MainView.vue` | Main three-panel layout |
-| `src/components/KnowledgeBrowser.vue` | Left panel: predicate browser |
-| `src/components/EditorPane.vue` | Middle panel: clause editor + verification gutter |
-| `src/components/DiagramPane.vue` | Right panel: SVG diagram + construction plan |
+| `src/views/PageView.vue` | The page: masthead, source, figure, contents, themes |
+| `src/components/CodeEditor.vue` | CodeMirror editor with verification gutter |
+| `src/components/GeometryDiagram.vue` | The figure: rendering, ghosting under text, dragging |
+| `src/composables/useWorkspace.ts` | Current page state: text, runtime, facts, construction |
+| `src/geometry/construction.ts` | Ruler-and-compass planner, execution and dragging |
 | `src/workers/lemmaCheckWorker.ts` | Worker-based progressive verification |
 
 ---
@@ -118,39 +122,49 @@ See `LANGUAGE.md` for the full semantic model.
 
 ## UI
 
-Three-panel layout: **Predicate Browser** | **Clause Editor** | **Diagram**.
+One page, in the manner of Byrne's *Euclid*: a flat colour field, the figure in ink, points and
+names in an accent colour.
 
-**Predicate Browser** (left): namespace tree (`core/`, `euclid/`, `lemmas/`, `user/`).
-Click a predicate to load its source and render its diagram. Scratchpad entry at top. `＋` to add
-new user clauses.
-
-**Clause Editor** (middle): Horn clause source for the selected predicate or scratchpad. Foundation
-clauses are read-only. Query lines (`?`) are checked in a worker and show progressive `…` / `✓` /
-`✗` marks in the gutter.
-
-**Diagram** (right): SVG diagram of the current construction.
-- Toggle **📐** to switch between the construction planner and the numerical solver.
-- When the planner succeeds, a step list is shown below the diagram and points are annotated with
-  their step index.
-- Drag free points and 1-DOF constrained points to explore the construction interactively.
+- **The figure fills the page** and runs behind the source text. Under the text it turns into a
+  dotted ghost of itself, and the text has a halo in the paper colour, so lines never read as text.
+- **Points**: grab cursor, a large hit area and a ring on hover. Solid points are free, ringed points
+  slide along a line or circle, open points are determined by the construction (dragging one
+  re-plans the construction so that it becomes free, if that loses no fact).
+- **Source** on the left (CodeMirror): predicates, variables and comments highlighted; `?` lines are
+  checked in a worker and marked `✓` / `✗` in the gutter; predicate names complete.
+- **The construction in words** below the source, with the failing step marked if the figure cannot
+  be constructed in its current position (and the reason at the bottom of the page).
+- **Contents**: click the title or `ELEMENTS` for the library; the scratchpad is at the top.
+- **Themes**: six palettes (swatches top right), cross-fading; with *shuffle* on, opening something
+  from the contents picks a new one. Both choices are remembered in the browser.
 
 ---
 
 ## Construction Planner
 
-The planner takes a canonical `GeometryProblem` and produces a `Plan`: an ordered sequence of
-construction steps, each with an explicit degree of freedom.
+`src/geometry/construction.ts` turns the drawable facts of a figure (collinear, between, circle,
+eq-lines) into a ruler-and-compass program. Each point is placed by one step:
 
-| Step kind | DOF | Params |
-|-----------|-----|--------|
-| `free` | 2 | `[x, y]` |
-| `point-on-line` | 1 | `[t]` |
-| `point-on-circle` | 1 | `[θ]` |
-| `line-line-intersection` | 0 | — |
-| `circle-circle-intersection` | 0 | `which: boolean` |
-| `circle-line-intersection` | 0 | `which: boolean` |
+| Step | DOF | Parameter | |
+|------|-----|-----------|---|
+| `free` | 2 | `x, y` | an input point |
+| `on` | 1 | slider | on a line, circle or perpendicular bisector of points already placed |
+| `meet` | 0 | — | where two such loci meet |
 
-The current planner is greedy and operates over the canonical geometry problem.
+- **Loci**: a line through two placed points of a collinear group; a circle about a placed centre
+  with the radius of any placed segment of equal length; the perpendicular bisector of two placed
+  points the new point is equidistant from.
+- **Order of construction**: an exact search (dynamic programming over sets of placed points) that
+  uses as many of the figure's equations as possible, then prefers named points over auxiliary ones as
+  inputs. Equations not used to place a point become checks, evaluated on every frame.
+- **Order facts** (`between`) choose which intersection to take and restrict where a point may slide;
+  a slider's value is measured within its allowed interval, so dragging can never break the order.
+- **Starting positions** are sampled from the plan's own parameters (seeded, so the figure is stable,
+  and keeping previous positions across edits); no numerical solver is needed.
+- **Failures** (e.g. two circles that do not meet) stop the drawing at that step and say why.
+- **Dragging** a determined point re-plans so that point becomes an input, if no fact is lost.
+
+If no configuration satisfies every fact, the figure is drawn by the numerical solver instead.
 
 ---
 
