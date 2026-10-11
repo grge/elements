@@ -4,7 +4,6 @@ import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { GEOMETRY_FRONTIER, frontierFactsFromRuntime, geometryProblemFromFacts, seedPredicateHeadFact } from '../geometry/extraction'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
-import { findUserClauseForPredicate } from '../helpers'
 import { useKB, type Namespace } from './useKB'
 
 /** The current construction of the figure: the planned program and its parameters. */
@@ -47,7 +46,7 @@ export function useWorkspace() {
       if (mode.value === 'scratchpad') { scratch.value = v; return }
       clause.value = v
       if (selectedNamespace.value === 'user') {
-        const uc = findUserClauseForPredicate(selectedPred.value, userClauses.value)
+        const uc = kbApi.userClauseFor(selectedPred.value)
         if (uc) kbApi.updateUserClause(uc.id, v)
       }
     },
@@ -75,7 +74,7 @@ export function useWorkspace() {
 
   function deleteSelected() {
     if (mode.value !== 'predicate' || selectedNamespace.value !== 'user') return
-    const uc = findUserClauseForPredicate(selectedPred.value, userClauses.value)
+    const uc = kbApi.userClauseFor(selectedPred.value)
     if (uc) kbApi.deleteUserClause(uc.id)
     openScratchpad()
   }

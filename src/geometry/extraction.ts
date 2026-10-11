@@ -1,6 +1,6 @@
 /**
- * EL2 Geometry — extraction.
- * Translate logical/runtime ground facts into a GeometryProblem.
+ * Extraction: from the facts of a configuration to drawable facts (collinear, between, circle,
+ * eq-lines) by unfolding definitions, and from those to a GeometryProblem.
  */
 
 import { KnowledgeBase, unfold, type GroundPredicate } from '../kb/inference'

@@ -2,11 +2,6 @@ import type { GroundPredicate } from './inference'
 import { groundKey } from './inference'
 import { Universe } from './universe'
 
-export interface ProofState {
-  universe: Universe
-  facts: GroundPredicate[]
-}
-
 /** Session-level ground configuration: a universe plus a set of ground facts. */
 export class Configuration {
   readonly universe: Universe
@@ -41,10 +36,4 @@ export class Configuration {
   factsForPredicate(name: string): GroundPredicate[] {
     return [...(this.byPredicate.get(name) ?? [])]
   }
-}
-
-export function makeProofState(seeds: readonly GroundPredicate[] = []): ProofState {
-  const universe = new Universe()
-  universe.introduce(seeds.flatMap(seed => seed.args))
-  return { universe, facts: [...seeds] }
 }

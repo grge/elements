@@ -111,6 +111,7 @@ function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
   }
 }
 
+// The name predates the project's rename; changing it would lose clauses users have saved.
 const LS_KEY = 'elements2.user_clauses'
 
 function loadUserClauses(): UserClause[] {
@@ -199,6 +200,14 @@ function updateUserClause(id: string, source: string) {
   saveUserClauses(userClauses.value)
 }
 
+/** The user clause (if any) that has a clause for `predName`. */
+function userClauseFor(predName: string): UserClause | null {
+  return userClauses.value.find(c => {
+    try { return parseRules(c.source).some(r => r.head.name === predName) }
+    catch { return false }
+  }) ?? null
+}
+
 function deleteUserClause(id: string) {
   userClauses.value = userClauses.value.filter(c => c.id !== id)
   saveUserClauses(userClauses.value)
@@ -215,5 +224,6 @@ export function useKB() {
     updateUserClause,
     deleteUserClause,
     clausesForPredicate,
+    userClauseFor,
   }
 }

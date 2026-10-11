@@ -1,6 +1,6 @@
 /**
- * EL2 Geometry — canonicalization.
- * Port of el2/geometry/canonicalization.py
+ * Canonicalisation: merges collinear facts into lines and circle facts into circles (centre plus
+ * points on it), the form the renderer and the numerical solver work with.
  */
 
 import type {

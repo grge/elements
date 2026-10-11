@@ -62,7 +62,7 @@
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { solve } from '../geometry/solver'
 import type { GeometryProblem, WitnessModel } from '../geometry/constraints'
-import { computeRenderTransform, screenToWorld, type RenderTransform } from '../helpers'
+import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
 import {
   execute, drag as dragConstruction, draggable, plan as planConstruction, realise,
   type ConstructionPlan, type Point,

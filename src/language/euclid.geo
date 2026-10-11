@@ -1,15 +1,15 @@
-# Euclidean constructions — expanded to primitives by unfolding.
+# Euclidean constructions.
 #
-# Primitives: collinear, between, eq-lines
-# The circle predicate is defined here in terms of eq-lines.
+# Each predicate here has a single clause, so it is a definition (read as if-and-only-if): a fact
+# such as `eq-triangle a b c` is unfolded into its body, both when checking lemmas and when drawing.
+# Variables that appear only in a body (the d and g of copy-segment) are the construction's
+# auxiliary points. The primitives (collinear, between, eq-lines, eq-point) are in core.geo.
 
 # ------ circle constraint
 
 circle a b c: eq-lines a b a c
 
-# ------ intersection constructions
-# Note: these may be removed once the planner/solver no longer need them
-# as named predicates; currently kept for KB browsing and scratchpad use.
+# ------ named intersections (convenient in the scratchpad)
 
 circle-circle-intersection o a p b i:
     circle o a i
@@ -25,7 +25,7 @@ circle-line-intersection o a b c i:
 
 # ------ constructions
 
-# P1 — equilateral triangle
+# I.1 — on the segment a-b, the equilateral triangle a b c.
 eq-triangle a b c:
     circle a b c
     circle b a c

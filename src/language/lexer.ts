@@ -1,6 +1,5 @@
 /**
- * EL2 Lexer — tokenizes .geo source text.
- * Port of el2/lexer.py
+ * Lexer: turns .geo source text into tokens (identifiers, punctuation, indentation, comments).
  */
 
 export type TokenType =

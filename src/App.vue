@@ -1,7 +1,7 @@
 <template>
-  <router-view />
+  <PageView />
 </template>
 
 <script setup lang="ts">
-// Router handles view routing now
+import PageView from './views/PageView.vue'
 </script>

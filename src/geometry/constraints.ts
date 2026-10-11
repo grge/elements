@@ -1,6 +1,5 @@
 /**
- * EL2 Geometry — constraint types.
- * Port of el2/geometry/constraints.py
+ * Geometry types shared by extraction, canonicalisation, the solver and the renderer.
  */
 
 export interface CollinearConstraint { kind: 'collinear'; points: string[] }

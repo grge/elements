@@ -1,6 +1,5 @@
 /**
- * EL2 Parser — parses tokens into rules, goals, queried clauses, and ground queries.
- * Port of el2/parser.py
+ * Parser: turns tokens into rules, ground facts, queried clauses (lemmas) and ground queries.
  *
  * Syntax:
  *   Horn clause (inline):  head args: body1 args, body2 args

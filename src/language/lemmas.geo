@@ -1,11 +1,10 @@
-# Lemma test suite
+# Lemmas, which double as the test suite (tests/lemmas.test.ts checks every one).
 #
-# Verified interactively in the browser and via npm test.
-# Conventions:
-#   ? head: hyp1, hyp2   — should be PROVABLE given hypotheses
-#   ? head: -             — should be PROVABLE from no hypotheses (axiomatic)
-#   Negative tests are marked with a comment and should show as ✗
+#   ? head: hyp1, hyp2   — the head should follow from the hypotheses
+#   ? head: -            — the head should hold outright
 #
+# The lemmas that should NOT follow are listed in tests/lemmas.test.ts (most sit under "negative"
+# headings; a few are known gaps, commented where they appear); in the app they show ✗.
 # Some predicates used here (midpoint) are defined in this file itself.
 
 midpoint m a b:

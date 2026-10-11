@@ -1,21 +1,8 @@
-import { parseRules } from './language/parser'
-import type { PredicateEntry, UserClause } from './composables/useKB'
-import type { GeometryProblem, WitnessModel } from './geometry/constraints'
+/**
+ * Mapping between world coordinates (the figure) and screen coordinates (the SVG).
+ */
 
-export function findUserClauseForPredicate(predName: string, userClauses: UserClause[]): UserClause | null {
-  return userClauses.find(c => {
-    try {
-      return parseRules(c.source).some(r => r.head.name === predName)
-    } catch {
-      return false
-    }
-  }) ?? null
-}
-
-export function isPredicateReadOnly(predName: string, predicates: PredicateEntry[]): boolean {
-  const pred = predicates.find(p => p.name === predName)
-  return pred?.readOnly ?? true
-}
+import type { GeometryProblem, WitnessModel } from './constraints'
 
 export interface RenderTransform {
   minX: number
@@ -25,14 +12,13 @@ export interface RenderTransform {
   offsetY: number
 }
 
-// This belongs with the renderer or a renderer/UI bridge, not in a Vue component.
+/** Fit a figure (its points and whole circles) into a viewport, leaving `insetLeft` px free on the left. */
 export function computeRenderTransform(
   witness: WitnessModel,
   width = 400,
   height = 400,
   padding = 40,
   problem?: GeometryProblem | null,
-  /** Space to leave free on the left (e.g. where text lies over the figure). */
   insetLeft = 0,
 ): RenderTransform | null {
   const coords = witness.coords
@@ -40,7 +26,6 @@ export function computeRenderTransform(
 
   const xs = [...coords.values()].map(([x]) => x)
   const ys = [...coords.values()].map(([, y]) => y)
-  // Fit whole circles in view, not just the points they pass through.
   for (const circle of problem?.circles ?? []) {
     const c = coords.get(circle.center)
     const onCircle = [...circle.points].map(p => coords.get(p)).filter((p): p is [number, number] => !!p)
@@ -57,18 +42,9 @@ export function computeRenderTransform(
   const scale = Math.min(boxWidth / rangeX, (height - padding * 2) / rangeY)
   const offsetX = insetLeft + padding + (boxWidth - rangeX * scale) / 2
   const offsetY = padding + ((height - padding * 2) - rangeY * scale) / 2
-
   return { minX, minY, scale, offsetX, offsetY }
 }
 
-// This belongs with the renderer or a renderer/UI bridge, not in a Vue component.
-export function screenToWorld(
-  x: number,
-  y: number,
-  transform: RenderTransform,
-): [number, number] {
-  return [
-    (x - transform.offsetX) / transform.scale + transform.minX,
-    (y - transform.offsetY) / transform.scale + transform.minY,
-  ]
+export function screenToWorld(x: number, y: number, t: RenderTransform): [number, number] {
+  return [(x - t.offsetX) / t.scale + t.minX, (y - t.offsetY) / t.scale + t.minY]
 }
