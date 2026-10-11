@@ -1,7 +1,7 @@
 <template>
-  <MainView />
+  <router-view />
 </template>
 
 <script setup lang="ts">
-import MainView from './views/MainView.vue'
+// Router handles view routing now
 </script>
