@@ -1,4 +1,3 @@
-
 # Language Semantics and Formalism
 
 This document outlines the formal semantics and design principles of the Horn-clause language used in the elements geometry system.
@@ -293,7 +292,7 @@ The knowledge base is a flat namespace, loaded from `.geo` files. These files ca
 
 ## Interactive Session / Scratchpad
 
-The user can interact with the system via a scratchpad environment in the web interface, or an interactive prompt at the command line. The scratchpad accepts the full language: Horn clauses, axioms, lemmas, theorems, ground facts, and ground queries.
+The user interacts with the system through the scratchpad page in the web interface. The scratchpad accepts the full language: Horn clauses, axioms, lemmas, theorems, ground facts, and ground queries.
 
 Rules and axioms defined in the scratchpad are session-scoped — they extend the knowledge base for the duration of the session but are not persisted to `.geo` files unless explicitly saved.
 

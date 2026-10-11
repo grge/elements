@@ -1,5 +1,10 @@
 # Embedded Lemma Syntax: Direct Query Attachment to Horn Clauses
 
+> **Status: proposal (March 2026), not implemented.** It adds syntax (`?` lines inside a clause body),
+> and the project now prefers conventions the engine can recognise over new syntax (see
+> [roadmap](../roadmap.md)), so it would need rethinking in that light. Code references describe the
+> system as it was when this was written.
+
 Date: 2026-03-22
 
 ## Summary

@@ -1,5 +1,10 @@
 # Progressive Rendering with Weights: Layered Diagram Complexity
 
+> **Status: proposal (March 2026), not implemented.** Written before the construction planner and the
+> definition analysis existed; references to `unfold`, the geometry frontier and canonicalisation
+> describe the code as it was then. One piece exists: auxiliary objects introduced by unfolding are
+> named (`d₁`) and drawn smaller, so a construction's scaffolding is already distinguishable.
+
 Date: 2026-03-22
 
 ## Summary
