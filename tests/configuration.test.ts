@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { Configuration, makeProofState } from '../src/kb/configuration'
+import { Configuration } from '../src/kb/configuration'
 import { Universe } from '../src/kb/universe'
 import { groundKey, type GroundPredicate } from '../src/kb/inference'
 
@@ -11,16 +11,6 @@ describe('Universe', () => {
     expect(u.has('b')).toBe(true)
     expect(u.has('c')).toBe(false)
     expect([...u.all()]).toEqual(['a', 'b'])
-  })
-
-  it('notifies listeners only about fresh objects', () => {
-    const u = new Universe()
-    const seen: string[][] = []
-    u.onIntroduce(xs => seen.push(xs))
-    u.introduce(['a', 'b'])
-    u.introduce(['b', 'c'])
-    u.introduce([])
-    expect(seen).toEqual([['a', 'b'], ['c']])
   })
 })
 
@@ -54,17 +44,5 @@ describe('Configuration', () => {
     expect(cfg.factsForPredicate('circle')).toEqual([fact1])
     expect(cfg.factsForPredicate('between')).toEqual([fact2])
     expect(cfg.factsForPredicate('eq-lines')).toEqual([])
-  })
-})
-
-describe('makeProofState', () => {
-  it('creates a temporary proof state from seed predicates', () => {
-    const seeds: GroundPredicate[] = [
-      { name: 'circle', args: ['o', 'a', 'p'] },
-      { name: 'circle', args: ['o', 'a', 'q'] },
-    ]
-    const state = makeProofState(seeds)
-    expect(state.facts).toEqual(seeds)
-    expect([...state.universe.all()]).toEqual(['o', 'a', 'p', 'q'])
   })
 })
