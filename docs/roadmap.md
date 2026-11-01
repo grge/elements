@@ -14,6 +14,33 @@ Open problems and ideas, roughly in order of value within each section. See
 - **The figure never silently disagrees with the facts.** It either satisfies every fact or says
   which step fails and why.
 
+## Towards basically done
+
+The plan as of November 2026, in order. The first milestone is **demo-ready**: steps 1 to 3.
+
+1. **Correctness.**
+   - A predicate's page draws the head of its first clause, so where that clause is an axiom the
+     figure is trivial: `eq-lines` draws `eq-lines a b b a`, one segment equal to itself. Draw the
+     predicate's signature instead, as the contents thumbnails already do.
+   - Tick marks are drawn but faint on the page (0.8 of the stroke); make them as prominent as a
+     thumbnail's.
+   - Equal sides realised as circles (`eq-triangle`, `vesica`) get no ticks. Byrne would mark them.
+   - The *ruler & compass* / *numerical solver* button is a debugging switch: the solver already
+     takes over, with a status line, when no valid construction exists. Remove it.
+   - Decide whether to draw the construction actually used (see *Construction and drawing*): the
+     steps say "circle about m with radius am", and the figure does not show it.
+2. **A careful pass over everything**, file by file: code, docs and the book's comments. Looking for
+   dead paths, comments that over-explain, inconsistent names, and anything that claims more than it
+   does.
+3. **The editor.** Wrapping that suits the page: a hanging indent, and no breaks inside a name (today
+   a comment breaks `c-d` across lines). Then the smaller polish.
+4. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
+   explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
+   help. Sketched before built; [the Plates concept](plates-concept/REDESIGN_CONCEPT.md) is a starting
+   point, and design.md's entry page is the earlier idea.
+5. **Chapters 2 onwards**, as [book.md](book.md) plans them. Writing them is also the test of all the
+   above.
+
 ## Logic
 
 - **Honest verdicts.** (Contradictory hypotheses are already reported as vacuous, `⊥`.) Report a check
