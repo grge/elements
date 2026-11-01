@@ -1,0 +1,838 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELEMENTS — interface concept prototype</title>
+<!--
+  ELEMENTS · UI redesign concept prototype
+  ========================================
+  A single-file, interactive sketch of the reimagined interface described in
+  UI_OVERHAUL_DESIGN.md / EUCLID_STYLE_NOTES.md / REDESIGN_CONCEPT.md.
+
+  What this demonstrates:
+    1. Hero entry      — a full-bleed plate; touching the figure reveals the interface
+    2. Reading plate   — code as composed typography, diagram owning the whole canvas,
+                         live draggable geometry, colour-bound code<->diagram hover,
+                         adaptive code positioning with hysteresis
+    3. Top strip       — ELEMENTS | SCRATCHPAD | <predicate> ◀ ▶ | SEARCH (tile vocabulary)
+    4. Search reveal   — header expands downward, predicate cards with live miniatures
+    5. Scratchpad      — slides in from the left; recognisable editor, gutter proof marks,
+                         palette permutation; the text is (crudely) live-interpreted
+    6. Boffin panel    — backtick ` or the § glyph, or "view trace" on a proof tick;
+                         the page gives up its lower space to show the machinery
+
+  All geometry is computed for real (eq-triangle is Euclid I.1, eq-lines is Euclid I.2).
+  Everything tiles on one plane: no overlays, no shadows, no z-order.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Archivo+Black&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+/* ============================== tokens ============================== */
+:root {
+  /* material Byrne palette — printed-ink character, not screen-digital */
+  --paper:      #f3eee2;
+  --paper-hi:   #faf7ee;
+  --ink:        #1b1813;
+  --ink-soft:   #4d463b;
+  --ultra:      #1d3fbf;   /* ultramarine */
+  --verm:       #d93a1a;   /* vermilion   */
+  --gamboge:    #e09c14;   /* gamboge     */
+  --proof-ok:   #2c7a3f;
+
+  --font-display: 'Archivo Black', 'Archivo', sans-serif;
+  --font-ui:      'Archivo', sans-serif;
+  --font-code:    'IBM Plex Mono', monospace;
+
+  --strip-h: 54px;
+  --search-h: 178px;
+  --boffin-h: 236px;
+
+  --t-fast: 160ms;
+  --t-med:  420ms cubic-bezier(.22,.9,.3,1);
+  --t-slow: 600ms cubic-bezier(.22,.9,.3,1);
+}
+
+* { box-sizing: border-box; }
+html, body { margin:0; padding:0; height:100%; overflow:hidden; }
+body { font-family: var(--font-ui); background: var(--ink); color: var(--ink); }
+
+#app { display:flex; flex-direction:column; height:100vh; }
+
+/* ============================== top strip ============================== */
+#strip {
+  height:0; overflow:hidden; flex:none;
+  transition: height var(--t-med);
+  background: var(--ink);
+  display:flex; gap:3px; padding:0;
+}
+#app.revealed #strip { height: var(--strip-h); }
+.tile {
+  display:flex; align-items:center; gap:14px;
+  padding:0 22px; cursor:pointer; user-select:none;
+  background: var(--ink); color: var(--paper);
+  font-family: var(--font-display); font-size:15px;
+  letter-spacing:.14em; text-transform:uppercase;
+  border:0; outline-offset:-4px;
+}
+.tile + .tile { border-left:3px solid var(--paper); }
+.tile:hover { color: var(--gamboge); }
+.tile.active { background: var(--ultra); color: var(--paper); }
+.tile.brand { color: var(--verm); cursor:default; }
+.tile.brand:hover { color: var(--verm); }
+#tile-viewer { flex:1; }
+#tile-viewer .navarrow {
+  font-family: var(--font-ui); font-weight:700; font-size:17px;
+  padding:2px 8px; cursor:pointer; opacity:.65;
+}
+#tile-viewer .navarrow:hover { opacity:1; color: var(--gamboge); }
+#tile-viewer .vname { letter-spacing:.14em; }
+
+/* ============================== search reveal ============================== */
+#search {
+  height:0; overflow:hidden; flex:none;
+  transition: height var(--t-med);
+  background: var(--ink); color: var(--paper);
+}
+#app.search-open #search { height: var(--search-h); }
+#search .inner { padding:14px 22px 18px; border-top:3px solid var(--paper); height:100%; }
+#search input {
+  width:100%; background:transparent; border:0; border-bottom:2px solid var(--paper);
+  color:var(--paper); font-family:var(--font-display); font-size:18px;
+  letter-spacing:.14em; text-transform:uppercase; padding:4px 0 8px; outline:none;
+}
+#search input::placeholder { color:var(--paper); opacity:.35; }
+#cards { display:flex; gap:14px; margin-top:14px; overflow-x:auto; }
+.card {
+  flex:none; width:172px; height:96px; position:relative; cursor:pointer;
+  border:2px solid var(--paper);
+}
+.card svg { width:100%; height:100%; display:block; }
+.card .cname {
+  position:absolute; left:8px; bottom:6px;
+  font-family:var(--font-display); font-size:12px; letter-spacing:.1em;
+  text-transform:uppercase; pointer-events:none;
+}
+.card:hover { border-color: var(--gamboge); }
+.card.stub { opacity:.55; cursor:default; }
+
+/* ============================== main track ============================== */
+#main { flex:1; min-height:0; overflow:hidden; position:relative; }
+#track {
+  display:flex; width:200%; height:100%;
+  transform: translateX(-50%);
+  transition: transform var(--t-slow);
+}
+#app.scratch-open #track { transform: translateX(0); }
+.pane { width:50%; height:100%; position:relative; overflow:hidden; }
+
+/* ============================== the plate ============================== */
+#plate { background: var(--paper); }
+#plate svg.canvas { position:absolute; inset:0; width:100%; height:100%; }
+
+#hero-title {
+  position:absolute; left:6%; top:10%;
+  font-family:var(--font-display); color:var(--ink);
+  font-size: clamp(64px, 11vw, 160px); letter-spacing:.06em;
+  pointer-events:none; transition: opacity 900ms ease;
+}
+#hero-hint {
+  position:absolute; left:6.4%; top: calc(10% + clamp(80px, 13vw, 190px));
+  font-family:var(--font-ui); font-weight:600; font-size:12px;
+  letter-spacing:.34em; text-transform:uppercase; color:var(--ink-soft);
+  pointer-events:none; transition: opacity 900ms ease;
+  animation: hint-pulse 2.6s ease-in-out infinite;
+}
+@keyframes hint-pulse { 50% { opacity:.35; } }
+#app.revealed #hero-title, #app.revealed #hero-hint { opacity:0; animation:none; }
+
+/* --- code as composed typography (reading mode) --- */
+#codeblock {
+  position:absolute; left:48px; top:30%;
+  max-width: 34vw;
+  opacity:0; transition: opacity 800ms ease 250ms, top 500ms cubic-bezier(.22,.9,.3,1);
+  font-family: var(--font-display);
+  font-size: clamp(15px, 1.55vw, 24px);
+  line-height: 1.85; letter-spacing:.1em; text-transform:uppercase;
+  user-select:none;
+}
+#app.revealed #codeblock { opacity:1; }
+#codeblock .clause { white-space:nowrap; }
+#codeblock .clause.body { padding-left:1.6em; cursor:pointer; }
+#codeblock .clause.body:hover { color: var(--ink); }
+#codeblock .pt { cursor:pointer; transition: opacity var(--t-fast); }
+#codeblock .pred { }
+#codeblock.dimmed .pt:not(.hl), #codeblock.dimmed .pred { opacity:.3; }
+#codeblock .clause.body.hl { text-decoration: underline; text-underline-offset:.28em; text-decoration-thickness:3px; }
+
+/* proof tick — quiet by default, opens the trace on demand */
+.tick {
+  display:inline-block; margin-left:.7em; cursor:pointer;
+  font-family:var(--font-ui); font-weight:700; font-size:.62em;
+  letter-spacing:.18em; color:var(--proof-ok); vertical-align:.18em;
+}
+.tick .tlabel { display:none; }
+.tick:hover .tlabel { display:inline; margin-left:.6em; border-bottom:2px solid var(--proof-ok); }
+
+/* --- diagram --- */
+.canvas .shape { transition: opacity var(--t-fast); }
+.canvas .shape.dim { opacity:.30; }
+.canvas .shape.hl  { stroke-width:6px !important; }
+.canvas.dimmed .shape:not(.hl) { opacity:.18; }
+.canvas .ptdot { cursor:grab; }
+.canvas .ptdot.dragging { cursor:grabbing; }
+.canvas .ptdot.hl { stroke-width:4px; }
+.canvas .ptlabel {
+  font-family:var(--font-display); font-size:19px; letter-spacing:.04em;
+  text-transform:uppercase; pointer-events:none;
+}
+.canvas .aux .ptlabel { font-size:15px; opacity:.75; }
+
+/* ============================== scratchpad ============================== */
+#scratch { background: var(--ink); display:flex; }
+#scratch .editorcol {
+  width: 420px; flex:none; border-right:3px solid var(--paper);
+  display:flex; flex-direction:column;
+}
+#scratch .edhead {
+  padding:14px 18px 10px; color:var(--gamboge);
+  font-family:var(--font-display); font-size:13px; letter-spacing:.22em; text-transform:uppercase;
+}
+#scratch .edwrap { flex:1; display:flex; overflow:auto; }
+#gutter {
+  width:40px; flex:none; padding:12px 0; text-align:center;
+  font-family:var(--font-code); font-size:14px; line-height:1.75;
+  color:var(--paper); opacity:.9; user-select:none;
+}
+#gutter .ok { color:var(--gamboge); }
+#gutter .bad { color:var(--verm); font-weight:600; }
+#editor {
+  flex:1; padding:12px 14px 12px 0; margin:0; border:0; outline:none; resize:none;
+  background:transparent; color:var(--paper);
+  font-family:var(--font-code); font-size:14px; line-height:1.75;
+  white-space:pre; caret-color:var(--gamboge);
+}
+#scratch .scanvas { flex:1; position:relative; }
+#scratch .scanvas svg { position:absolute; inset:0; width:100%; height:100%; }
+
+/* ============================== boffin panel ============================== */
+#boffin {
+  height:0; overflow:hidden; flex:none;
+  transition: height var(--t-med);
+  background:var(--ink); color:var(--paper);
+}
+#app.boffin-open #boffin { height: var(--boffin-h); }
+#boffin .inner {
+  border-top:3px solid var(--paper); height:100%;
+  display:grid; grid-template-columns: 1fr 1fr 1.2fr; gap:0;
+}
+#boffin .col { padding:12px 18px; overflow:auto; border-left:2px solid #3a352c; }
+#boffin .col:first-child { border-left:0; }
+#boffin h3 {
+  margin:0 0 10px; font-family:var(--font-display); font-size:11px;
+  letter-spacing:.26em; text-transform:uppercase; color:var(--gamboge);
+}
+#boffin pre {
+  margin:0; font-family:var(--font-code); font-size:12px; line-height:1.65;
+  color:var(--paper); opacity:.92; white-space:pre-wrap;
+}
+#boffin-btn {
+  position:fixed; right:10px; bottom:8px; z-index:5;
+  background:none; border:0; cursor:pointer;
+  font-family:var(--font-code); font-size:14px; color:var(--ink-soft); opacity:.35;
+}
+#boffin-btn:hover { opacity:.9; }
+#app.scratch-open #boffin-btn, #app:not(.revealed) #boffin-btn { color:var(--paper); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="strip">
+    <div class="tile brand">Elements</div>
+    <button class="tile" id="tile-scratch">Scratchpad</button>
+    <div class="tile active" id="tile-viewer">
+      <span class="navarrow" id="nav-prev">◀</span>
+      <span class="vname" id="viewer-name">eq-triangle</span>
+      <span class="navarrow" id="nav-next">▶</span>
+    </div>
+    <button class="tile" id="tile-search">Search</button>
+  </header>
+
+  <div id="search">
+    <div class="inner">
+      <input id="search-input" placeholder="predicate…" spellcheck="false">
+      <div id="cards"></div>
+    </div>
+  </div>
+
+  <main id="main">
+    <div id="track">
+      <!-- scratchpad lives to the LEFT; the viewer to the RIGHT (stable spatial metaphor) -->
+      <section class="pane" id="scratch">
+        <div class="editorcol">
+          <div class="edhead">Scratchpad</div>
+          <div class="edwrap">
+            <div id="gutter"></div>
+            <textarea id="editor" spellcheck="false"></textarea>
+          </div>
+        </div>
+        <div class="scanvas"><svg id="scratch-svg"></svg></div>
+      </section>
+
+      <section class="pane" id="plate">
+        <svg class="canvas" id="svg"></svg>
+        <div id="hero-title">ELEMENTS</div>
+        <div id="hero-hint">drag the figure</div>
+        <div id="codeblock"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="boffin">
+    <div class="inner">
+      <div class="col"><h3>Construction plan</h3><pre id="bof-plan"></pre></div>
+      <div class="col"><h3>Solver</h3><pre id="bof-solver"></pre></div>
+      <div class="col"><h3>Proof trace</h3><pre id="bof-trace"></pre></div>
+    </div>
+  </div>
+  <button id="boffin-btn" title="boffin panel (`)">§</button>
+</div>
+
+<script>
+/* ======================= small vector helpers ======================= */
+const V = {
+  add:(p,q)=>({x:p.x+q.x, y:p.y+q.y}),
+  sub:(p,q)=>({x:p.x-q.x, y:p.y-q.y}),
+  mul:(p,s)=>({x:p.x*s, y:p.y*s}),
+  dist:(p,q)=>Math.hypot(p.x-q.x, p.y-q.y),
+  norm:(p)=>{ const d=Math.hypot(p.x,p.y)||1; return {x:p.x/d, y:p.y/d}; },
+  rot:(p,c,ang)=>{ const s=Math.sin(ang), co=Math.cos(ang), dx=p.x-c.x, dy=p.y-c.y;
+                   return {x:c.x+dx*co-dy*s, y:c.y+dx*s+dy*co}; }
+};
+
+/* ======================= predicate data ======================= */
+/* Plate themes are permutations of the same material palette. */
+const THEMES = {
+  'eq-triangle': { bg:'#f3eee2', ink:'#1b1813', strokes:['#1d3fbf','#d93a1a','#e09c14','#1b1813'],
+                   pt:'#1b1813', ptRim:'#f3eee2', code:['#d93a1a','#1d3fbf','#e09c14','#1b1813'] },
+  'eq-lines':    { bg:'#d93a1a', ink:'#1b1813', strokes:['#fbf8f1','#fbf8f1','#1b1813','#fbf8f1','#fbf8f1'],
+                   pt:'#1b1813', ptRim:'#fbf8f1', code:['#1b1813','#fbf8f1','#1b1813','#fbf8f1','#1b1813','#fbf8f1'] },
+};
+
+const PREDS = {
+  'eq-triangle': {
+    args:['a','b','c'],
+    free: { a:{x:0,y:0}, b:{x:1,y:0} },
+    derive(p){ p.c = V.rot(p.b, p.a, -Math.PI/3); },
+    body: [
+      { text:['circle','a','b','c'], ref:'s0' },
+      { text:['circle','b','a','c'], ref:'s1' },
+    ],
+    shapes(p){ return [
+      { kind:'circle', c:p.a, r:V.dist(p.a,p.b), ref:'s0', ci:0 },
+      { kind:'circle', c:p.b, r:V.dist(p.b,p.a), ref:'s1', ci:1 },
+    ];},
+    aux: [],
+    plan: ['place  a', 'place  b',
+           'α ≔ circle(a ; b)', 'β ≔ circle(b ; a)',
+           'c ≔ meet(α, β) ▸ upper'],
+    solver: 'dof            4 free / 2 derived\nconstraints    2 (on-circle ×2)\nresidual       0.0 (constructive)\nplan           exact · no numeric fallback',
+    trace: '? eq-lines a b a c : circle a b c\n  ✓ unfold eq-lines/4 → eq-triangle…\n  ✓ circle a b c        [premise]\n  ✓ circle a c b        [radii-comm]\n  ✓ eq-lines a b a c    [on-circle-eq]\n\nQ.E.D. — 4 steps, 0.8 ms',
+  },
+  'eq-lines': {
+    args:['b','c','a','l'],
+    free: { a:{x:0,y:0}, b:{x:0.62,y:0.16}, c:{x:0.30,y:-0.42} },
+    derive(p){
+      p.d = V.rot(p.b, p.a, Math.PI/3);                       // eq-triangle d a b
+      p.g = V.add(p.b, V.mul(V.norm(V.sub(p.b,p.d)), V.dist(p.b,p.c)));  // circle b c g ∩ line d b
+      p.l = V.add(p.d, V.mul(V.norm(V.sub(p.a,p.d)), V.dist(p.d,p.g)));  // circle d g l ∩ line d a
+    },
+    body: [
+      { text:['eq-triangle','d','a','b'], ref:'s0' },
+      { text:['line','d','a','l'], ref:'s1' },
+      { text:['line','d','b','g'], ref:'s2' },
+      { text:['circle','b','c','g'], ref:'s3' },
+      { text:['circle','d','g','l'], ref:'s4' },
+    ],
+    shapes(p){ return [
+      { kind:'circle', c:p.d, r:V.dist(p.d,p.a), ref:'s0', ci:0, dim:true },
+      { kind:'circle', c:p.a, r:V.dist(p.a,p.d), ref:'s0', ci:0, dim:true },
+      { kind:'line', a:p.d, b:p.a, ref:'s1', ci:1 },
+      { kind:'line', a:p.d, b:p.b, ref:'s2', ci:1 },
+      { kind:'circle', c:p.b, r:V.dist(p.b,p.c), ref:'s3', ci:3 },
+      { kind:'circle', c:p.d, r:V.dist(p.d,p.g), ref:'s4', ci:4 },
+    ];},
+    aux: ['d','g'],
+    plan: ['place  a · b · c',
+           'd ≔ apex(eq-triangle a b)',
+           'ℓ₁ ≔ line(d, a)', 'ℓ₂ ≔ line(d, b)',
+           'γ ≔ circle(b ; c)', 'g ≔ meet(ℓ₂, γ) ▸ far',
+           'δ ≔ circle(d ; g)', 'l ≔ meet(ℓ₁, δ) ▸ far'],
+    solver: 'dof            6 free / 6 derived\nconstraints    5\nresidual       2.1e-12\nplan           exact · 8 steps',
+    trace: '? eq-lines b c a l : …\n  ✓ eq-triangle d a b   [I.1]\n  ✓ eq-lines d a d b    [equilateral]\n  ✓ eq-lines b c b g    [radii γ]\n  ✓ eq-lines d g d l    [radii δ]\n  ✓ between d b g · between d a l\n  ✓ eq-lines a l b g    [subtraction]\n  ✓ eq-lines b c a l    [transitivity]\n\nQ.E.D. — 7 steps, 2.3 ms',
+  },
+};
+const PRED_ORDER = ['eq-triangle','eq-lines'];
+
+/* ======================= app state ======================= */
+const app = document.getElementById('app');
+const svg = document.getElementById('svg');
+const codeblock = document.getElementById('codeblock');
+const state = {
+  current: 'eq-triangle',
+  pts: {},            // model coords for current predicate
+  tf: { k:300, ox:0, oy:0 },
+  revealed: false,
+  codeTop: null,
+};
+
+const $ = s => document.querySelector(s);
+const SVGNS = 'http://www.w3.org/2000/svg';
+function el(name, attrs, parent){
+  const e = document.createElementNS(SVGNS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+}
+
+/* ======================= transform ======================= */
+function plateSize(){ const r = $('#plate').getBoundingClientRect(); return { w:r.width, h:r.height }; }
+function toScreen(p){ return { x: p.x*state.tf.k + state.tf.ox, y: p.y*state.tf.k + state.tf.oy }; }
+function toModel(p){ return { x:(p.x-state.tf.ox)/state.tf.k, y:(p.y-state.tf.oy)/state.tf.k }; }
+
+/* Fit the named points into the right-hand zone of the plate.
+   The geometry itself is welcome to spill across the whole page. */
+function targetTf(){
+  const { w, h } = plateSize();
+  const pred = PREDS[state.current];
+  const names = pred.args.concat(pred.aux);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for (const n of names){ const p = state.pts[n];
+    x0=Math.min(x0,p.x); y0=Math.min(y0,p.y); x1=Math.max(x1,p.x); y1=Math.max(y1,p.y); }
+  const bw = Math.max(x1-x0, 1e-6), bh = Math.max(y1-y0, 1e-6);
+  const zone = { x: w*0.52, y: h*0.22, w: w*0.36, h: h*0.56 };
+  const k = Math.min(zone.w/bw, zone.h/bh);
+  return { k,
+    ox: zone.x + (zone.w - bw*k)/2 - x0*k,
+    oy: zone.y + (zone.h - bh*k)/2 - y0*k };
+}
+function setTf(tf){ state.tf = tf; }
+function animateTf(to, done){
+  const from = { ...state.tf }, t0 = performance.now(), dur = 380;
+  function step(t){
+    const u = Math.min(1, (t-t0)/dur), e = 1-Math.pow(1-u,3);
+    setTf({ k: from.k+(to.k-from.k)*e, ox: from.ox+(to.ox-from.ox)*e, oy: from.oy+(to.oy-from.oy)*e });
+    render();
+    if (u < 1) requestAnimationFrame(step); else if (done) done();
+  }
+  requestAnimationFrame(step);
+}
+
+/* ======================= rendering the plate ======================= */
+function render(){
+  const pred = PREDS[state.current];
+  const theme = THEMES[state.current];
+  pred.derive(state.pts);
+  const { w, h } = plateSize();
+  svg.innerHTML = '';
+  $('#plate').style.background = theme.bg;
+
+  // shapes — lines run off the page; circles are drawn whole
+  for (const s of pred.shapes(state.pts)){
+    const color = theme.strokes[s.ci % theme.strokes.length];
+    if (s.kind === 'circle'){
+      const c = toScreen(s.c);
+      el('circle', { cx:c.x, cy:c.y, r:s.r*state.tf.k, fill:'none',
+        stroke:color, 'stroke-width':4,
+        class:'shape' + (s.dim?' dim':''), 'data-ref':s.ref }, svg);
+    } else {
+      const a = toScreen(s.a), b = toScreen(s.b);
+      const d = V.norm(V.sub(b,a));
+      const p1 = V.sub(a, V.mul(d, 4000)), p2 = V.add(a, V.mul(d, 4000));
+      el('line', { x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y,
+        stroke:color, 'stroke-width':4,
+        class:'shape' + (s.dim?' dim':''), 'data-ref':s.ref }, svg);
+    }
+  }
+
+  // points + labels
+  const names = pred.args.concat(pred.aux);
+  for (const n of names){
+    const isAux = pred.aux.includes(n);
+    const p = toScreen(state.pts[n]);
+    const g = el('g', { class: isAux ? 'aux' : '' }, svg);
+    el('circle', { cx:p.x, cy:p.y, r: isAux?5:8,
+      fill: theme.pt, stroke: theme.ptRim, 'stroke-width':2.5,
+      class:'ptdot' + (pred.free[n] ? ' free':''), 'data-point':n }, g);
+    const t = el('text', { x:p.x+14, y:p.y+7, class:'ptlabel',
+      fill: pointColor(n), 'data-point':n }, g);
+    t.textContent = n;
+  }
+}
+
+function pointColor(name){
+  const pred = PREDS[state.current], theme = THEMES[state.current];
+  const names = pred.args.concat(pred.aux);
+  return theme.code[names.indexOf(name) % theme.code.length];
+}
+
+/* ======================= code as typography ======================= */
+function renderCode(){
+  const pred = PREDS[state.current], theme = THEMES[state.current];
+  codeblock.style.color = theme.ink;
+  let html = '';
+  const span = n => `<span class="pt" data-point="${n}" style="color:${pointColor(n)}">${n}</span>`;
+  html += `<div class="clause head"><span class="pred">${state.current}</span> `
+        + pred.args.map(span).join(' ')
+        + `:<span class="tick" id="proof-tick">✓<span class="tlabel">view trace</span></span></div>`;
+  for (const b of pred.body){
+    const [p, ...as] = b.text;
+    html += `<div class="clause body" data-shape="${b.ref}"><span class="pred">${p}</span> `
+          + as.map(span).join(' ') + `</div>`;
+  }
+  codeblock.innerHTML = html;
+  $('#proof-tick').addEventListener('click', e => { e.stopPropagation(); openBoffin(); });
+}
+
+/* Adaptive positioning: fixed left anchor, ~12 candidate y positions,
+   least-overlap wins, hysteresis so small drags don't cause drift. */
+function overlapScore(rect){
+  const pred = PREDS[state.current];
+  const shapes = pred.shapes(state.pts);
+  let score = 0;
+  const sx = 5, sy = 7;
+  for (let i=0;i<=sx;i++) for (let j=0;j<=sy;j++){
+    const q = { x: rect.x + rect.w*i/sx, y: rect.y + rect.h*j/sy };
+    for (const s of shapes){
+      if (s.kind === 'circle'){
+        const c = toScreen(s.c);
+        if (Math.abs(V.dist(q,c) - s.r*state.tf.k) < 26) score += s.dim?0.4:1;
+      } else {
+        const a = toScreen(s.a), b = toScreen(s.b);
+        const d = V.norm(V.sub(b,a));
+        const t = (q.x-a.x)*d.x + (q.y-a.y)*d.y;
+        const f = V.add(a, V.mul(d,t));
+        if (V.dist(q,f) < 22) score += 1;
+      }
+    }
+    for (const n of pred.args.concat(pred.aux))
+      if (V.dist(q, toScreen(state.pts[n])) < 46) score += 2;
+  }
+  return score;
+}
+function placeCode(){
+  const { h } = plateSize();
+  const cb = codeblock.getBoundingClientRect();
+  const plate = $('#plate').getBoundingClientRect();
+  const cw = cb.width, ch = cb.height;
+  const lo = 70, hi = Math.max(lo+1, h - ch - 50);
+  let best = null, bestScore = 1e9, current = null;
+  for (let i=0;i<=12;i++){
+    const y = lo + (hi-lo)*i/12;
+    const s = overlapScore({ x:48, y, w:cw, h:ch });
+    if (state.codeTop !== null && Math.abs(y - state.codeTop) < 14) current = s;
+    if (s < bestScore){ bestScore = s; best = y; }
+  }
+  // hysteresis: only move when meaningfully better
+  if (state.codeTop === null || current === null || current - bestScore > 4){
+    state.codeTop = best;
+    codeblock.style.top = (best / plate.height * 100) + '%';
+  }
+}
+
+/* ======================= hover binding (the tether) ======================= */
+function bindHover(){
+  codeblock.addEventListener('mouseover', e => {
+    const pt = e.target.closest('.pt');
+    const cl = e.target.closest('.clause.body');
+    if (pt) setPointHl(pt.dataset.point, true);
+    else if (cl) setShapeHl(cl.dataset.shape, true);
+  });
+  codeblock.addEventListener('mouseout', e => {
+    const pt = e.target.closest('.pt');
+    const cl = e.target.closest('.clause.body');
+    if (pt) setPointHl(pt.dataset.point, false);
+    else if (cl) setShapeHl(cl.dataset.shape, false);
+  });
+  svg.addEventListener('mouseover', e => {
+    const n = e.target.dataset && e.target.dataset.point;
+    if (n) setPointHl(n, true);
+  });
+  svg.addEventListener('mouseout', e => {
+    const n = e.target.dataset && e.target.dataset.point;
+    if (n) setPointHl(n, false);
+  });
+}
+function setPointHl(name, on){
+  svg.querySelectorAll(`[data-point="${name}"]`).forEach(x => x.classList.toggle('hl', on));
+  codeblock.querySelectorAll(`.pt[data-point="${name}"]`).forEach(x => x.classList.toggle('hl', on));
+  codeblock.classList.toggle('dimmed', on);
+  svg.classList.toggle('dimmed', on);
+}
+function setShapeHl(ref, on){
+  svg.querySelectorAll(`[data-ref="${ref}"]`).forEach(x => x.classList.toggle('hl', on));
+  codeblock.querySelectorAll(`[data-shape="${ref}"]`).forEach(x => x.classList.toggle('hl', on));
+  svg.classList.toggle('dimmed', on);
+}
+
+/* ======================= dragging ======================= */
+let drag = null;
+svg.addEventListener('pointerdown', e => {
+  reveal();   // first touch of the figure brings the interface in
+  const n = e.target.dataset && e.target.dataset.point;
+  if (!n || !PREDS[state.current].free[n]) return;
+  drag = n;
+  e.target.classList.add('dragging');
+  svg.setPointerCapture(e.pointerId);
+});
+svg.addEventListener('pointermove', e => {
+  if (!drag) return;
+  const r = $('#plate').getBoundingClientRect();
+  state.pts[drag] = toModel({ x:e.clientX - r.left, y:e.clientY - r.top });
+  render();
+});
+svg.addEventListener('pointerup', e => {
+  if (!drag) return;
+  drag = null;
+  svg.querySelectorAll('.dragging').forEach(x => x.classList.remove('dragging'));
+  // settle: re-fit the named points into the right zone, then re-place the text
+  animateTf(targetTf(), placeCode);
+});
+
+/* ======================= predicate navigation ======================= */
+function loadPredicate(name){
+  state.current = name;
+  const pred = PREDS[name];
+  state.pts = {};
+  for (const n in pred.free) state.pts[n] = { ...pred.free[n] };
+  pred.derive(state.pts);
+  setTf(targetTf());
+  state.codeTop = null;
+  $('#viewer-name').textContent = name;
+  renderCode();
+  render();
+  requestAnimationFrame(placeCode);
+  renderBoffin();
+}
+function navigate(dir){
+  const i = PRED_ORDER.indexOf(state.current);
+  loadPredicate(PRED_ORDER[(i + dir + PRED_ORDER.length) % PRED_ORDER.length]);
+}
+$('#nav-prev').addEventListener('click', () => navigate(-1));
+$('#nav-next').addEventListener('click', () => navigate(1));
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT'){
+    if (e.key === 'Escape') e.target.blur();
+    return;
+  }
+  if (e.key === 'ArrowLeft') navigate(-1);
+  if (e.key === 'ArrowRight') navigate(1);
+  if (e.key === '`'){ e.preventDefault(); toggleBoffin(); }
+});
+
+/* ======================= reveal sequence ======================= */
+function reveal(){
+  if (state.revealed) return;
+  state.revealed = true;
+  app.classList.add('revealed');
+  // the strip takes real vertical space — re-settle once it has landed
+  setTimeout(() => { animateTf(targetTf(), placeCode); }, 460);
+}
+
+/* ======================= search ======================= */
+const CORE_STUBS = ['point','line','circle','between','eq-points'];
+function buildCards(filter){
+  const cards = $('#cards');
+  cards.innerHTML = '';
+  const f = (filter||'').toLowerCase();
+  for (const name of PRED_ORDER){
+    if (f && !name.includes(f)) continue;
+    const card = document.createElement('div');
+    card.className = 'card';
+    const theme = THEMES[name];
+    card.style.background = theme.bg;
+    card.innerHTML = `<svg viewBox="0 0 172 96"></svg><span class="cname" style="color:${theme.ink}">${name}</span>`;
+    miniDiagram(card.querySelector('svg'), name);
+    card.addEventListener('click', () => {
+      loadPredicate(name);
+      app.classList.remove('search-open', 'scratch-open');
+      $('#tile-search').classList.remove('active');
+      $('#tile-scratch').classList.remove('active');
+    });
+    cards.appendChild(card);
+  }
+  for (const name of CORE_STUBS){
+    if (f && !name.includes(f)) continue;
+    const card = document.createElement('div');
+    card.className = 'card stub';
+    card.style.background = '#1b1813';
+    card.innerHTML = `<span class="cname" style="color:#f3eee2">${name}</span>`;
+    cards.appendChild(card);
+  }
+}
+function miniDiagram(msvg, name){
+  const pred = PREDS[name], theme = THEMES[name];
+  const pts = {};
+  for (const n in pred.free) pts[n] = { ...pred.free[n] };
+  pred.derive(pts);
+  const names = pred.args.concat(pred.aux);
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for (const n of names){ x0=Math.min(x0,pts[n].x); y0=Math.min(y0,pts[n].y);
+                          x1=Math.max(x1,pts[n].x); y1=Math.max(y1,pts[n].y); }
+  const k = Math.min(96/(x1-x0), 52/(y1-y0));
+  const tx = p => ({ x: 50 + (p.x-x0)*k, y: 20 + (p.y-y0)*k });
+  for (const s of pred.shapes(pts)){
+    const color = theme.strokes[s.ci % theme.strokes.length];
+    if (s.kind === 'circle'){
+      const c = tx(s.c);
+      el('circle', { cx:c.x, cy:c.y, r:s.r*k, fill:'none', stroke:color, 'stroke-width':2.5,
+                     opacity: s.dim?0.3:1 }, msvg);
+    } else {
+      const a = tx(s.a), b = tx(s.b), d = V.norm(V.sub(b,a));
+      const p1 = V.sub(a,V.mul(d,300)), p2 = V.add(a,V.mul(d,300));
+      el('line', { x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, stroke:color, 'stroke-width':2.5 }, msvg);
+    }
+  }
+  for (const n of names){
+    const p = tx(pts[n]);
+    el('circle', { cx:p.x, cy:p.y, r:3, fill:theme.pt, stroke:theme.ptRim, 'stroke-width':1 }, msvg);
+  }
+}
+$('#tile-search').addEventListener('click', () => {
+  const open = app.classList.toggle('search-open');
+  $('#tile-search').classList.toggle('active', open);
+  if (open){ buildCards(''); $('#search-input').focus(); }
+  setTimeout(() => { setTf(targetTf()); render(); placeCode(); }, 460);
+});
+$('#search-input').addEventListener('input', e => buildCards(e.target.value));
+
+/* ======================= scratchpad ======================= */
+const DEFAULT_SCRATCH =
+`circle a b c
+circle b a c
+line a b m
+
+? eq-lines a b a c
+? eq-lines a b b m
+? equilateral a b c`;
+
+$('#tile-scratch').addEventListener('click', () => {
+  const open = app.classList.toggle('scratch-open');
+  $('#tile-scratch').classList.toggle('active', open);
+  $('#tile-viewer').classList.toggle('active', !open);
+  if (open) runScratch();
+});
+
+const KNOWN = new Set(['circle','line','eq-triangle','eq-lines','between','eq-points','point']);
+
+function runScratch(){
+  const src = $('#editor').value;
+  const lines = src.split('\n');
+  const gutter = [];
+  const facts = [];
+  for (const line of lines){
+    const t = line.trim();
+    if (!t){ gutter.push(''); continue; }
+    const isQuery = t.startsWith('?');
+    const bodyText = isQuery ? t.slice(1).trim() : t;
+    const toks = bodyText.split(/\s+/);
+    const known = KNOWN.has(toks[0]);
+    if (isQuery) gutter.push(known ? '<span class="ok">✓</span>' : '<span class="bad">✗</span>');
+    else { gutter.push(''); if (known) facts.push(toks); }
+  }
+  $('#gutter').innerHTML = gutter.join('<br>');
+  drawScratch(facts);
+}
+
+/* A toy relaxation pass — just enough to make the scratch diagram feel live. */
+function drawScratch(facts){
+  const ssvg = $('#scratch-svg');
+  const pts = {};
+  const seed = n => { let h = 0; for (const ch of n) h = (h*31 + ch.charCodeAt(0)) % 997;
+                      return { x: (h%10)/10 - 0.5, y: ((h*7)%10)/10 - 0.5 }; };
+  const need = n => { if (!pts[n]) pts[n] = seed(n); return pts[n]; };
+  for (let pass=0; pass<24; pass++){
+    for (const f of facts){
+      const [p, ...as] = f;
+      if (p === 'circle' && as.length === 3){
+        const [c, r1, z] = as.map(need);
+        const r = V.dist(c, r1) || 0.5;
+        const d = V.norm(V.sub(z, c));
+        const tgt = V.add(c, V.mul(d, r));
+        pts[as[2]] = V.add(z, V.mul(V.sub(tgt, z), 0.6));
+      } else if (p === 'line' && as.length === 3){
+        const [a, b, z] = as.map(need);
+        const d = V.norm(V.sub(b, a));
+        const t = (z.x-a.x)*d.x + (z.y-a.y)*d.y;
+        const tgt = V.add(a, V.mul(d, t < 0.2 ? t - 0.9 : t));
+        pts[as[2]] = V.add(z, V.mul(V.sub(tgt, z), 0.6));
+      } else if (p === 'eq-triangle' && as.length === 3){
+        const [a, b] = [need(as[0]), need(as[1])]; need(as[2]);
+        pts[as[2]] = V.rot(b, a, -Math.PI/3);
+      } else { as.forEach(need); }
+    }
+  }
+  // render
+  ssvg.innerHTML = '';
+  const r = ssvg.getBoundingClientRect();
+  const names = Object.keys(pts);
+  if (!names.length) return;
+  let x0=1e9,y0=1e9,x1=-1e9,y1=-1e9;
+  for (const n of names){ x0=Math.min(x0,pts[n].x); y0=Math.min(y0,pts[n].y);
+                          x1=Math.max(x1,pts[n].x); y1=Math.max(y1,pts[n].y); }
+  const k = Math.min((r.width*0.5)/Math.max(x1-x0,1e-6), (r.height*0.5)/Math.max(y1-y0,1e-6));
+  const tx = p => ({ x: r.width*0.25 + (p.x-x0)*k, y: r.height*0.25 + (p.y-y0)*k });
+  const SCOL = ['#e09c14','#f3eee2','#d93a1a'];
+  let ci = 0;
+  for (const f of facts){
+    const [p, ...as] = f;
+    const color = SCOL[ci++ % SCOL.length];
+    if (p === 'circle'){
+      const c = tx(pts[as[0]]);
+      el('circle', { cx:c.x, cy:c.y, r:V.dist(pts[as[0]], pts[as[1]])*k, fill:'none',
+                     stroke:color, 'stroke-width':3.5 }, ssvg);
+    } else if (p === 'line'){
+      const a = tx(pts[as[0]]), b = tx(pts[as[1]]);
+      const d = V.norm(V.sub(b,a));
+      const p1 = V.sub(a,V.mul(d,3000)), p2 = V.add(a,V.mul(d,3000));
+      el('line', { x1:p1.x, y1:p1.y, x2:p2.x, y2:p2.y, stroke:color, 'stroke-width':3.5 }, ssvg);
+    }
+  }
+  for (const n of names){
+    const p = tx(pts[n]);
+    el('circle', { cx:p.x, cy:p.y, r:6, fill:'#f3eee2', stroke:'#1b1813', 'stroke-width':2 }, ssvg);
+    const t = el('text', { x:p.x+11, y:p.y+5, fill:'#f3eee2',
+      style:'font-family:var(--font-display);font-size:15px;text-transform:uppercase' }, ssvg);
+    t.textContent = n;
+  }
+}
+let scratchTimer = null;
+$('#editor').addEventListener('input', () => {
+  clearTimeout(scratchTimer);
+  scratchTimer = setTimeout(runScratch, 280);
+});
+
+/* ======================= boffin panel ======================= */
+function renderBoffin(){
+  const pred = PREDS[state.current];
+  $('#bof-plan').textContent = pred.plan.join('\n');
+  $('#bof-solver').textContent = pred.solver;
+  $('#bof-trace').textContent = pred.trace;
+}
+function toggleBoffin(){
+  app.classList.toggle('boffin-open');
+  setTimeout(() => { setTf(targetTf()); render(); placeCode(); }, 460);
+}
+function openBoffin(){
+  if (!app.classList.contains('boffin-open')) toggleBoffin();
+}
+$('#boffin-btn').addEventListener('click', toggleBoffin);
+
+/* ======================= boot ======================= */
+window.addEventListener('resize', () => { setTf(targetTf()); render(); placeCode(); });
+$('#editor').value = DEFAULT_SCRATCH;
+bindHover();
+loadPredicate('eq-triangle');
+</script>
+</body>
+</html>
