@@ -4,22 +4,20 @@ Euclidean geometry you can write, check and drag. You state geometric facts and 
 clauses; elements checks your lemmas as you type and draws each construction the way Euclid would, with
 ruler and compass, as a figure whose points you can drag.
 
-![Euclid I.2 in elements](docs/images/screenshot.png)
+![A page of the book in elements](docs/images/screenshot.png)
 
-The figure above is Euclid's second proposition, from this definition in [`euclid.geo`](src/language/euclid.geo) (comment shortened):
+elements comes with a book, in progress, that will cover the content of Euclid's plane geometry in its
+own order, one chapter per kind of equality: length, angle, direction, area, ratio (see
+[docs/book.md](docs/book.md)). The page above is from chapter 1, which exists so far. The construction
 
 ```txt
-# I.2 — from point a, draw a segment a-l equal to the segment b-c.
-copy-segment a l b c:
-    eq-triangle d a b
-    circle b c g
-    between d b g
-    circle d g l
-    between d a l
+vesica a b c d:
+    eq-triangle a b c
+    eq-triangle a b d
 ```
 
-and the lemma `? eq-lines a l b c: copy-segment a l b c` beside it carries a ✓ because the engine proves
-it from Euclid's common notions in [`core.geo`](src/language/core.geo).
+is drawn with ruler and compass, and each `?` proposition beside it carries a ✓ because the engine
+proves it from the chapter's axioms.
 
 ## Running it
 
@@ -36,14 +34,16 @@ Pushing to `main` deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 - **The scratchpad** is the page you start on. Write facts (`eq-triangle a b c`), rules
   (`midpoint m a b: between a m b, eq-lines a m m b`) and questions (`? eq-lines a b b c: eq-triangle a b c`).
-  The figure redraws as you type; each `?` line gets ✓ or ✗.
+  The figure redraws as you type; each `?` line gets ✓, ✗, or ⊥ if its hypotheses contradict each
+  other.
 - **Drag points.** Solid points are free, ringed ones slide along a line or circle, open ones are
   determined by the construction (dragging one reverses the construction around it).
 - **The steps** under the source describe the construction in words. If the figure cannot be built in
   its current position (two circles that no longer meet), the failing step is marked and the reason
   shown.
-- **Contents**: click `ELEMENTS` or the title to browse the bundled knowledge base, or add predicates of
-  your own (stored in your browser).
+- **Contents**: click `ELEMENTS` or the title to browse the book chapter by chapter, as cards with a
+  miniature of each figure, or add predicates of your own (stored in your browser). A construction's
+  page shows its definition with the propositions about it.
 - **Themes**: the swatches top right; with *shuffle* on, the colours change each time you open
   something from the contents.
 
@@ -60,19 +60,20 @@ two loci meet. Every fact is either used by the construction or checked on each 
 
 ```
 src/
-  language/     lexer, parser, and the bundled knowledge base (core.geo, euclid.geo, lemmas.geo)
+  language/     lexer, parser; book/ holds the bundled book, one chapter per .geo file
   kb/           inference: definitions, recognised structure, forward closure, checking
   geometry/     from facts to figures: extraction, the construction planner, the numerical fallback
   composables/  page state, the knowledge base, the verification worker client
   components/   the code editor and the figure
   views/        the page
   workers/      lemma checking off the main thread
-tests/          vitest suites (see docs/architecture.md#tests)
+tests/          vitest suites (see docs/architecture.md#tests) and fixtures/
 docs/           documentation
 ```
 
 ## Documentation
 
+- [Book](docs/book.md): what the bundled book covers and how it is organised.
 - [Language](docs/language.md): syntax and semantics, including how definitions are recognised.
 - [Architecture](docs/architecture.md): how checking and drawing work, and why.
 - [Design](docs/design.md): the visual design, what is built and what is planned.

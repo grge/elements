@@ -29,11 +29,14 @@
       <g class="ghost" :mask="`url(#${uid}-ghost)`">
         <line v-for="(l, i) in scene.lines" :key="`gl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
         <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" />
+        <line v-for="(l, i) in [...scene.segments, ...scene.ticks]" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
         <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
         <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" />
+        <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
+        <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
         <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
@@ -63,6 +66,7 @@ import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { solve } from '../geometry/solver'
 import type { GeometryProblem, WitnessModel } from '../geometry/constraints'
 import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
+import { buildScene } from '../geometry/scene'
 import {
   execute, drag as dragConstruction, draggable, plan as planConstruction, realise,
   type ConstructionPlan, type Point,
@@ -83,8 +87,6 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:construction': [state: ConstructionState] }>()
 
 const VEIL_FADE = 48
-/** How much of the text column the fitted figure keeps clear of: the rest it fills, behind the text. */
-const VEIL_SHARE = 0.3
 const uid = `dg${Math.random().toString(36).slice(2, 8)}`
 
 // The construction being shown; dragging changes it locally and reports it on release.
@@ -123,7 +125,7 @@ function currentPadding() {
 }
 
 function fit(witness: WitnessModel) {
-  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.problem, veilAt.value * VEIL_SHARE)
+  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.problem, veilAt.value)
 }
 
 // ── how each point can be moved ──
@@ -159,37 +161,12 @@ const TITLES: Record<PointKind, string> = {
 const scene = computed(() => {
   const witness = activeWitness.value, t = displayTransform.value
   if (!props.problem || !witness || !t) return null
-  const coords = witness.coords
-  const tx = (x: number) => t.offsetX + (x - t.minX) * t.scale
-  const ty = (y: number) => t.offsetY + (y - t.minY) * t.scale
-  const reach = viewportWidth.value + viewportHeight.value
-
-  const lines: number[][] = []
-  for (const line of props.problem.lines) {
-    const pts = [...line.points].map(p => coords.get(p)).filter((p): p is Point => !!p)
-    if (pts.length < 2) continue
-    const [a, b] = pts
-    const [ax, ay, bx, by] = [tx(a[0]), ty(a[1]), tx(b[0]), ty(b[1])]
-    const len = Math.hypot(bx - ax, by - ay)
-    if (len < 1e-9) continue
-    const [ux, uy] = [(bx - ax) / len, (by - ay) / len]
-    lines.push([ax - ux * reach, ay - uy * reach, ax + ux * reach, ay + uy * reach])
-  }
-
-  const circles: number[][] = []
-  for (const circle of props.problem.circles) {
-    const c = coords.get(circle.center)
-    const pts = [...circle.points].map(p => coords.get(p)).filter((p): p is Point => !!p)
-    if (!c || !pts.length) continue
-    const r = pts.reduce((s, p) => s + Math.hypot(p[0] - c[0], p[1] - c[1]), 0) / pts.length
-    circles.push([tx(c[0]), ty(c[1]), r * t.scale])
-  }
-
-  const points = [...coords].map(([name, [x, y]]) => {
-    const kind = kindOf(name)
-    return { name, x: tx(x), y: ty(y), kind, aux: isAuxiliary(name), label: displayName(name), title: `${displayName(name)}: ${TITLES[kind]}` }
+  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value)
+  const points = base.points.map(p => {
+    const kind = kindOf(p.name)
+    return { ...p, kind, aux: isAuxiliary(p.name), label: displayName(p.name), title: `${displayName(p.name)}: ${TITLES[kind]}` }
   })
-  return { lines, circles, points }
+  return { ...base, points }
 })
 
 // ── dragging ──
@@ -327,6 +304,8 @@ defineExpose({ activeWitness, baseWitness })
   stroke: var(--dg-ink, #fff);
   stroke-width: var(--dg-stroke, 3);
 }
+.crisp .tick { stroke-width: calc(var(--dg-stroke, 3) * 0.8); stroke-linecap: round; }
+
 /* Behind the text the figure becomes a dotted ghost, like a construction pencilled in. */
 .ghost line, .ghost circle {
   fill: none;

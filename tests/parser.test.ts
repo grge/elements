@@ -1,14 +1,11 @@
 /** Lexer and parser. */
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { tokenize, TokenType } from '../src/language/lexer'
+import { bookRules } from './book'
 import { parseSource, parseRules, parseGroundQueries, parseGeoFile, validateConsistentArities } from '../src/language/parser'
 
-const coreGeo   = readFileSync(resolve(__dirname, '../src/language/core.geo'), 'utf8')
-const euclidGeo = readFileSync(resolve(__dirname, '../src/language/euclid.geo'), 'utf8')
-const foundationRules = [...parseRules(coreGeo), ...parseRules(euclidGeo)]
+const foundationRules = bookRules
 
 // ── Lexer ──────────────────────────────────────────────────────────────
 
@@ -122,7 +119,7 @@ describe('parser', () => {
     expect(queries.map(q => q.name)).toEqual(['foo', 'bar'])
   })
 
-  it('loads expected rules from core.geo and euclid.geo', () => {
+  it('loads the book', () => {
     expect(foundationRules.length).toBeGreaterThan(0)
     const names = new Set(foundationRules.map(r => r.head.name))
     expect(names.has('collinear')).toBe(true)

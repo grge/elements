@@ -12,7 +12,7 @@ import type {
 } from './constraints'
 import { canonicalise } from './canonicalization'
 
-export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-lines'])
+export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-lines', 'distinct'])
 
 export class UnsupportedPrimitiveError extends Error {}
 
@@ -67,6 +67,9 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
         pair2: [goal.args[2], goal.args[3]],
       } satisfies EqualDistConstraint)
       break
+
+    case 'distinct':
+      break  // no constraint on positions; the construction planner keeps the points apart
 
     default:
       throw new UnsupportedPrimitiveError(`Unsupported primitive: ${goal.name}`)

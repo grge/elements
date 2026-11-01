@@ -3,7 +3,7 @@
 The interface takes its cue from Oliver Byrne's 1847 edition of Euclid, in which the proposition and its
 figure share the page and colour carries the structure. It is an influence, not a pastiche.
 
-![The page, showing Euclid I.2](images/screenshot.png)
+![A page of the book: the rhombus of two equilateral triangles](images/screenshot.png)
 
 ## Principles
 
@@ -29,8 +29,9 @@ annotation pages were dropped:
 ## As built
 
 **Page.** A masthead strip (`ELEMENTS`, the name being viewed and its arguments, theme swatches), the
-source on the left, and the figure filling the whole page behind it. The figure's points are fitted to
-the right of centre; its lines and circles run on behind the text.
+source on the left, and the figure filling the whole page behind it. The figure's points are fitted in
+the space beside the text, while its lines and circles may run on behind it (the composition the
+original brief describes: points in a chosen region, geometry across the whole page).
 
 **Figure behind text.** Under the text column the figure turns into a dotted ghost of itself, cross-fading
 back to solid strokes across a soft edge. The text and the construction steps carry a halo in the paper
@@ -43,7 +44,7 @@ open points are determined by the construction (dragging one re-plans the constr
 becomes free), and small quiet points cannot be moved. Auxiliary points (`d₁`) are smaller.
 
 **Source.** CodeMirror with predicate names in ink and variables in the accent colour; `?` lines get
-`✓` or `✗` in a gutter beside them.
+`✓`, `✗`, or `⊥` (contradictory hypotheses) in a gutter beside them.
 
 **The construction in words** sits under the source ("g₁ where line bd₁ meets circle about b with
 radius bc"). If the figure cannot be constructed in its current position, the failing step is marked and
@@ -64,8 +65,13 @@ the paper):
 Theme colours are registered CSS properties, so a change cross-fades everything, figure included.
 With *shuffle* on, opening something from the contents picks a new theme.
 
-**Contents.** Clicking the title or `ELEMENTS` replaces the page with a typographic index of the
-knowledge base. It works, but it is the least resolved part of the design (see below).
+**Contents.** Clicking the title or `ELEMENTS` replaces the page with the book's contents, one chapter
+at a time: a card for each predicate, in the order the chapter defines them, with a miniature of its
+figure (computed in idle time and cached), its name and its arguments. Opening a construction shows its
+definition with the propositions about it, each checked.
+
+**Equal segments** that a figure states (not already shown as circles) are drawn with tick marks, the
+same number on segments of the same length.
 
 **Narrow screens.** With no room beside the text, the source sits above a solid figure.
 
@@ -82,8 +88,8 @@ From the original brief, in rough order of importance:
 - **Text that makes room for the figure**: try a set of vertical positions for the text block, score
   their overlap with lines and circles, move (animated, with hysteresis) only on load and after a drag,
   and fall back to the margin when nothing fits.
-- **A better index**: predicates shown as cards with a miniature figure, constructions ordered by their
-  dependencies (a construction after the ones it uses), core predicates set apart, search, and books.
+- **A fuller index**: the cards exist; still to come are search, setting the primitives apart from the
+  constructions, and grouping chapters into books.
 - **Predicate views across the knowledge base**, with lemmas as optional layers (lemmas implying it,
   implied by it, mentioning it).
 - **The boffin panel**: a strip that the page gives up at the bottom, hidden by default, for proof

@@ -1,26 +1,26 @@
 /**
- * useKB — knowledge base composable.
+ * useKB — the knowledge base: the bundled book plus the user's own clauses.
  *
- * Three namespace layers:
- *   core/      read-only, bundled (inference rules)
- *   euclid/    read-only, bundled (constructions)
- *   lemmas/    read-only, bundled (test lemmas + auxiliary rules)
- *   user/      editable, localStorage
+ * The book is every `.geo` file in src/language/book/, one chapter per file in file-name order; a
+ * chapter's title is its first comment line. The user's clauses live in the browser.
  *
- * All horn clauses and lemmas are stored in a single flat ClauseItem list,
- * each tagged with its source namespace. clausesForPredicate(name, ns)
- * filters that list — no special-casing per namespace.
+ * Each clause belongs to a namespace (a chapter's id, or 'user'). A rule belongs to the predicate of
+ * its head. A lemma belongs to the predicate it is about: of the predicates it mentions, the one
+ * defined latest in the book (so `? eq-lines a c b d: vesica a b c d` belongs to vesica).
  */
 
 import { ref, computed } from 'vue'
-import { parseRules, parseLemmas, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
+import { parseRules, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
-import coreGeo   from '../language/core.geo?raw'
-import euclidGeo from '../language/euclid.geo?raw'
-import lemmasGeo from '../language/lemmas.geo?raw'
 
-export type Namespace = 'core' | 'euclid' | 'lemmas' | 'user'
+/** A chapter's id (its file name without `.geo`), or 'user'. */
+export type Namespace = string
 export type { Lemma, SourceRef }
+
+export interface Chapter {
+  id: Namespace
+  title: string
+}
 
 export interface UserClause {
   id: string
@@ -33,6 +33,8 @@ export interface PredicateEntry {
   namespace: Namespace
   readOnly: boolean
   arity: number
+  /** Argument names to show: its definition's (`vesica a b c d`), or plain letters if it has none. */
+  args: string[]
 }
 
 export interface ClauseItem {
@@ -42,32 +44,43 @@ export interface ClauseItem {
   namespace: Namespace
   readOnly: boolean
   sourceRef?: SourceRef
+  /** For a rule, its head's arguments. */
+  args?: string[]
 }
 
-const coreItems = parseGeoFile(coreGeo, 'core.geo')
-const euclidItems = parseGeoFile(euclidGeo, 'euclid.geo')
-const lemmaItems = parseGeoFile(lemmasGeo, 'lemmas.geo')
-validateConsistentArities([
-  { sourceName: 'core.geo', items: coreItems },
-  { sourceName: 'euclid.geo', items: euclidItems },
-  { sourceName: 'lemmas.geo', items: lemmaItems },
-])
+const chapterSources = import.meta.glob('../language/book/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
-const coreRules   = parseRules(coreGeo)
-const euclidRules = parseRules(euclidGeo)
-const lemmaRules  = parseRules(lemmasGeo)
-export const builtinLemmas: Lemma[] = parseLemmas(lemmasGeo)
+const loaded = Object.entries(chapterSources)
+  .sort(([a], [b]) => a.localeCompare(b))
+  .map(([path, source]) => {
+    const file = path.split('/').pop()!
+    const id = file.replace(/\.geo$/, '')
+    const title = source.match(/^#\s*(.+)$/m)?.[1].trim() ?? id
+    return { id, title, file, source, items: parseGeoFile(source, file) }
+  })
+validateConsistentArities(loaded.map(c => ({ sourceName: c.file, items: c.items })))
 
-const builtinClauses: ClauseItem[] = [
-  ...coreItems.flatMap(item => toClauseItem(item, 'core')),
-  ...euclidItems.flatMap(item => toClauseItem(item, 'euclid')),
-  ...lemmaItems.flatMap(item => toClauseItem(item, 'lemmas')),
-]
+export const chapters: Chapter[] = loaded.map(({ id, title }) => ({ id, title }))
+const bookRules: Rule[] = loaded.flatMap(c => parseRules(c.source))
 
+// Where each predicate is first defined in the book (chapter, then position), for ordering.
+const definedAt = new Map<string, number>()
+loaded.forEach((c, ci) => c.items.forEach((item, ii) => {
+  if (item.kind === 'rule' && !definedAt.has(item.rule.head.name)) definedAt.set(item.rule.head.name, ci * 100_000 + ii)
+}))
+
+function owner(lemma: Lemma): string {
+  const mentioned = [lemma.head, ...lemma.hypotheses].map(p => p.name).filter(n => definedAt.has(n))
+  return mentioned.reduce((best, n) => definedAt.get(n)! > definedAt.get(best)! ? n : best, mentioned[0] ?? lemma.head.name)
+}
+
+const builtinClauses: ClauseItem[] = loaded.flatMap(c => c.items.flatMap(item => toClauseItem(item, c.id)))
+
+/** A clause with its doc comment above it, each paragraph of the comment on one line (the editor wraps it). */
 function withDocComment(source: string, item: TopLevel): string {
   if (!item.docComment) return source
-  const doc = item.docComment.split('\n').map(line => `# ${line}`).join('\n')
-  return `${doc}\n${source}`
+  const paragraphs = item.docComment.split(/\n\s*\n/).map(p => p.split('\n').map(l => l.trim()).join(' '))
+  return `${paragraphs.map(p => `# ${p}`).join('\n#\n')}\n${source}`
 }
 
 function ruleToSource(r: Rule): string {
@@ -96,12 +109,13 @@ function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
         namespace,
         readOnly: true,
         sourceRef: item.sourceRef,
+        args: item.rule.head.args,
       }]
     case 'lemma':
       return [{
         id: `lemma:${item.lemma.head.name}:${Math.random()}`,
         source: withDocComment(lemmaToSource(item.lemma), item),
-        predName: item.lemma.head.name,
+        predName: owner(item.lemma),
         namespace,
         readOnly: true,
         sourceRef: item.sourceRef,
@@ -132,20 +146,29 @@ const kb = computed<KnowledgeBase>(() => {
   const userRules = userClauses.value.flatMap(c => {
     try { return parseRules(c.source) } catch { return [] }
   })
-  return new KnowledgeBase([...coreRules, ...euclidRules, ...lemmaRules, ...userRules])
+  return new KnowledgeBase([...bookRules, ...userRules])
 })
+
+/** The contradiction marker: a predicate of the logic, not something to browse. */
+const RESERVED_FALSE = 'false'
 
 const predicates = computed<PredicateEntry[]>(() => {
   const seen = new Map<string, PredicateEntry>()
 
   for (const item of builtinClauses) {
-    if (!seen.has(`${item.namespace}:${item.predName}`)) {
-      seen.set(`${item.namespace}:${item.predName}`, {
+    if (item.predName === RESERVED_FALSE) continue
+    const key = `${item.namespace}:${item.predName}`
+    const entry = seen.get(key)
+    if (!entry) {
+      seen.set(key, {
         name: item.predName,
         namespace: item.namespace,
         readOnly: true,
         arity: arityOf(item),
+        args: item.args ?? [],
       })
+    } else if (!entry.args.length && item.args) {
+      entry.args = item.args
     }
   }
   for (const c of userClauses.value) {
@@ -158,14 +181,27 @@ const predicates = computed<PredicateEntry[]>(() => {
             namespace: 'user',
             readOnly: false,
             arity: r.head.args.length,
+            args: r.head.args,
           })
         }
       }
     } catch {}
   }
 
+  // Show a defined predicate with its definition's arguments; anything else (axioms such as
+  // `eq-lines a b b a` come first) with plain letters.
+  const definitions = kb.value.definitions()
+  for (const entry of seen.values()) {
+    const def = definitions.get(entry.name)
+    entry.args = def?.kind === 'definition'
+      ? def.clause.head.args
+      : Array.from({ length: entry.arity }, (_, i) => String.fromCharCode(97 + i))
+  }
+
+  // Book predicates in the order the book defines them; the user's alphabetically, after.
+  const rank = (p: PredicateEntry) => definedAt.get(p.name) ?? Infinity
   return [...seen.values()].sort((a, b) =>
-    a.namespace.localeCompare(b.namespace) || a.name.localeCompare(b.name)
+    (a.namespace === 'user' ? 1 : 0) - (b.namespace === 'user' ? 1 : 0) || rank(a) - rank(b) || a.name.localeCompare(b.name)
   )
 })
 
@@ -219,7 +255,7 @@ export function useKB() {
     predicates,
     predicatesInNS,
     userClauses,
-    builtinLemmas,
+    chapters,
     addUserClause,
     updateUserClause,
     deleteUserClause,

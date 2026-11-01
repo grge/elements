@@ -1,17 +1,15 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { parseRules } from '../src/language/parser'
 import { KnowledgeBase, forwardClosure, groundKey, type GroundPredicate } from '../src/kb/inference'
 import { analyseStructure } from '../src/kb/structure'
 import { prepare, saturate } from '../src/kb/saturate'
 import { showRule } from '../src/kb/rules'
+import { chapterSource } from './book'
 
-const read = (f: string) => readFileSync(resolve(__dirname, '../src/language', f), 'utf8')
-const core = parseRules(read('core.geo'))
+const core = parseRules(chapterSource('01-length.geo'))
 const g = (s: string): GroundPredicate => { const [name, ...args] = s.split(' '); return { name, args } }
 
-describe('structure recognised by proof in core.geo', () => {
+describe('structure recognised by proof in chapter 1', () => {
   const st = analyseStructure(core)
 
   it('finds eq-point as the equality, substitutable into the other primitives', () => {
@@ -23,6 +21,11 @@ describe('structure recognised by proof in core.geo', () => {
     const e = st.equivalences.get('eq-lines')!
     expect(e.k).toBe(2)
     expect(e.blockGroup).toHaveLength(2)
+  })
+
+  it('treats distinct like any other relation: symmetric, and equals substitute into it', () => {
+    expect(st.symmetries.get('distinct')).toHaveLength(2)
+    expect(st.congruent.get('distinct')).toEqual([true, true])
   })
 
   it('finds exactly the symmetries the rules give', () => {

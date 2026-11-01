@@ -4,7 +4,14 @@ import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './i
 import { saturate } from './saturate'
 import { FreshNames } from './names'
 
-export type CheckResult = 'verified' | 'not-provable' | 'invalid-query'
+/**
+ * verified: the goal follows. vacuous: the hypotheses (or the configuration) are contradictory, i.e.
+ * they derive the reserved 0-ary predicate `false`. A contradiction takes precedence over the goal:
+ * anything follows from it, so a ✓ would hide what the author needs to know.
+ */
+export type CheckResult = 'verified' | 'vacuous' | 'not-provable' | 'invalid-query'
+
+const FALSE: GroundPredicate = { name: 'false', args: [] }
 
 export interface CheckResponse {
   result: CheckResult
@@ -22,6 +29,25 @@ function dedupeFacts(facts: readonly GroundPredicate[]): GroundPredicate[] {
   return [...out.values()]
 }
 
+/**
+ * Could facts of these predicates lead to `target` at all? Fires rules at the level of predicate
+ * names only (a rule applies once every predicate in its body is reachable): an over-approximation,
+ * so a "no" is certain.
+ */
+function mayDerive(kb: KnowledgeBase, seeds: readonly GroundPredicate[], target: string): boolean {
+  const reachable = new Set(seeds.map(s => s.name))
+  for (let grew = true; grew && !reachable.has(target);) {
+    grew = false
+    for (const rule of kb.allRules()) {
+      if (!reachable.has(rule.head.name) && rule.body.every(b => reachable.has(b.name))) {
+        reachable.add(rule.head.name)
+        grew = true
+      }
+    }
+  }
+  return reachable.has(target)
+}
+
 function runCheckPipeline(
   goal: GroundPredicate,
   seeds: readonly GroundPredicate[],
@@ -31,9 +57,15 @@ function runCheckPipeline(
   // One supply of fresh names for the whole check, so auxiliaries of different hypotheses stay distinct.
   const fresh = new FreshNames()
   const frontier = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
-  const sat = saturate(kb, frontier, { goal, maxDerivations: maxSteps * 100 })
+  const budget = { maxDerivations: maxSteps * 100 }
+  const sat = saturate(kb, frontier, { goal, ...budget })
+  // The search stops at the goal; to rule out a contradiction it must be carried on to the end,
+  // which is only worth doing if `false` is derivable at all from these kinds of facts.
+  const contradictory = sat.holds(goal)
+    ? mayDerive(kb, frontier, FALSE.name) && saturate(kb, frontier, { goal: FALSE, ...budget }).holds(FALSE)
+    : sat.holds(FALSE)
   return {
-    result: sat.holds(goal) ? 'verified' : 'not-provable',
+    result: contradictory ? 'vacuous' : sat.holds(goal) ? 'verified' : 'not-provable',
     facts: sat.allFacts(),
   }
 }

@@ -41,6 +41,8 @@ export interface ConstructionModel {
   /** Classes of segments of equal length, each with at least two segments. */
   lengths: [string, string][][]
   between: [string, string, string][]
+  /** Pairs of points that must not coincide. */
+  distinct: [string, string][]
 }
 
 export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel {
@@ -49,6 +51,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
   const groups: Set<string>[] = []
   const segParent = new Map<string, string>()
   const between: [string, string, string][] = []
+  const distinct: [string, string][] = []
 
   const segKey = (a: string, b: string) => a < b ? `${a}\u0001${b}` : `${b}\u0001${a}`
   const segFind = (k: string): string => {
@@ -79,6 +82,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
         break
       case 'circle': equal(f.args[0], f.args[1], f.args[0], f.args[2]); break
       case 'eq-lines': equal(f.args[0], f.args[1], f.args[2], f.args[3]); break
+      case 'distinct': if (f.args[0] !== f.args[1]) distinct.push([f.args[0], f.args[1]]); break
     }
   }
 
@@ -113,6 +117,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
     lines: groups.map(order),
     lengths: [...classes.values()].filter(c => c.length >= 2),
     between,
+    distinct,
   }
 }
 
@@ -130,6 +135,7 @@ export type Step =
 
 export interface Check { step: number; point: string; locus: Locus }
 export interface OrderFact { step: number; between: [string, string, string] }
+export interface DistinctFact { step: number; points: [string, string] }
 
 export interface ConstructionPlan {
   steps: Step[]
@@ -137,6 +143,8 @@ export interface ConstructionPlan {
   checks: Check[]
   /** Order facts, decided at the step that places their last point. */
   orders: OrderFact[]
+  /** Points that must not coincide, decided at the step that places the later one. */
+  distinct: DistinctFact[]
   dof: number
   /** Number of equations the figure states, and how many the plan uses to place points. */
   equations: number
@@ -249,9 +257,10 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
   })
   const stepOf = (p: string) => order.indexOf(p)
   const orders = model.between.map(b => ({ step: Math.max(...b.map(stepOf)), between: b }))
+  const distinct = model.distinct.map(d => ({ step: Math.max(...d.map(stepOf)), points: d }))
   const dof = steps.reduce((s, st) => s + (st.kind === 'free' ? 2 : st.kind === 'on' ? 1 : 0), 0)
   const equations = countEquations(model)
-  return { steps, checks, orders, dof, equations, used: 2 * n - dof }
+  return { steps, checks, orders, distinct, dof, equations, used: 2 * n - dof }
 }
 
 /** Parameters each step takes. */
@@ -450,8 +459,16 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       })
       if (ok.length === 0) return fail(`neither meeting point of ${step.loci.map(describeLocus).join(' and ')} satisfies ${orders.map(o => `between ${o.between.join(' ')}`).join(', ')}`)
       decided = new Set(orders)
+      // "The other intersection": a meeting point on a point x must differ from is ruled out.
+      const coincides = (c: Point, q: string) => dist(c, at.get(q)!) <= tol()
+      const apart = cp.distinct.filter(d => d.step === k).map(d => d.points[0] === x ? d.points[1] : d.points[0])
+      const allowed = ok.filter(c => apart.every(q => !coincides(c, q)))
+      if (allowed.length === 0) return fail(`where ${step.loci.map(describeLocus).join(' and ')} meet is ${apart.join(', ')}, which ${x} must differ from`)
+      // The drawing takes distinct names for distinct points: prefer a meeting point not already used.
+      const unused = allowed.filter(c => ![...at.keys()].some(q => coincides(c, q)))
+      const choices = unused.length ? unused : allowed
       const near = target ?? options.previous?.get(x)
-      pos = near ? ok.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best) : ok[0]
+      pos = near ? choices.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best) : choices[0]
     }
 
     at.set(x, pos)
@@ -460,6 +477,9 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     for (const c of cp.checks.filter(c => c.step === k)) {
       const curve = curveOf(c.locus, at)
       if (curve && residual(at.get(c.point)!, curve) > tol()) violations.push({ step: k, what: `${c.point} on ${describeLocus(c.locus)}` })
+    }
+    for (const { points: [p, q] } of cp.distinct.filter(d => d.step === k)) {
+      if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${p} and ${q} distinct` })
     }
     for (const order of orders) {
       if (decided.has(order)) continue

@@ -1,14 +1,13 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
-import { parseRules, parseSource } from '../src/language/parser'
+import { parseSource } from '../src/language/parser'
+import { bookRules, fixtureRules } from './book'
 import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { frontierFactsFromRuntime } from '../src/geometry/extraction'
 import { buildModel, plan, realise, execute, drag, paramCount, type Point, type ConstructionPlan } from '../src/geometry/construction'
 
-const read = (f: string) => readFileSync(resolve(__dirname, '../src/language', f), 'utf8')
-const kb = new KnowledgeBase([...parseRules(read('core.geo')), ...parseRules(read('euclid.geo')), ...parseRules(read('lemmas.geo'))])
+// The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
+const kb = new KnowledgeBase([...bookRules, ...fixtureRules])
 
 const factsOf = (text: string) => frontierFactsFromRuntime(buildRuntimeState(kb, parseSource(text)))
 
@@ -22,6 +21,7 @@ function worstFact(facts: GroundPredicate[], c: Map<string, Point>): { residual:
     let r = 0
     if (f.name === 'circle') r = Math.abs(d(a, b) - d(a, x))
     if (f.name === 'eq-lines') r = Math.abs(d(a, b) - d(x, y))
+    if (f.name === 'distinct') r = d(a, b) < 1e-9 ? 1 : 0
     if (f.name === 'collinear' || f.name === 'between') {
       const ab = [b[0] - a[0], b[1] - a[1]], ax = [x[0] - a[0], x[1] - a[1]]
       r = Math.abs(ab[0] * ax[1] - ab[1] * ax[0]) / Math.max(1e-12, Math.hypot(ax[0], ax[1]))
@@ -54,6 +54,7 @@ const figures: Array<{ text: string; dof: number; mayFail?: boolean }> = [
   { text: 'double a b c', dof: 4 },
   { text: 'vesica a b c d', dof: 4 },
   { text: 'march a b c d e', dof: 4 },
+  { text: 'hexagon o a b c d e f', dof: 4 },                     // needs "the other intersection"
   { text: 'copy-segment a l b c', dof: 6 },
   { text: 'cut-segment a b x c d', dof: 8, mayFail: true },     // only possible when cd < ab
   { text: 'copy-segment a l b c\ncopy-segment p q r s', dof: 12 },
@@ -158,5 +159,28 @@ describe('reusing previous positions', () => {
     const pts = [...after.drawing.coords.values()]
     const closest = Math.min(...pts.flatMap((p, i) => pts.slice(i + 1).map(q => Math.hypot(p[0] - q[0], p[1] - q[1]))))
     expect(closest).toBeGreaterThan(1e-3)
+  })
+})
+
+describe('the other intersection', () => {
+  const minGap = (c: Map<string, Point>) => {
+    const ps = [...c.values()]
+    return Math.min(...ps.flatMap((p, i) => ps.slice(i + 1).map(q => Math.hypot(p[0] - q[0], p[1] - q[1]))))
+  }
+
+  it('takes the meeting point a distinct fact allows', () => {
+    const cp = plan(buildModel(factsOf('eq-triangle o a b\neq-triangle o b c\ndistinct c a')))
+    const start = realise(cp)
+    const random = seeded(3)
+    for (let i = 0; i < 100; i++) {
+      const d = execute(cp, wiggle(cp, start.params, random), { previous: start.drawing.coords })
+      expect(d.failure).toBeUndefined()
+      expect(minGap(d.coords)).toBeGreaterThan(1e-6)
+    }
+  })
+
+  it('prefers a meeting point not already in use even without a distinct fact', () => {
+    const cp = plan(buildModel(factsOf('eq-triangle o a b\neq-triangle o b c')))
+    expect(minGap(realise(cp).drawing.coords)).toBeGreaterThan(1e-6)
   })
 })

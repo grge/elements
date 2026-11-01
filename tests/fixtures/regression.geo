@@ -1,15 +1,7 @@
-# Lemmas, which double as the test suite (tests/lemmas.test.ts checks every one).
-#
-#   ? head: hyp1, hyp2   — the head should follow from the hypotheses
-#   ? head: -            — the head should hold outright
-#
-# The lemmas that should NOT follow are listed in tests/lemmas.test.ts (most sit under "negative"
-# headings; a few are known gaps, commented where they appear); in the app they show ✗.
-# Some predicates used here (midpoint) are defined in this file itself.
-
-midpoint m a b:
-    between a m b
-    eq-lines a m m b
+# Regression lemmas for the engine: equality, substitution, symmetry, degenerate cases and order.
+# tests/lemmas.test.ts checks every lemma here and in the book (src/language/book/). Lemmas that
+# should NOT follow are listed in that test as expected to fail; most sit under the "negative"
+# heading at the end, and a known gap is commented where it appears.
 
 # ── eq-point ──────────────────────────────────────────────────────────
 
@@ -110,6 +102,7 @@ midpoint m a b:
 # ── collinear: interaction with betweenness ───────────────────────────
 
 ? collinear a c d: between a b d, between b c d
+# Known gap: true only when a != c, and the language cannot state that yet (expected to fail).
 ? collinear a b d: between a b c, collinear a c d
 ? collinear a m b: between a m b
 
@@ -127,89 +120,32 @@ midpoint m a b:
 ? eq-point b c: between a b c, eq-lines a b a c
 ? eq-point a b: between a b c, eq-lines a c b c
 
-# ── circle predicate ─────────────────────────────────────────────────
+# ── circles, triangles, midpoints ───────────────────────────────────
 
 ? eq-lines o a o p: circle o a p
 ? eq-lines o p o a: circle o a p
-
-# ── equilateral triangle ─────────────────────────────────────────────
-
 ? eq-lines a b a c: eq-triangle a b c
-? eq-lines a b b c: eq-triangle a b c
-? eq-lines a c b c: eq-triangle a b c
-
-# ── midpoint ─────────────────────────────────────────────────────────
-
+? eq-lines b a b c: eq-triangle a b c
 ? between a m b: midpoint m a b
 ? collinear a m b: midpoint m a b
 ? eq-lines a m m b: midpoint m a b
 ? eq-lines m a b m: midpoint m a b
 ? midpoint m a b: between a m b, eq-lines a m m b
-
-# ── equilateral recognition ───────────────────────────────────────────
-
-? eq-triangle a b c: eq-lines a b a c, eq-lines a b b c
-
-# ── small transitive geometric facts ─────────────────────────────────
-
-? eq-lines o p o q: circle o a p, circle o a q
-? eq-lines a c b c: eq-triangle a b c
-? collinear a c d: collinear a b c, collinear a b d
-
-# ── negative tests (these should NOT be provable — expect ✗) ─────────
-
-? eq-point a b: -
-? between a b c: collinear a b c
-? eq-lines a b b c: circle a b c
-? midpoint m a b: between a m b
-? eq-triangle a b c: circle a b c
-? eq-point a b: eq-lines a c b c
-
-# ══ Euclid, Book I — properties of the constructions in euclid.geo ═══════════════════════════
-
-# ── I.1 equilateral triangle ─────────────────────────────────────────
-
-? eq-lines a b a c: eq-triangle a b c
-? eq-lines b a b c: eq-triangle a b c
-
-# ── I.2 copy a segment (uses common notion 3) ────────────────────────
-
-? eq-lines a l b c: copy-segment a l b c
-#
-# The construction's own points (the apex d, the point g) are internal to it: a lemma cannot name
-# them. In "? eq-lines d a d b: copy-segment a l b c" the d is an arbitrary new point.
-
-# ── I.3 cut off a segment ────────────────────────────────────────────
-
-? eq-lines a x c d: cut-segment a b x c d
-? between a x b: cut-segment a b x c d
-? collinear a x b: cut-segment a b x c d
-
-# ── doubling and marching ────────────────────────────────────────────
-
 ? eq-lines a b b c: double a b c
 ? collinear a b c: double a b c
-? eq-lines a b d e: march a b c d e
 ? eq-lines a b c d: march a b c d e
-? eq-lines a c c e: march a b c d e
-? eq-lines a c b d: march a b c d e
 ? eq-lines b d c e: march a b c d e
 ? between a b c: march a b c d e
 ? between c d e: march a b c d e
-#
-# Not stated: between a c e, collinear a b e, ... These are true in every configuration, but
-# proving them takes a case split on b != c (if b = c, a-b-c and b-c-d say nothing about a-b-d).
-# The language has no inequality yet, so the engine cannot do this.
 
-# ── the vesica: a rhombus on a-b ─────────────────────────────────────
+# ── negative: these should NOT follow ───────────────────────────────
 
-? eq-lines a c b d: vesica a b c d
-? eq-lines a c a d: vesica a b c d
-? eq-lines c a c b: vesica a b c d
-
-# ── negative: these do NOT follow from the constructions ─────────────
-
-? eq-lines a l a b: copy-segment a l b c
+? eq-point a b: -
+? between a b c: collinear a b c
+? eq-point a b: eq-lines a c b c
+? collinear a c d: collinear a b c, collinear a b d
+? eq-lines a b b c: circle a b c
+? midpoint m a b: between a m b
+? eq-triangle a b c: circle a b c
 ? eq-lines a e b c: march a b c d e
 ? between a b d: vesica a b c d
-? eq-lines a x a b: cut-segment a b x c d

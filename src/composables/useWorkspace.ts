@@ -21,13 +21,21 @@ eq-triangle a b c
 ? eq-lines a b b c: eq-triangle a b c
 ? eq-lines a b b c: circle a b c`
 
+/** Clauses one per paragraph, except that a lemma without a comment of its own joins the lemmas before it. */
+function joinClauses(sources: string[]): string {
+  const isLemma = (src: string) => src.split('\n').find(line => !line.startsWith('#'))?.trimStart().startsWith('?') ?? false
+  const together = (prev: string, cur: string) => isLemma(prev) && isLemma(cur) && !cur.startsWith('#')
+  return sources.reduce((text, src, i) =>
+    i === 0 ? src : text + (together(sources[i - 1], src) ? '\n' : '\n\n') + src, '')
+}
+
 /**
  * The current "page": either the scratchpad or one predicate from the knowledge base,
  * plus the runtime / geometry / plan derived from its text.
  */
 export function useWorkspace() {
   const kbApi = useKB()
-  const { kb, predicates, userClauses, clausesForPredicate } = kbApi
+  const { kb, predicates, userClauses, clausesForPredicate, chapters } = kbApi
 
   const mode = ref<'scratchpad' | 'predicate'>('scratchpad')
   const selectedPred = ref('')
@@ -62,7 +70,7 @@ export function useWorkspace() {
     mode.value = 'predicate'
     selectedPred.value = name
     selectedNamespace.value = ns
-    clause.value = clausesForPredicate(name, ns).map(c => c.source).join('\n\n')
+    clause.value = joinClauses(clausesForPredicate(name, ns).map(c => c.source))
   }
 
   function newUserPredicate(name: string): boolean {
@@ -138,7 +146,7 @@ export function useWorkspace() {
   }
 
   return {
-    kb, predicates, userClauses,
+    kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, usePlanner,
     runtime, facts, problem, construction, drawing, setConstruction,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,

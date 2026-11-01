@@ -11,7 +11,7 @@
           <span v-for="(a, i) in headArgs" :key="i" class="arg">{{ a }}</span>
         </template>
       </h1>
-      <span v-if="ws.mode.value === 'predicate'" class="ns">{{ ws.selectedNamespace.value }}</span>
+      <span v-if="ws.mode.value === 'predicate'" class="ns">{{ namespaceLabel }}</span>
       <button v-if="ws.selectedNamespace.value === 'user'" class="quiet" @click="ws.deleteSelected()">delete</button>
 
       <div class="themes" role="group" aria-label="Colour theme">
@@ -70,14 +70,24 @@
       <nav v-if="contentsOpen" class="contents" @click.self="contentsOpen = false">
         <div class="contents-inner">
           <button class="entry scratch" @click="go(() => ws.openScratchpad())">Scratch</button>
-          <div v-for="g in groups" :key="g.ns" class="group">
-            <h2>{{ g.ns }}</h2>
+          <div class="chapters" role="tablist" aria-label="Chapters">
             <button
-              v-for="p in g.items" :key="p.name" class="entry"
-              :class="{ current: ws.selectedPred.value === p.name && ws.selectedNamespace.value === g.ns }"
-              @click="go(() => ws.openPredicate(p.name, g.ns))"
-            >{{ p.name }}<sup>{{ p.arity }}</sup></button>
-            <button v-if="g.ns === 'user'" class="entry add" @click="addUser">+ new</button>
+              v-for="g in groups" :key="g.ns" role="tab" class="chapter-tab"
+              :class="{ current: g.ns === shownGroup?.ns }" :aria-selected="g.ns === shownGroup?.ns"
+              @click="shownChapter = g.ns"
+            >{{ g.title }}</button>
+          </div>
+          <div v-if="shownGroup" class="cards">
+            <button
+              v-for="p in shownGroup.items" :key="p.name" class="card"
+              :class="{ current: ws.selectedPred.value === p.name && ws.selectedNamespace.value === shownGroup.ns }"
+              @click="go(() => ws.openPredicate(p.name, shownGroup!.ns))"
+            >
+              <FigureThumb :thumbnail="thumbnails.get(p.name)" :fallback="p.args.join(' ')" />
+              <span class="card-name">{{ p.name }}</span>
+              <span class="card-args">{{ p.args.join(' ') }}</span>
+            </button>
+            <button v-if="shownGroup.ns === 'user'" class="card add" @click="addUser">+ new predicate</button>
           </div>
         </div>
       </nav>
@@ -86,12 +96,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { parseSource } from '../language/parser'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor from '../components/CodeEditor.vue'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
+import FigureThumb from '../components/FigureThumb.vue'
+import { useThumbnails } from '../composables/useThumbnails'
 import type { Locus, Step } from '../geometry/construction'
 import { displayName } from '../kb/names'
 import type { Namespace } from '../composables/useKB'
@@ -172,11 +184,26 @@ const headArgs = computed(() => {
   } catch { return [] }
 })
 
-const groups = computed(() =>
-  (['core', 'euclid', 'lemmas', 'user'] as Namespace[]).map(ns => ({
-    ns,
-    items: ws.predicates.value.filter(p => p.namespace === ns),
-  })).filter(g => g.items.length || g.ns === 'user'))
+// The book's chapters in order, then the user's own predicates.
+const groups = computed(() => [
+  ...ws.chapters.map(c => ({ ns: c.id as Namespace, title: c.title, items: ws.predicates.value.filter(p => p.namespace === c.id) })),
+  { ns: 'user' as Namespace, title: 'Your predicates', items: ws.predicates.value.filter(p => p.namespace === 'user') },
+])
+// The contents show one chapter at a time, as cards with a thumbnail of each figure.
+const shownChapter = ref<Namespace>('')
+const shownGroup = computed(() => groups.value.find(g => g.ns === shownChapter.value) ?? groups.value[0])
+const { thumbnails, request } = useThumbnails()
+watch(contentsOpen, open => {
+  if (!open) return
+  const here = ws.mode.value === 'predicate' ? ws.selectedNamespace.value : ''
+  shownChapter.value = groups.value.some(g => g.ns === here) ? here : groups.value[0].ns
+})
+watch([contentsOpen, shownGroup, () => ws.kb.value], () => {
+  if (contentsOpen.value && shownGroup.value) request(ws.kb.value, shownGroup.value.items)
+})
+
+const namespaceLabel = computed(() =>
+  ws.chapters.find(c => c.id === ws.selectedNamespace.value)?.title ?? 'your predicate')
 
 function go(fn: () => void) {
   fn()
@@ -349,20 +376,49 @@ const status = computed(() => {
 /* ── contents ── */
 .contents {
   position: fixed; inset: 84px 0 0 0; background: var(--paper); overflow: auto; z-index: 5;
+  scrollbar-width: thin; scrollbar-color: var(--soft) transparent;
 }
-.contents-inner { padding: 2rem 2.5rem 4rem; max-width: 1200px; display: flex; flex-wrap: wrap; gap: 1rem 4rem; align-items: flex-start; }
-.group h2 {
-  margin: 0 0 0.6rem; font: 400 0.8rem 'JetBrains Mono', monospace;
-  letter-spacing: 0.15em; text-transform: uppercase; color: var(--soft);
-}
+.contents-inner { padding: 2rem 2.5rem 4rem; max-width: 1400px; }
 .entry {
   display: block; background: none; border: 0; padding: 0.1rem 0; cursor: pointer; color: var(--ink);
   font: 400 1.5rem 'Archivo Black', 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; text-align: left;
 }
-.entry sup { font: 0.7rem 'JetBrains Mono', monospace; color: var(--soft); margin-left: 0.3rem; }
-.entry:hover, .entry.current { color: var(--accent); }
-.entry.scratch { flex-basis: 100%; font-size: 2.2rem; margin-bottom: 1rem; }
-.entry.add { font: 0.95rem 'JetBrains Mono', monospace; text-transform: none; color: var(--soft); margin-top: 0.5rem; }
+.entry:hover { color: var(--accent); }
+.entry.scratch { font-size: 2.2rem; margin-bottom: 1.2rem; }
+
+.chapters { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-bottom: 1.6rem; }
+.chapter-tab {
+  background: none; border: 0; padding: 0 0 0.25rem; cursor: pointer; color: var(--soft);
+  font: 400 0.8rem 'JetBrains Mono', monospace; letter-spacing: 0.15em; text-transform: uppercase;
+  border-bottom: 2px solid transparent;
+}
+.chapter-tab:hover { color: var(--ink); }
+.chapter-tab.current { color: var(--ink); border-bottom-color: var(--accent); }
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 1.6rem 1.4rem; }
+.card {
+  --dg-ink: var(--ink); --dg-accent: var(--accent); --dg-paper: var(--paper);
+  display: flex; flex-direction: column; gap: 0.15rem; align-items: flex-start;
+  background: none; border: 0; padding: 0; cursor: pointer; color: var(--ink); text-align: left;
+}
+.card :deep(.figure-thumb) {
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  margin-bottom: 0.45rem;
+  transition: background 0.15s;
+}
+.card:hover :deep(.figure-thumb), .card.current :deep(.figure-thumb) { background: color-mix(in srgb, var(--ink) 13%, transparent); }
+.card-name {
+  font: 400 1rem 'Archivo Black', 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 0.03em;
+  overflow-wrap: anywhere;
+}
+.card:hover .card-name, .card.current .card-name { color: var(--accent); }
+.card-args { font: 0.8rem 'JetBrains Mono', monospace; color: var(--accent); letter-spacing: 0.2em; }
+.card.add {
+  justify-content: center; align-items: center; min-height: 8rem;
+  font: 0.95rem 'JetBrains Mono', monospace; color: var(--soft);
+  border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent);
+}
+.card.add:hover { color: var(--ink); }
 
 .fade-enter-active, .fade-leave-active { transition: opacity 0.12s; }
 .fade-enter-from, .fade-leave-to { opacity: 0; }

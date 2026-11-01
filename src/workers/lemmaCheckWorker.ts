@@ -12,7 +12,7 @@ interface VerifyRequest {
 
 interface VerifyMark {
   line: number
-  type: 'verified' | 'failed' | 'unknown'
+  type: 'verified' | 'vacuous' | 'failed' | 'unknown'
   message: string
 }
 
@@ -48,13 +48,15 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
           kind: 'mark',
           mark: {
             line: lineNum,
-            type: result.result === 'verified' ? 'verified' : 'failed',
+            type: result.result === 'verified' ? 'verified' : result.result === 'vacuous' ? 'vacuous' : 'failed',
             message:
               result.result === 'verified'
                 ? 'Verified ✓'
-                : result.result === 'invalid-query'
-                  ? (result.message ?? 'Invalid ground query')
-                  : 'Cannot prove ✗',
+                : result.result === 'vacuous'
+                  ? 'Holds only vacuously: the hypotheses contradict each other'
+                  : result.result === 'invalid-query'
+                    ? (result.message ?? 'Invalid ground query')
+                    : 'Cannot prove ✗',
           },
         }
         self.postMessage(response)

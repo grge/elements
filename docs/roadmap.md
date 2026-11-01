@@ -16,11 +16,8 @@ Open problems and ideas, roughly in order of value within each section. See
 
 ## Logic
 
-- **Distinct points and contradiction.** A `distinct` relation (still positive, still Horn) plus a
-  reserved `false` head (`false: eq-point a b, distinct a b`). Lemmas could then carry non-degeneracy
-  hypotheses, and order facts that hold in every configuration but need a case split (the order of
-  marched points, `collinear a b d: between a b c, collinear a c d`) become provable.
-- **Honest verdicts.** Report a check that ran out of budget as *unknown*, not ✗. Then add numeric
+- **Honest verdicts.** (Contradictory hypotheses are already reported as vacuous, `⊥`.) Report a check
+  that ran out of budget as *unknown*, not ✗. Then add numeric
   evidence: evaluate a lemma on sampled configurations of its hypotheses' construction, giving
   *proven* ✓, *false* with a counterexample figure, *probably true* (holds in every sample, not proven),
   and an alarm when something proven fails numerically (a bug or a false axiom).
@@ -34,7 +31,9 @@ Open problems and ideas, roughly in order of value within each section. See
 - **Replace the `__object__` bootstrap** the checker uses to introduce a lemma's head-only objects with
   an explicit initial universe.
 - **Performance for larger knowledge bases**: semi-naive evaluation and argument indexes in
-  `saturate.ts`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
+  `saturate.ts` (lemmas with `distinct` facts take 0.3–0.5 s, mostly the full closure that rules out a
+  contradiction); keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
+- **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
 - Open question: one arity per predicate name, or `foo/1` distinct from `foo/2`?
 
 ## Construction and drawing
@@ -48,7 +47,8 @@ Open problems and ideas, roughly in order of value within each section. See
   instead of falling back to the solver for the whole figure.
 - **A drawing-layer boundary** for other geometries: the drawable relations, their loci, intersections
   and numeric residuals as a plug-in.
-- **Annotations from proven facts**: tick marks for segments proven equal.
+- **Annotations from proven facts**: segments a figure *states* equal get tick marks already; extend
+  this to segments *proven* equal.
 - Step-by-step playback of a construction; undo for dragging.
 - Figures above 18 points use a greedy order; a bounded search would do better.
 

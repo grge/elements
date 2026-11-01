@@ -223,12 +223,23 @@ conjunction, i.e. still Horn. Consequences:
 - Axioms about a predicate in terms of itself (common notion 3 for `eq-lines`) are recursive, so they
   are never mistaken for definitions.
 
-**Auxiliary objects.** Variables that occur in a definition's body but not its head are existential:
-the definition of `copy-segment a l b c` mentions an apex `d` and a point `g` that exist whenever the
-construction does. Every unfolding gives them fresh names (`d#1`, `g#1`, … shown as `d₁`, `g₁`). `#`
-starts a comment, so these never collide with names a user can write, and two constructions in one
-figure never share auxiliary points. A lemma cannot refer to a construction's auxiliary points: in
-`? eq-lines d a d b: copy-segment a l b c`, `d` is an arbitrary new point.
+**Auxiliary objects.** Variables that occur in a definition's body but not its head are existential.
+In Euclid's construction for copying a segment (kept in `tests/fixtures/constructions.geo`),
+
+```
+copy-segment a l b c:
+    eq-triangle d a b
+    circle b c g
+    between d b g
+    circle d g l
+    between d a l
+```
+
+the apex `d` and the point `g` exist whenever the construction does. Every unfolding gives them fresh
+names (`d#1`, `g#1`, … shown as `d₁`, `g₁`). `#` starts a comment, so these never collide with names a
+user can write, and two constructions in one figure never share auxiliary points. A lemma cannot refer
+to a construction's auxiliary points: in `? eq-lines d a d b: copy-segment a l b c`, `d` is an
+arbitrary new point.
 
 **Forward chaining** means starting with one or more facts and inferring new facts via Horn clauses. If ground facts successfully unify with the body of a Horn clause in the knowledge base, we can add the corresponding head predicate to our fact set.
 
@@ -340,9 +351,20 @@ Variables that appear in the body but not the head are common in geometric const
 intermediate point that is needed to build a result but not named in the goal). When a definition is
 unfolded they become fresh auxiliary objects; see [Definitions](#definitions).
 
-## Negation and Failure
+## Negation, Distinctness and Contradiction
 
 Only positive Horn clauses are supported; there is no negation-as-failure.
+
+Distinctness is stated positively, as an ordinary relation: `distinct a b` says that a and b are
+different points. Its rules live in the book (symmetry, substitution of equals, how distinctness
+spreads along segments and orders) like those of any other relation, and it is what lets axioms be
+stated honestly ("two *distinct* points determine a line").
+
+`false`, with no arguments, is reserved for contradiction. Rules may conclude it
+(`false: eq-point a b, distinct a b`), and a lemma whose hypotheses lead to it is reported as
+**vacuous** (shown `⊥`) rather than proven: anything follows from a contradiction, so a ✓ would hide
+the mistake. A lemma is checked for contradictory hypotheses whenever `false` could be derived from
+them at all.
 
 A lemma that fails to check is not necessarily false, only not provable by this procedure (for
 example, a fact true in every configuration but whose proof needs a case split, or a run that hit the

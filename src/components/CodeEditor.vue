@@ -15,7 +15,7 @@ import { autocompletion, type CompletionContext } from '@codemirror/autocomplete
 export interface EditorMark {
   /** 0-based line index. */
   line: number
-  type: 'verified' | 'failed' | 'unknown'
+  type: 'verified' | 'vacuous' | 'failed' | 'unknown'
   message: string
 }
 
@@ -51,7 +51,7 @@ class MarkMarker extends GutterMarker {
     const el = document.createElement('span')
     el.className = `mark ${this.mark.type}`
     el.title = this.mark.message
-    el.textContent = this.mark.type === 'verified' ? '✓' : this.mark.type === 'failed' ? '✗' : '…'
+    el.textContent = { verified: '✓', vacuous: '⊥', failed: '✗', unknown: '…' }[this.mark.type]
     return el
   }
 }
@@ -112,6 +112,8 @@ const theme = EditorView.theme({
   '&': { height: 'var(--ed-height, 100%)', maxHeight: '100%', color: 'var(--ed-ink, #c8c8e8)', backgroundColor: 'transparent' },
   '&.cm-focused': { outline: 'none' },
   '.cm-scroller': {
+    scrollbarWidth: 'thin',
+    scrollbarColor: 'var(--ed-punct, #888) transparent',
     fontFamily: "var(--ed-font, 'JetBrains Mono', monospace)",
     fontSize: 'var(--ed-size, 13px)',
     lineHeight: 'var(--ed-leading, 1.5)',
@@ -127,6 +129,7 @@ const theme = EditorView.theme({
   '.cm-marks .cm-gutterElement': { textAlign: 'center' },
   '.mark': { textShadow: 'var(--ed-halo, none)', fontWeight: '700', fontSize: 'var(--ed-mark-size, 0.9em)', cursor: 'default' },
   '.mark.verified': { color: 'var(--ed-ok, #8ec88e)' },
+  '.mark.vacuous': { color: 'var(--ed-pending, #888)' },
   '.mark.failed': { color: 'var(--ed-bad, #e88e8e)', fontWeight: '700' },
   '.mark.unknown': { color: 'var(--ed-pending, #888)', animation: 'cm-pulse 1s infinite ease-in-out' },
   '.tok-pred': { color: 'var(--ed-pred, var(--ed-ink, #c8c8e8))', fontWeight: '600' },

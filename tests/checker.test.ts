@@ -66,4 +66,20 @@ describe('queried-clause checker', () => {
     expect(result.result).toBe('invalid-query')
     expect(result.message).toMatch(/not in the configuration universe/)
   })
+
+  it('reports contradictory hypotheses as vacuous, not as proven', () => {
+    const kb = new KnowledgeBase(parseRules(`
+      false: eq-point a b, distinct a b
+    `))
+    const [lemma] = parseLemmas(`? eq-lines a b c d: eq-point a b, distinct a b`)
+    expect(checkLemma(lemma, kb).result).toBe('vacuous')
+  })
+
+  it('reports contradictory hypotheses as vacuous even when the goal follows from them', () => {
+    const kb = new KnowledgeBase(parseRules(`
+      false: eq-point a b, distinct a b
+    `))
+    const [lemma] = parseLemmas(`? eq-point a b: eq-point a b, distinct a b`)
+    expect(checkLemma(lemma, kb).result).toBe('vacuous')
+  })
 })

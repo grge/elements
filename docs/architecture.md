@@ -5,7 +5,7 @@ it is built this way. For the language itself see [language.md](language.md); fo
 see [design.md](design.md).
 
 ```
- core.geo · euclid.geo · lemmas.geo · user clauses · the text on the page
+ the book (src/language/book/*.geo) · user clauses · the text on the page
                          │  parse (src/language)
                          ▼
                    KnowledgeBase ── definitions.ts   which clause defines each predicate (iff)
@@ -21,7 +21,7 @@ see [design.md](design.md).
 
 | Path | What it is |
 |------|------------|
-| `src/language/` | Lexer and parser; the bundled knowledge base (`core.geo`, `euclid.geo`, `lemmas.geo`) |
+| `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file |
 | `src/kb/inference.ts` | `KnowledgeBase`, `unfold`, and `forwardClosure` (the plain reference engine) |
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, or are symmetric |
@@ -32,18 +32,20 @@ see [design.md](design.md).
 | `src/geometry/extraction.ts` | From facts to drawable facts, and to a `GeometryProblem` |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
 | `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
-| `src/geometry/canonicalization.ts`, `constraints.ts`, `view.ts` | Lines and circles for rendering and the solver; world-to-screen mapping |
-| `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the worker) |
-| `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure) |
+| `src/geometry/canonicalization.ts`, `constraints.ts` | Lines and circles for rendering and the solver |
+| `src/geometry/view.ts`, `scene.ts` | Fitting a figure to the screen; the figure in screen coordinates (shared by the diagram and the thumbnails) |
+| `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the worker), `useThumbnails` (contents miniatures) |
+| `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure), `FigureThumb` (a miniature) |
 | `src/views/PageView.vue` | The page: masthead, source, figure, contents, themes |
 | `src/workers/lemmaCheckWorker.ts` | Checks `?` lines off the main thread |
 
 ## The knowledge base
 
-Four sources are merged into one flat knowledge base: `core.geo` (the primitive relations: equal points,
-equal segments, order on a line, collinearity, and Euclid's common notions), `euclid.geo` (constructions,
-written as definitions), `lemmas.geo` (lemmas, which double as the test suite) and the user's own
-clauses (kept in the browser). The namespaces are only for browsing.
+The knowledge base is the book (one chapter per file in `src/language/book/`, each with its axioms,
+constructions and propositions; see [book.md](book.md)) plus the user's own clauses, kept in the
+browser. Chapters are only for browsing: logically it is one flat set of clauses. On a predicate's page
+the app shows its clauses and the propositions about it: a lemma belongs to the predicate it mentions
+that is defined latest in the book (`useKB.ts`).
 
 Two analyses of the rules run lazily and are cached by the rules' content:
 
@@ -56,7 +58,7 @@ and the geometry primitives, which have several or only recursive clauses, are n
 one-way rule (`tall x: giraffe x`) *is* read as a definition: writing definitions as definitions is the
 knowledge base author's responsibility. Details in [language.md](language.md#definitions).
 
-**Structure** (`structure.ts`). Equality of points and of segments is written in `core.geo` as ordinary
+**Structure** (`structure.ts`). Equality of points and of segments is written in chapter 1 as ordinary
 rules (reflexivity, symmetry, transitivity, substitution). Fired one by one these are expensive: segment
 equality alone has n⁴ ground facts. So the engine *proves*, from each predicate's own rules on fresh
 constants, which predicates are equivalences (on single objects or on argument tuples, such as unordered
@@ -83,10 +85,15 @@ checked) and fires every other rule normally, so it computes the same closure as
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
 
-What it cannot do: case splits and reasoning about distinct points. Several facts that hold in every
-configuration (for example the order of five marched points) need "if b ≠ c …", and the language has no
-inequality yet. A check that runs out of its derivation budget is currently reported as ✗. Both are on
-the [roadmap](roadmap.md).
+Three verdicts: ✓ the goal follows; ✗ it could not be derived; ⊥ the hypotheses are contradictory
+(they derive the reserved `false`), which takes precedence over ✓. Because the search stops as soon as
+the goal is found, a successful check is carried on to the end to rule out a contradiction, but only
+when `false` is derivable at all from the kinds of facts involved (a cheap test at the level of
+predicate names).
+
+What it cannot do: case splits. Facts that need one can be stated with a `distinct` hypothesis instead
+(the order of marched points holds once the first step is non-zero). A check that runs out of its
+derivation budget is currently reported as ✗. Both are on the [roadmap](roadmap.md).
 
 The page checks its `?` lines in a web worker (`useVerification` → `lemmaCheckWorker`), so typing never
 blocks.
@@ -139,16 +146,22 @@ lost. During a drag each intersection stays on the branch nearest to where it wa
 If no configuration satisfies every fact, the figure is drawn by the **numerical solver**
 (`solver.ts`, Adam gradient descent on an energy) instead, and the page says so.
 
+**Distinct points.** A `distinct` fact rules out an intersection that would coincide with the given
+point ("the other intersection", as the regular hexagon needs) and is checked on every frame. Without
+one, the planner still prefers an intersection that lands on no existing point.
+
 **Degenerate configurations.** The logic is exact over every configuration, including coincident
 points; the drawing assumes distinct names are distinct points (it merges collinear groups that share
-two names, for instance). The two stances differ on purpose, and a `distinct` relation would let the
-logic state the drawing's assumption explicitly.
+two names, for instance). The two stances differ on purpose; `distinct` lets the logic state the
+drawing's assumption where it matters.
 
 ## The page
 
 `PageView.vue` composes the page; `useWorkspace` holds its state: the text being shown (scratchpad or a
 predicate from the knowledge base), the runtime built from it, the drawable facts, the construction and
-its current drawing. `GeometryDiagram` renders the figure, ghosting it under the text column, and
+its current drawing. The contents' miniatures run the same pipeline for each predicate of a chapter
+(about 1 ms each for chapter 1), in idle time, cached per knowledge base. The figure is fitted so that
+its points lie beside the text and its circles within the page. `GeometryDiagram` renders the figure, ghosting it under the text column, and
 reports parameter changes back after a drag. `CodeEditor` is CodeMirror with highlighting, completion
 and the verification gutter. See [design.md](design.md).
 
@@ -188,7 +201,7 @@ good reference for how `between` and distinctness should eventually work).
 | `unfold.test.ts`, `definitions.test.ts` | unfolding, fresh names, which clauses are definitions |
 | `structure.test.ts`, `saturate.test.ts`, `forward-closure.test.ts` | recognised structure; the fast and reference engines agreeing |
 | `checker.test.ts`, `runtime.test.ts`, `configuration.test.ts` | checking pipeline and page state |
-| `lemmas.test.ts` | every lemma in `lemmas.geo`, with the expected-false ones listed |
-| `construction.test.ts` | 12 figures: degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact |
+| `lemmas.test.ts` | every proposition in the book, and the engine's regression lemmas (`fixtures/regression.geo`, expected failures listed) |
+| `construction.test.ts` | 12 figures (including Euclid I.2 and I.3, kept as fixtures in `fixtures/constructions.geo`): degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact |
 | `geometry.test.ts` | extraction and the numerical solver |
 | `useKB.test.ts` | source references for bundled clauses |

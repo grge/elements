@@ -1,8 +1,6 @@
 /** From facts to geometry: unfolding to drawable facts, extraction, and the numerical solver. */
 
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { parseSource, parseRules, parseGoals } from '../src/language/parser'
 import { KnowledgeBase, unfold } from '../src/kb/inference'
 import { saturate } from '../src/kb/saturate'
@@ -10,10 +8,9 @@ import { buildRuntimeState } from '../src/kb/runtime'
 import { extractProblem, geometryProblemFromRuntime, seedPredicateHeadFact } from '../src/geometry/extraction'
 import { canonicalise } from '../src/geometry/canonicalization'
 import { solve } from '../src/geometry/solver'
+import { bookRules, fixtureRules } from './book'
 
-const coreGeo   = readFileSync(resolve(__dirname, '../src/language/core.geo'), 'utf8')
-const euclidGeo = readFileSync(resolve(__dirname, '../src/language/euclid.geo'), 'utf8')
-const kb = new KnowledgeBase([...parseRules(coreGeo), ...parseRules(euclidGeo)])
+const kb = new KnowledgeBase([...bookRules, ...fixtureRules])
 
 // ── Inference ──────────────────────────────────────────────────────────
 

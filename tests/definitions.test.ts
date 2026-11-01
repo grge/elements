@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
 import { parseRules, parseLemmas } from '../src/language/parser'
 import { KnowledgeBase } from '../src/kb/inference'
 import { checkLemma } from '../src/kb/checker'
+import { bookRules, fixtureRules } from './book'
 
-const read = (f: string) => readFileSync(resolve(__dirname, '../src/language', f), 'utf8')
-const geometry = [...parseRules(read('core.geo')), ...parseRules(read('euclid.geo'))]
+const geometry = [...bookRules, ...fixtureRules]  // the fixtures add Euclid I.2 and I.3
 
 const status = (rules: string, pred: string, base = geometry) =>
   new KnowledgeBase([...base, ...parseRules(rules)]).definitions().get(pred)

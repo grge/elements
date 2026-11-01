@@ -12,7 +12,11 @@ export interface RenderTransform {
   offsetY: number
 }
 
-/** Fit a figure (its points and whole circles) into a viewport, leaving `insetLeft` px free on the left. */
+/**
+ * Fit a figure into a viewport. Its points must lie in the region right of `insetLeft` (where text
+ * may cover the left of the page); its whole circles must lie within the viewport, so geometry may
+ * extend behind the text while the points stay clear of it. The largest scale satisfying both wins.
+ */
 export function computeRenderTransform(
   witness: WitnessModel,
   width = 400,
@@ -24,25 +28,36 @@ export function computeRenderTransform(
   const coords = witness.coords
   if (!coords.size) return null
 
-  const xs = [...coords.values()].map(([x]) => x)
-  const ys = [...coords.values()].map(([, y]) => y)
+  const px = [...coords.values()].map(([x]) => x)
+  const py = [...coords.values()].map(([, y]) => y)
+  const ax = [...px], ay = [...py]
   for (const circle of problem?.circles ?? []) {
     const c = coords.get(circle.center)
     const onCircle = [...circle.points].map(p => coords.get(p)).filter((p): p is [number, number] => !!p)
     if (!c || !onCircle.length) continue
-    const r = onCircle.reduce((sum, [px, py]) => sum + Math.hypot(px - c[0], py - c[1]), 0) / onCircle.length
-    xs.push(c[0] - r, c[0] + r)
-    ys.push(c[1] - r, c[1] + r)
+    const r = onCircle.reduce((sum, [qx, qy]) => sum + Math.hypot(qx - c[0], qy - c[1]), 0) / onCircle.length
+    ax.push(c[0] - r, c[0] + r)
+    ay.push(c[1] - r, c[1] + r)
   }
-  const minX = Math.min(...xs), maxX = Math.max(...xs)
-  const minY = Math.min(...ys), maxY = Math.max(...ys)
-  const rangeX = Math.max(maxX - minX, 1e-3)
-  const rangeY = Math.max(maxY - minY, 1e-3)
-  const boxWidth = Math.max(40, width - insetLeft - padding * 2)
-  const scale = Math.min(boxWidth / rangeX, (height - padding * 2) / rangeY)
-  const offsetX = insetLeft + padding + (boxWidth - rangeX * scale) / 2
-  const offsetY = padding + ((height - padding * 2) - rangeY * scale) / 2
-  return { minX, minY, scale, offsetX, offsetY }
+  const [pMinX, pMaxX] = [Math.min(...px), Math.max(...px)]
+  const [aMinX, aMaxX] = [Math.min(...ax), Math.max(...ax)]
+  const [aMinY, aMaxY] = [Math.min(...ay), Math.max(...ay)]
+
+  const left = Math.min(insetLeft, width * 0.6) + padding  // where the points' region starts
+  const right = width - padding
+  const scale = Math.min(
+    Math.max(40, right - left) / Math.max(pMaxX - pMinX, 1e-3),
+    Math.max(40, width - 2 * padding) / Math.max(aMaxX - aMinX, 1e-3),
+    Math.max(40, height - 2 * padding) / Math.max(aMaxY - aMinY, 1e-3),
+  )
+
+  // Horizontal offset: centre the points in their region, as far as the circles allow.
+  const lo = Math.max(left - pMinX * scale, padding - aMinX * scale)
+  const hi = Math.min(right - pMaxX * scale, right - aMaxX * scale)
+  const centred = (left + right) / 2 - ((pMinX + pMaxX) / 2) * scale
+  const offsetX = lo <= hi ? Math.min(hi, Math.max(lo, centred)) : (lo + hi) / 2
+  const offsetY = height / 2 - ((aMinY + aMaxY) / 2) * scale
+  return { minX: 0, minY: 0, scale, offsetX, offsetY }
 }
 
 export function screenToWorld(x: number, y: number, t: RenderTransform): [number, number] {

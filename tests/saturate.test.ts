@@ -3,20 +3,18 @@
  * (forwardClosure) running the very same rules.
  */
 import { describe, it, expect } from 'vitest'
-import { readFileSync } from 'fs'
-import { resolve } from 'path'
-import { parseRules, parseLemmas } from '../src/language/parser'
+import { parseRules, type Lemma } from '../src/language/parser'
+import { bookLemmas, bookRules, regressionLemmas } from './book'
 import { KnowledgeBase, forwardClosure, groundKey, type GroundPredicate } from '../src/kb/inference'
 import { saturate } from '../src/kb/saturate'
 
-const read = (f: string) => readFileSync(resolve(__dirname, '../src/language', f), 'utf8')
-const rules = [...parseRules(read('core.geo')), ...parseRules(read('euclid.geo')), ...parseRules(read('lemmas.geo'))]
+const rules = bookRules
 const fastKB = new KnowledgeBase(rules)
 const refKB = new KnowledgeBase(rules)
 
 const g = (name: string, ...args: string[]): GroundPredicate => ({ name, args })
 
-describe('saturate: structure recognised in core.geo', () => {
+describe('saturate: structure recognised in chapter 1', () => {
   it('substitutes equal points everywhere', () => {
     const sat = saturate(fastKB, [g('eq-point', 'a', 'x'), g('between', 'a', 'b', 'c')])
     expect(sat.holds(g('between', 'x', 'b', 'c'))).toBe(true)
@@ -58,11 +56,11 @@ describe('saturate: structure recognised in core.geo', () => {
 // The reference engine fires the equality rules one by one (segment equality alone has n^4 facts):
 // at four objects a single lemma takes 1.5-9 s, at five 20-30 s and it runs into its step cap.
 const MAX_REFERENCE_OBJECTS = 3
-const objectCount = (l: ReturnType<typeof parseLemmas>[number]) =>
+const objectCount = (l: Lemma) =>
   new Set([...l.hypotheses.flatMap(h => h.args), ...l.head.args]).size
 
 describe('saturate agrees with the reference engine on small lemmas', () => {
-  for (const lemma of parseLemmas(read('lemmas.geo')).filter(l => objectCount(l) <= MAX_REFERENCE_OBJECTS)) {
+  for (const lemma of [...bookLemmas, ...regressionLemmas].filter(l => objectCount(l) <= MAX_REFERENCE_OBJECTS)) {
     const label = `${lemma.head.name} ${lemma.head.args.join(' ')} : ${lemma.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ') || '-'}`
     it(label, () => {
       const seeds = lemma.hypotheses.map(h => g(h.name, ...h.args))
