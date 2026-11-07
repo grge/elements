@@ -78,7 +78,9 @@ Points, equality of points, equal segments as an equivalence on unordered pairs,
 (`between`), collinearity, Euclid's common notions 2 and 3 (adding and taking away equal segments),
 circles. Constructions: the equilateral triangle, the rhombus of two equilateral triangles, doubling a
 segment and marching it along a line, the midpoint as a characterisation (its construction and proof
-need chapter 2), the regular hexagon.
+need chapter 2), the regular hexagon. Then constructions on constructions, whose figures have layers:
+reflection in a line, Euclid's collapsing compass (I.2) and cutting off a length (I.3), the midpoint with
+a compass alone, and the circumcentre (the last two drawn now, proved in later chapters).
 
 Distinct points: `distinct` with its rules and the reserved `false` for contradictions. With them
 the chapter states Euclid's first postulate honestly ("two distinct points determine a line"), proves

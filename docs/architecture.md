@@ -103,7 +103,9 @@ blocks.
 **Extraction** (`extraction.ts`) unfolds the page's facts down to the four relations the drawing layer
 understands: `collinear`, `between`, `circle`, `eq-lines`. That list belongs to the drawing layer, not
 to the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
-auxiliary points. Facts that cannot be drawn are skipped.
+auxiliary points. Facts that cannot be drawn are skipped. Each drawable fact keeps its depth, the number
+of definitions unfolded to reach it (the shallowest if it is reached twice); lines and circles merged by
+canonicalisation keep the shallowest of theirs, and the figure draws deeper elements thinner and fainter.
 
 From the drawable facts two representations are built:
 

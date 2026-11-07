@@ -27,16 +27,16 @@
       </defs>
 
       <g class="ghost" :mask="`url(#${uid}-ghost)`">
-        <line v-for="(l, i) in scene.lines" :key="`gl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
-        <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" />
-        <line v-for="(l, i) in [...scene.segments, ...scene.ticks]" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
+        <line v-for="(l, i) in scene.lines" :key="`gl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
+        <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="weight(c[3])" />
+        <line v-for="(l, i) in [...scene.segments, ...scene.ticks]" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
-        <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
-        <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" />
-        <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
-        <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" />
+        <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
+        <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="weight(c[3])" />
+        <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
+        <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
         <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
@@ -66,10 +66,11 @@ import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { solve } from '../geometry/solver'
 import type { GeometryProblem, WitnessModel } from '../geometry/constraints'
 import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
-import { buildScene } from '../geometry/scene'
+import { buildScene, type Helper } from '../geometry/scene'
 import {
   execute, drag as dragConstruction, draggable, plan as planConstruction, realise,
   type ConstructionPlan, type Point,
+  curveOf,
 } from '../geometry/construction'
 import { displayName, isAuxiliary } from '../kb/names'
 import type { ConstructionState } from '../composables/useWorkspace'
@@ -165,10 +166,39 @@ const TITLES: Record<PointKind, string> = {
 
 // ── the scene in screen coordinates ──
 
+/**
+ * How a level is drawn: each level deeper is thinner and fainter, down to a floor, so a
+ * construction's own lines lead and the scaffolding of the constructions inside it recedes.
+ */
+function weight(level: number | undefined) {
+  const n = level ?? 0
+  if (n === 0) return undefined
+  return { strokeWidth: `calc(var(--dg-stroke, 3) * ${Math.max(0.3, 0.68 ** n).toFixed(3)})`, opacity: Math.max(0.22, 0.62 ** n).toFixed(3) }
+}
+
+/** The loci the construction used, at the current positions: drawn where the figure lacks them. */
+function helpersFor(coords: Map<string, Point>): Helper[] {
+  if (!planning.value) return []
+  const out: Helper[] = []
+  for (const step of local.value!.plan.steps) {
+    const loci = step.kind === 'on' ? [step.locus] : step.kind === 'meet' ? step.loci : []
+    for (const locus of loci) {
+      const curve = curveOf(locus, coords)
+      if (!curve) continue
+      out.push(curve.kind === 'line'
+        ? { point: step.point, kind: 'line', p: curve.p, d: curve.d }
+        : { point: step.point, kind: 'circle', c: curve.c, r: curve.r })
+    }
+  }
+  return out
+}
+
 const scene = computed(() => {
   const witness = activeWitness.value, t = displayTransform.value
   if (!props.problem || !witness || !t) return null
-  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value, TICK)
+  let helpers: Helper[] = []
+  try { helpers = helpersFor(witness.coords) } catch { /* a step whose points are missing: draw without */ }
+  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value, TICK, helpers)
   const points = base.points.map(p => {
     const kind = kindOf(p.name)
     return { ...p, kind, aux: isAuxiliary(p.name), label: displayName(p.name), title: `${displayName(p.name)}: ${TITLES[kind]}` }

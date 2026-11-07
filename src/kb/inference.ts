@@ -165,6 +165,8 @@ export class DepthExceeded extends Error {}
 
 export interface UnfoldResult {
   frontier: GroundPredicate[]
+  /** For each frontier fact, how many definitions were unfolded to reach it (0: the goal itself). */
+  depths: number[]
   expanded: boolean
 }
 
@@ -194,20 +196,17 @@ export function unfold(
 ): UnfoldResult {
   const { stopPred } = options
   const fresh = options.fresh ?? new FreshNames()
-  if (stopPred?.(goal)) {
-    return { frontier: [goal], expanded: false }
-  }
+  const leaf: UnfoldResult = { frontier: [goal], depths: [0], expanded: false }
+  if (stopPred?.(goal)) return leaf
 
   const key = groundKey(goal)
-  if (visiting.has(key)) {
-    return { frontier: [goal], expanded: false }
-  }
+  if (visiting.has(key)) return leaf
 
   const rule = kb.definitionOf(goal.name)
-  if (!rule) return { frontier: [goal], expanded: false }
+  if (!rule) return leaf
 
   const s = unify(goal, rule.head, emptySubst())
-  if (s === null) return { frontier: [goal], expanded: false }
+  if (s === null) return leaf
   for (const v of variablesOf(rule.body)) {
     if (!s.has(v)) s.set(v, fresh.next(v))
   }
@@ -216,11 +215,14 @@ export function unfold(
   nextVisiting.add(key)
 
   const frontier: GroundPredicate[] = []
+  const depths: number[] = []
   for (const bodyPred of rule.body) {
-    frontier.push(...unfold(applySubst(s, bodyPred), kb, nextVisiting, { ...options, fresh }).frontier)
+    const sub = unfold(applySubst(s, bodyPred), kb, nextVisiting, { ...options, fresh })
+    frontier.push(...sub.frontier)
+    depths.push(...sub.depths.map(d => d + 1))
   }
 
-  return { frontier, expanded: true }
+  return { frontier, depths, expanded: true }
 }
 
 // ── Forward Closure ───────────────────────────────────────────────────

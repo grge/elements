@@ -270,14 +270,15 @@ export function paramCount(step: Step): number {
 
 // ───────────────────────────── geometry ─────────────────────────────
 
-type Curve = { kind: 'line'; p: Point; d: Point } | { kind: 'circle'; c: Point; r: number }
+export type Curve = { kind: 'line'; p: Point; d: Point } | { kind: 'circle'; c: Point; r: number }
 
 const sub = (a: Point, b: Point): Point => [a[0] - b[0], a[1] - b[1]]
 const dot = (a: Point, b: Point) => a[0] * b[0] + a[1] * b[1]
 const cross = (a: Point, b: Point) => a[0] * b[1] - a[1] * b[0]
 const dist = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1])
 
-function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
+/** A locus as a curve, given the positions of the points it depends on (null if degenerate). */
+export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
   const g = (q: string) => at.get(q)!
   switch (locus.kind) {
     case 'line': {

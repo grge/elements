@@ -19,9 +19,8 @@ Open problems and ideas, roughly in order of value within each section. See
 The plan as of November 2026, in order. The first milestone is **demo-ready**: steps 1 to 3.
 
 1. **Correctness.** Done in November 2026: a predicate's page draws its signature, ticks are as
-   bold as Byrne's and mark circles' radii too, and the solver switch is gone. One decision left:
-   - Whether to draw the construction actually used (see *Construction and drawing*): the steps
-     say "circle about m with radius am", and the figure does not show it.
+   bold as Byrne's and mark circles' radii too, the solver switch is gone, and the figure draws
+   the construction it used, in layers by depth (see *Construction and drawing*).
 2. **A careful pass over everything**, file by file: code, docs and the book's comments. Looking for
    dead paths, comments that over-explain, inconsistent names, and anything that claims more than it
    does.
@@ -60,7 +59,10 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 
 - **Use inferred facts when drawing**: feed the forward closure (not only the unfolded facts) to the
   planner, so derived facts become loci or checks.
-- **Draw the construction actually used**: the circles of a compass transfer or of a bisector, faint.
+- ~~Draw the construction actually used~~ (November 2026): the planner's loci the figure lacks are
+  drawn one level below the point they place, and every element is drawn thinner and fainter the
+  more deeply nested the definition it comes from. Next: let the reader choose how many levels to
+  show (the [progressive rendering](proposals/progressive-rendering.md) proposal's detail levels).
 - **Continuity near tangencies**: nearest-branch tracking can jump; consider complex tracing.
 - **Order facts on circles** restrict sliders to arcs (today they are only checked).
 - **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,

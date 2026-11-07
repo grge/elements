@@ -200,3 +200,70 @@ hexagon o a b c d e f:
 ? eq-lines e f o a: hexagon o a b c d e f
 #
 # That the sixth side, f-a, is a radius too is true, as the figure shows, but the proof needs angles.
+
+# ══ Constructions on constructions ═══════════════════════════════════════════════════════════════
+#
+# Each of these is built from the ones before, so its figure has layers: its own lines and circles
+# in front, the constructions it uses fainter behind, and theirs fainter still.
+
+# The reflection of p in the line a-b: where the circle about a through p meets the circle about b
+# through p again.
+reflect a b p q:
+    circle a p q
+    circle b p q
+    distinct p q
+
+# a and b are each as far from q as from p.
+? eq-lines a p a q: reflect a b p q
+? eq-lines b p b q: reflect a b p q
+
+# Placing at a a segment equal to b-c, with a compass that collapses when lifted (Euclid I.2). Build
+# the equilateral triangle a-b-d, extend d-b to g on the circle about b through c, then extend d-a
+# to l on the circle about d through g. Our compass carries lengths, so the book does not need
+# this; it shows that Euclid's weaker compass does just as well.
+transfer a b c l:
+    eq-triangle a b d
+    between d b g
+    circle b c g
+    between d a l
+    circle d g l
+
+# d-l and d-g are equal and so are d-a and d-b, so what is left, a-l and b-g, are equal
+# (common notion 3); and b-g is b-c.
+? eq-lines a l b c: transfer a b c l
+
+# Cutting off from a-d a segment a-e equal to b-c (Euclid I.3): transfer b-c to a, then swing it
+# onto a-d. Three layers deep: this, the transfer, and the equilateral triangle inside that.
+cut a b c d e:
+    transfer a b c l
+    circle a l e
+    between a e d
+
+? eq-lines a e b c: cut a b c d e
+
+# The midpoint of a-b with a compass alone (Mohr and Mascheroni). Step the radius three times around
+# the circle about b to c, opposite a. The circle about c through a meets the circle about a through
+# b at d and e; the circles about d and e through a meet again at m, the midpoint. Proving that
+# needs similar triangles (chapter 6); for now, see it.
+compass-midpoint a b m:
+    eq-triangle b a p
+    eq-triangle b p q
+    distinct q a
+    eq-triangle b q c
+    distinct c p
+    circle c a d
+    circle a b d
+    circle c a e
+    circle a b e
+    distinct d e
+    circle d a m
+    circle e a m
+    distinct m a
+
+# Where the lines through the rhombuses on a-b and on b-c meet: the centre of the circle through a, b
+# and c. That o is as far from a as from b needs congruent triangles (chapter 2); drag a, b or c and
+# watch it hold.
+circumcentre a b c o:
+    vesica a b p q
+    vesica b c r s
+    line-line-intersection p q r s o

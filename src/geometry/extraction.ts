@@ -28,16 +28,17 @@ function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
   }
 }
 
-function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
+function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): GeometryProblem {
   const points = new Set<string>()
   const constraints: Constraint[] = []
+  const depth = goal.depth ?? 0
 
   goal.args.forEach(a => points.add(a))
 
   switch (goal.name) {
     case 'collinear':
       if (goal.args.length < 3) throw new MalformedFactError(`collinear needs 3+ points`)
-      constraints.push({ kind: 'collinear', points: [...goal.args] } satisfies CollinearConstraint)
+      constraints.push({ kind: 'collinear', points: [...goal.args], depth } satisfies CollinearConstraint)
       break
 
     case 'between':
@@ -46,10 +47,11 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
         kind: 'between',
         middle: goal.args[1],
         endpoints: [goal.args[0], goal.args[2]],
+        depth,
       } satisfies BetweenConstraint)
       // Betweenness implies collinearity; state it so the canonical line structure exists
       // for the planner and renderer. The order constraint above is kept separately.
-      constraints.push({ kind: 'collinear', points: [...goal.args] } satisfies CollinearConstraint)
+      constraints.push({ kind: 'collinear', points: [...goal.args], depth } satisfies CollinearConstraint)
       break
 
     case 'circle':
@@ -59,6 +61,7 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
         center: goal.args[0],
         radiusPoint: goal.args[1],
         targetPoint: goal.args[2],
+        depth,
       } satisfies OnCircleConstraint)
       break
 
@@ -68,6 +71,7 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
         kind: 'eq-dist',
         pair1: [goal.args[0], goal.args[1]],
         pair2: [goal.args[2], goal.args[3]],
+        depth,
       } satisfies EqualDistConstraint)
       break
 
@@ -87,16 +91,26 @@ export function extractProblem(goal: GroundPredicate, kb: KnowledgeBase): Geomet
   return mergeProblems(frontier.map(problemFromPrimitive))
 }
 
-export function frontierFactsFromRuntime(runtime: RuntimeState): GroundPredicate[] {
+/**
+ * A drawable fact, with its depth: how many definitions were unfolded to reach it. A fact written
+ * on the page is 0; the circles of an `eq-triangle` written there are 1; those of an `eq-triangle`
+ * inside another construction are 2. The figure draws deeper facts fainter.
+ */
+export type DrawableFact = GroundPredicate & { depth: number }
+
+export function frontierFactsFromRuntime(runtime: RuntimeState): DrawableFact[] {
   const facts = runtime.configuration.allFacts()
-  const frontier = new Map<string, GroundPredicate>()
+  const frontier = new Map<string, DrawableFact>()
   // Shared across facts: two constructions in one drawing must not share auxiliary points.
   const fresh = new FreshNames()
 
   for (const fact of facts) {
-    for (const pred of unfold(fact, runtime.kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh }).frontier) {
-      frontier.set(`${pred.name}(${pred.args.join(',')})`, pred)
-    }
+    const u = unfold(fact, runtime.kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh })
+    u.frontier.forEach((pred, i) => {
+      const key = `${pred.name}(${pred.args.join(',')})`
+      const depth = Math.min(u.depths[i], frontier.get(key)?.depth ?? Infinity)
+      frontier.set(key, { ...pred, depth })
+    })
   }
 
   return [...frontier.values()]

@@ -71,8 +71,13 @@ figure (computed in idle time and cached), its name and its arguments. Opening a
 definition with the propositions about it, each checked.
 
 **Equal segments** that a figure states are drawn with bold tick marks, the same number on segments of
-the same length. A circle's radii count as equal segments, so the equilateral triangle's two circles
-draw its three sides, one tick each, as Byrne would.
+the same length. The figure's own circles count their radii as equal segments, so the equilateral
+triangle's two circles draw its three sides, one tick each, as Byrne would.
+
+**Layers by depth.** Every line, circle and segment is drawn thinner and fainter the more deeply
+nested the definition it comes from: a construction's own elements in front, the constructions it
+uses behind, theirs further behind (`cut` shows three layers). The construction actually used is drawn
+too, one layer below the point it places: the circle that carries a length, the line of a bisector.
 
 **Narrow screens.** With no room beside the text, the source sits above a solid figure. Phones show
 the source and the figure only (no construction steps), with one theme dot that steps through the themes.
