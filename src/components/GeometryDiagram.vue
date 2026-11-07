@@ -5,7 +5,7 @@
       :width="viewportWidth"
       :height="viewportHeight"
       :viewBox="`0 0 ${viewportWidth} ${viewportHeight}`"
-      @mousedown="startInteraction"
+      @pointerdown="startInteraction"
       @wheel.prevent
     >
       <defs>
@@ -192,7 +192,8 @@ function animateToTransform(from: RenderTransform, to: RenderTransform, duration
   animationFrame = requestAnimationFrame(step)
 }
 
-function startInteraction(e: MouseEvent) {
+function startInteraction(e: PointerEvent) {
+  if (!e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return
   const target = (e.target as Element | null)?.closest('[data-point]') as SVGGElement | null
   const point = target?.dataset.point
   const witness = activeWitness.value
@@ -216,7 +217,8 @@ function startInteraction(e: MouseEvent) {
   dragging.value = point
   const rect = svgEl.getBoundingClientRect()
 
-  function onMove(ev: MouseEvent) {
+  function onMove(ev: PointerEvent) {
+    if (ev.pointerId !== e.pointerId) return
     const world = screenToWorld(
       (ev.clientX - rect.left) * (viewportWidth.value / rect.width),
       (ev.clientY - rect.top) * (viewportHeight.value / rect.height),
@@ -232,7 +234,8 @@ function startInteraction(e: MouseEvent) {
     catch { draggedWitness.value = { coords: warmStart, energy: witness!.energy } }
   }
 
-  function onUp() {
+  function onUp(ev: PointerEvent) {
+    if (ev.pointerId !== e.pointerId) return
     if (planning.value) emit('update:construction', local.value!)
     dragging.value = null
     const from = frozenTransform.value
@@ -241,12 +244,15 @@ function startInteraction(e: MouseEvent) {
     const to = baseWitness.value ? fit(baseWitness.value) : null
     if (from && to) { animatedTransform.value = from; animateToTransform(from, to) }
     else animatedTransform.value = null
-    document.removeEventListener('mousemove', onMove)
-    document.removeEventListener('mouseup', onUp)
+    document.removeEventListener('pointermove', onMove)
+    document.removeEventListener('pointerup', onUp)
+    document.removeEventListener('pointercancel', onUp)
   }
 
-  document.addEventListener('mousemove', onMove)
-  document.addEventListener('mouseup', onUp)
+  // Pointer events cover mouse, touch and pen alike.
+  document.addEventListener('pointermove', onMove)
+  document.addEventListener('pointerup', onUp)
+  document.addEventListener('pointercancel', onUp)
 }
 
 // ── layout ──
@@ -293,7 +299,7 @@ defineExpose({ activeWitness, baseWitness })
   overflow: hidden;
   user-select: none;
 }
-.geometry-diagram svg { display: block; }
+.geometry-diagram svg { display: block; touch-action: none; }  /* a finger on the figure drags points, not the page */
 
 .empty-diagram {
   height: 100%;

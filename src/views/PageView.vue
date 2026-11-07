@@ -1,5 +1,5 @@
 <template>
-  <div class="page" :style="themeStyle" @keydown.esc="contentsOpen = false">
+  <div class="page" :class="{ short }" :style="[themeStyle, heightStyle]" @keydown.esc="contentsOpen = false">
     <header class="masthead">
       <button class="wordmark" @click="contentsOpen = !contentsOpen" :aria-expanded="contentsOpen">
         Elements
@@ -157,6 +157,23 @@ const textRef = ref<HTMLElement | null>(null)
 const veil = ref(0)
 const measure = () => { veil.value = narrow.matches ? 0 : textRef.value?.offsetWidth ?? 0 }
 let observer: ResizeObserver | null = null
+// ── the page's height: what is actually visible, so it shrinks when a phone's keyboard opens ──
+
+// 100vh ignores the on-screen keyboard (and on iPhone, Safari's toolbars), which hid the editor
+// while typing. The visual viewport is what's left; while pinch-zoomed, keep the last height.
+const visibleHeight = ref<number | null>(null)
+const vv = window.visualViewport
+function onViewport() {
+  if (!vv || Math.abs(vv.scale - 1) > 0.01) return
+  visibleHeight.value = Math.round(vv.height)
+  if (window.scrollY) window.scrollTo(0, 0)
+}
+const heightStyle = computed(() => visibleHeight.value ? { height: `${visibleHeight.value}px` } : {})
+/** Little height to spare (a phone with its keyboard up): the text takes priority over the steps. */
+const short = computed(() => (visibleHeight.value ?? window.innerHeight) < 520)
+onMounted(() => { onViewport(); vv?.addEventListener('resize', onViewport) })
+onBeforeUnmount(() => vv?.removeEventListener('resize', onViewport))
+
 onMounted(() => {
   observer = new ResizeObserver(measure)
   if (textRef.value) observer.observe(textRef.value)
@@ -291,7 +308,7 @@ const status = computed(() => {
   --dg-font: 'Archivo Black', 'Arial Black', sans-serif;
 
   display: flex; flex-direction: column;
-  height: 100vh; overflow: hidden;
+  height: 100vh; height: 100dvh; overflow: hidden;
   background: var(--paper); color: var(--ink);
   transition: --paper 0.7s ease, --ink 0.7s ease, --accent 0.7s ease, --soft 0.7s ease;
 }
@@ -431,7 +448,11 @@ const status = computed(() => {
   .themes { margin-right: 0.8rem; gap: 0.3rem; }
   .stage { display: flex; flex-direction: column; }
   .text { order: -1; position: relative; width: 100%; max-height: 45%; flex: none; padding: 1rem; }
-  .steps { max-height: 8rem; margin-top: 0.5rem; }
+  /* The editor keeps at least three lines; the steps give way first, and go when space is short. */
+  .editor { min-height: 6rem; }
+  .steps { max-height: 8rem; margin-top: 0.5rem; flex: 0 100 auto; min-height: 4rem; }
+  .short .steps { display: none; }
+  .short .text { max-height: 60%; padding-block: 0.6rem; }
   .figure { position: relative; inset: auto; flex: 1; min-height: 0; }
   .foot { left: 1rem; right: 1rem; }
 }
