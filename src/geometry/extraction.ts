@@ -16,6 +16,9 @@ export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-
 
 export class UnsupportedPrimitiveError extends Error {}
 
+/** A drawable fact with the wrong number of points, e.g. `circle a b` while it is being typed. */
+export class MalformedFactError extends Error {}
+
 function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
   return {
     points: new Set(problems.flatMap(p => Array.from(p.points))),
@@ -33,12 +36,12 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
 
   switch (goal.name) {
     case 'collinear':
-      if (goal.args.length < 3) throw new Error(`collinear needs 3+ points`)
+      if (goal.args.length < 3) throw new MalformedFactError(`collinear needs 3+ points`)
       constraints.push({ kind: 'collinear', points: [...goal.args] } satisfies CollinearConstraint)
       break
 
     case 'between':
-      if (goal.args.length !== 3) throw new Error(`between needs 3 points`)
+      if (goal.args.length !== 3) throw new MalformedFactError(`between needs 3 points`)
       constraints.push({
         kind: 'between',
         middle: goal.args[1],
@@ -50,7 +53,7 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
       break
 
     case 'circle':
-      if (goal.args.length !== 3) throw new Error(`circle needs 3 points`)
+      if (goal.args.length !== 3) throw new MalformedFactError(`circle needs 3 points`)
       constraints.push({
         kind: 'on-circle',
         center: goal.args[0],
@@ -60,7 +63,7 @@ function problemFromPrimitive(goal: GroundPredicate): GeometryProblem {
       break
 
     case 'eq-lines':
-      if (goal.args.length !== 4) throw new Error(`eq-lines needs 4 points`)
+      if (goal.args.length !== 4) throw new MalformedFactError(`eq-lines needs 4 points`)
       constraints.push({
         kind: 'eq-dist',
         pair1: [goal.args[0], goal.args[1]],
@@ -99,11 +102,17 @@ export function frontierFactsFromRuntime(runtime: RuntimeState): GroundPredicate
   return [...frontier.values()]
 }
 
-/** Build the canonical problem from drawable facts; facts the renderer cannot draw are skipped. */
+/**
+ * Build the canonical problem from drawable facts; facts the renderer cannot draw are skipped,
+ * including ones with the wrong number of points (a line still being typed).
+ */
 export function geometryProblemFromFacts(facts: readonly GroundPredicate[]): GeometryProblem | null {
-  const drawable = facts.filter(f => GEOMETRY_FRONTIER.has(f.name))
-  if (drawable.length === 0) return null
-  const merged = mergeProblems(drawable.map(problemFromPrimitive))
+  const problems = facts.filter(f => GEOMETRY_FRONTIER.has(f.name)).flatMap(f => {
+    try { return [problemFromPrimitive(f)] }
+    catch (e) { if (e instanceof MalformedFactError) return []; throw e }
+  })
+  if (problems.length === 0) return null
+  const merged = mergeProblems(problems)
   canonicalise(merged)
   return merged
 }

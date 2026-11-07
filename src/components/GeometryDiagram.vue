@@ -108,13 +108,18 @@ const veilAt = computed(() => props.veil ?? 0)
 
 const baseWitness = computed<WitnessModel | null>(() => {
   if (!props.problem) return null
-  if (planning.value) {
-    // Keep each intersection on the branch it was on (continuity while dragging).
-    const drawing = execute(local.value!.plan, local.value!.params, { previous: lastCoords })
-    if (!drawing.failure) lastCoords = drawing.coords
-    return { coords: drawing.coords, energy: 0 }
+  try {
+    if (planning.value) {
+      // Keep each intersection on the branch it was on (continuity while dragging).
+      const drawing = execute(local.value!.plan, local.value!.params, { previous: lastCoords })
+      if (!drawing.failure) lastCoords = drawing.coords
+      return { coords: drawing.coords, energy: 0 }
+    }
+    return solve(props.problem) || null
+  } catch (e) {
+    console.warn('Drawing error:', e)
+    return null
   }
-  return solve(props.problem) || null
 })
 
 const activeWitness = computed(() => draggedWitness.value ?? baseWitness.value)

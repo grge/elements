@@ -151,3 +151,19 @@ describe('runtime to geometry extraction', () => {
     expect(problem?.circles.length).toBe(2)
   })
 })
+
+describe('a line still being typed', () => {
+  it('skips a drawable fact with too few points instead of throwing', async () => {
+    const { geometryProblemFromFacts } = await import('../src/geometry/extraction')
+    const facts = [
+      { name: 'circle', args: ['a', 'b', 'c'] },
+      { name: 'between', args: ['a', 'b'] },
+      { name: 'eq-lines', args: ['a', 'b', 'c'] },
+      { name: 'circle', args: [] },
+    ]
+    const problem = geometryProblemFromFacts(facts as any)
+    expect(problem).not.toBeNull()
+    expect([...problem!.points].sort()).toEqual(['a', 'b', 'c'])
+    expect(geometryProblemFromFacts([{ name: 'between', args: ['a'] }] as any)).toBeNull()
+  })
+})

@@ -114,7 +114,12 @@ export function useWorkspace() {
     catch (e) { console.warn('Geometry extraction error:', e); return [] }
   })
 
-  const problem = computed(() => geometryProblemFromFacts(facts.value))
+  // Never throw from here: the page renders from this, and a render error tears down the whole
+  // page in production, editor included, which loses focus mid-typing.
+  const problem = computed(() => {
+    try { return geometryProblemFromFacts(facts.value) }
+    catch (e) { console.warn('Geometry problem error:', e); return null }
+  })
 
   // Positions from the last drawing: re-planning after an edit keeps points where they were.
   let lastCoords: Map<string, Point> | undefined
@@ -136,9 +141,11 @@ export function useWorkspace() {
   const drawing = computed(() => {
     const c = construction.value
     if (!c) return null
-    const d = execute(c.plan, c.params, { previous: lastCoords })
-    if (!d.failure) lastCoords = d.coords
-    return d
+    try {
+      const d = execute(c.plan, c.params, { previous: lastCoords })
+      if (!d.failure) lastCoords = d.coords
+      return d
+    } catch (e) { console.warn('Construction execution error:', e); return null }
   })
 
   function setConstruction(c: ConstructionState) {
