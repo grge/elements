@@ -28,6 +28,14 @@
           @click="toggleShuffle"
         >shuffle</button>
       </div>
+      <!-- Phones: one dot, the current theme, that steps to the next. -->
+      <button
+        class="swatch cycle"
+        :style="{ background: THEMES[themeIndex].paper, color: THEMES[themeIndex].accent, borderColor: THEMES[themeIndex].ink }"
+        :title="`${THEMES[themeIndex].name}: tap for the next theme`"
+        :aria-label="`Colour theme ${THEMES[themeIndex].name}; next theme`"
+        @click="setTheme((themeIndex + 1) % THEMES.length)"
+      ><span /></button>
     </header>
 
     <main class="stage" :style="{ '--veil': `${veil}px` }">
@@ -345,6 +353,7 @@ const status = computed(() => {
 .swatch span { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
 .swatch:hover { transform: scale(1.15); }
 .swatch.current { outline: 2px solid var(--ink); outline-offset: 3px; }
+.cycle { display: none; }
 .shuffle { margin-left: 0.4rem; text-decoration-style: dotted; }
 .shuffle.on { color: var(--ink); text-decoration-style: solid; }
 
@@ -445,13 +454,20 @@ const status = computed(() => {
   .wordmark { padding: 0 1rem; font-size: 1.2rem; }
   .title { font-size: 1.3rem; }
   .ns, .shuffle { display: none; }
-  .themes { margin-right: 0.8rem; gap: 0.3rem; }
+  /* One theme dot instead of six, so the title has room. */
+  .themes { display: none; }
+  .cycle {
+    display: grid; flex: none; align-self: center; margin: 0 0.9rem 0 auto;
+    width: 30px; height: 30px; position: relative;
+  }
+  .cycle span { width: 11px; height: 11px; }
+  .cycle::after { content: ''; position: absolute; inset: -8px; }  /* a 46px target */
   .stage { display: flex; flex-direction: column; }
   .text { order: -1; position: relative; width: 100%; max-height: 45%; flex: none; padding: 1rem; }
-  /* The editor keeps at least three lines; the steps give way first, and go when space is short. */
+  /* Phones show the source and the figure only: no construction steps, no solver switch. */
+  .page { --ed-size: 15px; --ed-leading: 1.6; --ed-gutter: 1.8rem; }
   .editor { min-height: 6rem; }
-  .steps { max-height: 8rem; margin-top: 0.5rem; flex: 0 100 auto; min-height: 4rem; }
-  .short .steps { display: none; }
+  .steps, .foot button { display: none; }
   .short .text { max-height: 60%; padding-block: 0.6rem; }
   .figure { position: relative; inset: auto; flex: 1; min-height: 0; }
   .foot { left: 1rem; right: 1rem; }
