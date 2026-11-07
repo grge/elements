@@ -42,7 +42,6 @@ export function useWorkspace() {
   const selectedNamespace = ref<Namespace | ''>('')
   const scratch = ref(DEFAULT_SCRATCH)
   const clause = ref('')
-  const usePlanner = ref(true)
 
   const readOnly = computed(() =>
     mode.value === 'predicate' && selectedNamespace.value !== 'user')
@@ -87,6 +86,16 @@ export function useWorkspace() {
     openScratchpad()
   }
 
+  /**
+   * A predicate's signature: its definition's argument names, or plain letters (what the contents
+   * show). Its page draws this, not the head of its first clause, which may be an axiom such as
+   * `eq-lines a b b a` and draw nothing worth seeing.
+   */
+  const signature = computed(() => {
+    if (mode.value !== 'predicate') return null
+    return predicates.value.find(p => p.name === selectedPred.value && p.namespace === selectedNamespace.value)?.args ?? null
+  })
+
   const runtime = computed<RuntimeState | null>(() => {
     if (!kb.value) return null
     try {
@@ -99,7 +108,8 @@ export function useWorkspace() {
         : kb.value
       const rt = buildRuntimeState(base, isUser ? parsed : parsed.filter(i => i.kind !== 'rule'))
       const firstRule = parsed.find((i): i is Extract<typeof i, { kind: 'rule' }> => i.kind === 'rule')
-      if (firstRule) rt.configuration.addFacts([seedPredicateHeadFact(firstRule.rule.head)])
+      const args = signature.value ?? firstRule?.rule.head.args
+      if (args) rt.configuration.addFacts([seedPredicateHeadFact({ name: selectedPred.value, args })])
       return rt
     } catch (e) {
       console.warn('Runtime construction error:', e)
@@ -154,7 +164,7 @@ export function useWorkspace() {
 
   return {
     kb, predicates, userClauses, chapters,
-    mode, selectedPred, selectedNamespace, readOnly, text, usePlanner,
+    mode, selectedPred, selectedNamespace, readOnly, text, signature,
     runtime, facts, problem, construction, drawing, setConstruction,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }

@@ -70,10 +70,12 @@ at a time: a card for each predicate, in the order the chapter defines them, wit
 figure (computed in idle time and cached), its name and its arguments. Opening a construction shows its
 definition with the propositions about it, each checked.
 
-**Equal segments** that a figure states (not already shown as circles) are drawn with tick marks, the
-same number on segments of the same length.
+**Equal segments** that a figure states are drawn with bold tick marks, the same number on segments of
+the same length. A circle's radii count as equal segments, so the equilateral triangle's two circles
+draw its three sides, one tick each, as Byrne would.
 
-**Narrow screens.** With no room beside the text, the source sits above a solid figure.
+**Narrow screens.** With no room beside the text, the source sits above a solid figure. Phones show
+the source and the figure only (no construction steps), with one theme dot that steps through the themes.
 
 ## Designed, not yet built
 

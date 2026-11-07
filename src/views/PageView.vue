@@ -68,9 +68,6 @@
 
       <footer class="foot">
         <p class="status">{{ status }}</p>
-        <button class="quiet" @click="ws.usePlanner.value = !ws.usePlanner.value">
-          {{ ws.usePlanner.value ? 'ruler & compass' : 'numerical solver' }}
-        </button>
       </footer>
     </main>
 
@@ -105,7 +102,6 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
-import { parseSource } from '../language/parser'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor from '../components/CodeEditor.vue'
@@ -202,12 +198,8 @@ const { verificationMarks } = useVerification(
 const marks = computed(() => verificationMarks.value)
 const predicateNames = computed(() => [...new Set(ws.predicates.value.map(p => p.name))])
 
-const headArgs = computed(() => {
-  try {
-    const first = parseSource(ws.text.value).find(i => i.kind === 'rule')
-    return first && first.kind === 'rule' ? first.rule.head.args : []
-  } catch { return [] }
-})
+// The predicate's signature, as the contents show it (its definition's argument names).
+const headArgs = computed(() => ws.signature.value ?? [])
 
 // The book's chapters in order, then the user's own predicates.
 const groups = computed(() => [
@@ -261,10 +253,10 @@ const planSteps = computed(() =>
   (ws.construction.value?.plan.steps ?? []).map(s => ({ point: displayName(s.point), how: describe(s) })))
 
 // Ruler and compass when a valid construction exists; otherwise the numerical solver.
-const usingConstruction = computed(() => ws.usePlanner.value && !!ws.construction.value?.valid)
+const usingConstruction = computed(() => !!ws.construction.value?.valid)
 const failure = computed(() => usingConstruction.value ? ws.drawing.value?.failure : undefined)
 const status = computed(() => {
-  if (ws.usePlanner.value && ws.construction.value && !ws.construction.value.valid) {
+  if (ws.construction.value && !ws.construction.value.valid) {
     return 'No configuration satisfies every fact with this construction; drawn numerically instead.'
   }
   const d = ws.drawing.value
@@ -464,10 +456,10 @@ const status = computed(() => {
   .cycle::after { content: ''; position: absolute; inset: -8px; }  /* a 46px target */
   .stage { display: flex; flex-direction: column; }
   .text { order: -1; position: relative; width: 100%; max-height: 45%; flex: none; padding: 1rem; }
-  /* Phones show the source and the figure only: no construction steps, no solver switch. */
+  /* Phones show the source and the figure only, without the construction steps. */
   .page { --ed-size: 15px; --ed-leading: 1.6; --ed-gutter: 1.8rem; }
   .editor { min-height: 6rem; }
-  .steps, .foot button { display: none; }
+  .steps { display: none; }
   .short .text { max-height: 60%; padding-block: 0.6rem; }
   .figure { position: relative; inset: auto; flex: 1; min-height: 0; }
   .foot { left: 1rem; right: 1rem; }

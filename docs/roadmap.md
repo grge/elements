@@ -18,17 +18,10 @@ Open problems and ideas, roughly in order of value within each section. See
 
 The plan as of November 2026, in order. The first milestone is **demo-ready**: steps 1 to 3.
 
-1. **Correctness.**
-   - A predicate's page draws the head of its first clause, so where that clause is an axiom the
-     figure is trivial: `eq-lines` draws `eq-lines a b b a`, one segment equal to itself. Draw the
-     predicate's signature instead, as the contents thumbnails already do.
-   - Tick marks are drawn but faint on the page (0.8 of the stroke); make them as prominent as a
-     thumbnail's.
-   - Equal sides realised as circles (`eq-triangle`, `vesica`) get no ticks. Byrne would mark them.
-   - The *ruler & compass* / *numerical solver* button is a debugging switch: the solver already
-     takes over, with a status line, when no valid construction exists. Remove it.
-   - Decide whether to draw the construction actually used (see *Construction and drawing*): the
-     steps say "circle about m with radius am", and the figure does not show it.
+1. **Correctness.** Done in November 2026: a predicate's page draws its signature, ticks are as
+   bold as Byrne's and mark circles' radii too, and the solver switch is gone. One decision left:
+   - Whether to draw the construction actually used (see *Construction and drawing*): the steps
+     say "circle about m with radius am", and the figure does not show it.
 2. **A careful pass over everything**, file by file: code, docs and the book's comments. Looking for
    dead paths, comments that over-explain, inconsistent names, and anything that claims more than it
    does.

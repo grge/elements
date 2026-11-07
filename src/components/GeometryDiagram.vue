@@ -87,6 +87,8 @@ const props = defineProps<{
 const emit = defineEmits<{ 'update:construction': [state: ConstructionState] }>()
 
 const VEIL_FADE = 48
+/** Length of a tick mark across an equal segment, in px: bold, as Byrne draws them. */
+const TICK = 16
 const uid = `dg${Math.random().toString(36).slice(2, 8)}`
 
 // The construction being shown; dragging changes it locally and reports it on release.
@@ -166,7 +168,7 @@ const TITLES: Record<PointKind, string> = {
 const scene = computed(() => {
   const witness = activeWitness.value, t = displayTransform.value
   if (!props.problem || !witness || !t) return null
-  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value)
+  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value, TICK)
   const points = base.points.map(p => {
     const kind = kindOf(p.name)
     return { ...p, kind, aux: isAuxiliary(p.name), label: displayName(p.name), title: `${displayName(p.name)}: ${TITLES[kind]}` }
@@ -315,7 +317,7 @@ defineExpose({ activeWitness, baseWitness })
   stroke: var(--dg-ink, #fff);
   stroke-width: var(--dg-stroke, 3);
 }
-.crisp .tick { stroke-width: calc(var(--dg-stroke, 3) * 0.8); stroke-linecap: round; }
+.crisp .tick { stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 
 /* Behind the text the figure becomes a dotted ghost, like a construction pencilled in. */
 .ghost line, .ghost circle {

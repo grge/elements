@@ -12,7 +12,7 @@ export interface Scene {
   lines: number[][]
   /** Circles: [cx, cy, r]. */
   circles: number[][]
-  /** Segments stated to be equal (eq-lines facts not already shown as circles): [x1, y1, x2, y2]. */
+  /** Segments known to be equal, from eq-lines facts and from circles' radii: [x1, y1, x2, y2]. */
   segments: number[][]
   /** Tick marks across those segments, one per stroke; equal segments share a number of ticks. */
   ticks: number[][]
@@ -53,14 +53,21 @@ export function buildScene(
   }
 
   // Equal segments: group them into classes, the first class gets one tick, the next two, and so on.
+  // A circle's radii are equal too, so they are drawn and ticked like any other equal segments, as
+  // Byrne would: the equilateral triangle's two circles give its three sides one tick each.
   const parent = new Map<string, string>()
   const find = (k: string): string => { while (parent.get(k) !== k) k = parent.get(k)!; return k }
   const key = ([a, b]: readonly string[]) => a < b ? `${a}\u0001${b}` : `${b}\u0001${a}`
-  for (const c of problem.constraints) {
-    if (c.kind !== 'eq-dist') continue
-    const [k1, k2] = [key(c.pair1), key(c.pair2)]
+  const equate = (k1: string, k2: string) => {
     for (const k of [k1, k2]) if (!parent.has(k)) parent.set(k, k)
     parent.set(find(k1), find(k2))
+  }
+  for (const c of problem.constraints) {
+    if (c.kind === 'eq-dist') equate(key(c.pair1), key(c.pair2))
+  }
+  for (const circle of problem.circles) {
+    const radii = [...circle.points].filter(p => p !== circle.center).map(p => key([circle.center, p]))
+    if (radii.length >= 2) for (const r of radii) equate(radii[0], r)  // one radius equals nothing
   }
   const classOf = new Map<string, number>()
   const segments: number[][] = []
