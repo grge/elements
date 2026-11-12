@@ -33,6 +33,7 @@ see [design.md](design.md).
 | `src/geometry/extraction.ts` | From facts to constraints, what is drawn and what is unread |
 | `src/geometry/figure.ts` | What the figure draws through the points: lines, circles, and its marks |
 | `src/geometry/marks.ts` | Ticks and arcs: equalities stated or proven by ✓ lemmas, in classes with their chains |
+| `src/geometry/provenance.ts` | Where an element of the figure came from, in words; a mark's chain |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
 | `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
 | `src/geometry/classes.ts` | Equal segments (union-find) and merged lines, shared by the model and the figure |
@@ -154,7 +155,8 @@ Two things are built from the extraction, one from each list:
   design.md, *Marks* and *Equality chains*.
 
 The planner's own loci are not part of the figure: the diagram draws a point's route (its loci) only
-while the point is touched.
+while the point is touched. Hovering an element of the figure says where it came from
+(`provenance.ts`): each extracted fact keeps the index of the written fact it was unfolded from.
 
 **Planning** (`construction.ts`) turns the model into a straight-line program in which each point is
 

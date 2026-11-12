@@ -106,7 +106,9 @@ came from.
 
 ## The figure: what it draws and why
 
-*Agreed November 2026; partly built. This section is the rule; the code follows it as it is changed.*
+*Agreed and built November 2026. This section is the rule; the code follows it. Still open: a user's
+lemmas travelling to other pages (see* Marks*), and marks from the forward closure (see* Equality
+chains*).*
 
 **The rule.** Everything the figure shows by default is something written: a fact on the page, or a
 fact inside a definition the page uses (fainter the deeper), or an equality the page states or a
@@ -231,6 +233,12 @@ Hovering an element of the figure says what made it and highlights its source:
 chain as above. This completes the tether (source → figure, built) in the other direction
 (figure → source). It needs each drawable fact to remember the written fact it was unfolded from,
 as it already remembers its depth.
+
+Built (November 2026): each fact of the extraction keeps the index of the written fact it came from,
+and each element of the figure the facts that made it. Hovering an element puts its provenance in the
+status line (`src/geometry/provenance.ts`), lights the source lines it came from, and brings forward
+what the same facts draw; hovering a mark brings forward its whole class and reads its chain, e.g.
+*pq = bc (stated: eq-lines b c p q (line 2)) = al (proven, of transfer a b c l (line 1))*.
 
 ## Designed, not yet built
 

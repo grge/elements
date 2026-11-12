@@ -46,7 +46,10 @@ export interface Figure {
  */
 export function drawFigure(kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[]): Figure | null {
   const { equivalences } = analyseStructure(kb.allRules())
-  return figureOf(x.depicted, markClasses(equalities(x.outline, x.depicted, lemmas, equivalences), equivalences))
+  const figure = figureOf(x.depicted, markClasses(equalities(x.outline, x.depicted, lemmas, equivalences), equivalences))
+  // A proven mark is made by the constructions its lemma matched: they are sources too.
+  for (const f of x.outline) if (!figure?.sources.has(factKey(f))) figure?.sources.set(factKey(f), f)
+  return figure
 }
 
 /** The figure of the depicted facts; null when nothing is drawn. */

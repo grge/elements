@@ -106,6 +106,8 @@ export function useWorkspace() {
     }
   })
   const parseError = computed(() => 'error' in parsed.value ? parsed.value.error : null)
+  /** The page's items, as last parsed (none while it does not parse). */
+  const items = computed<TopLevel[]>(() => 'items' in parsed.value ? parsed.value.items : [])
 
   // While the text does not parse (a line half typed), the page keeps its last figure.
   let lastGood: { page: string; runtime: RuntimeState | null } | null = null
@@ -204,7 +206,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    parseError, runtime, extraction, facts, figure, construction, drawing, setConstruction, setVerified,
+    parseError, items, runtime, extraction, facts, figure, construction, drawing, setConstruction, setVerified,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

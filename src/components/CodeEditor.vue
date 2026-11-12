@@ -57,6 +57,8 @@ const props = defineProps<{
   error?: { line: number; message: string } | null
   /** Names to light up (the point hovered in the figure). */
   highlight?: string[]
+  /** Lines (0-based) to light up: where a hovered element of the figure came from. */
+  highlightLines?: number[]
 }>()
 
 /** What the pointer is over: a name, or a whole atom (when over its predicate). */
@@ -97,6 +99,14 @@ const highlightField = StateField.define<ReadonlySet<string>>({
   create: () => new Set(),
   update(value, tr) {
     for (const e of tr.effects) if (e.is(setHighlight)) return e.value
+    return value
+  },
+})
+const setHighlightLines = StateEffect.define<ReadonlySet<number>>()
+const highlightLinesField = StateField.define<ReadonlySet<number>>({
+  create: () => new Set(),
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(setHighlightLines)) return e.value
     return value
   },
 })
@@ -223,6 +233,7 @@ function typography(view: EditorView): DecorationSet {
   const doc = state.doc
   const known = state.field(knownField)
   const highlight = state.field(highlightField)
+  const litLines = state.field(highlightLinesField)
   // The `#` shows on the cursor's line, and only while the editor has focus.
   const cursorLines = new Set(view.hasFocus ? state.selection.ranges.map(r => doc.lineAt(r.head).number) : [])
 
@@ -256,7 +267,7 @@ function typography(view: EditorView): DecorationSet {
     const hang = commentOnly ? indent + (showHash ? 2 : 0) : indent + INDENT.length
     if (text.trim()) {
       out.push(Decoration.line({
-        class: commentOnly ? 'cm-prose-line' : undefined,
+        class: [commentOnly ? 'cm-prose-line' : '', litLines.has(i) ? 'cm-source-line' : ''].filter(Boolean).join(' ') || undefined,
         attributes: { style: `padding-left: calc(${hang}ch + 0.25rem); text-indent: -${hang}ch` },
       }).range(from))
     }
@@ -294,6 +305,7 @@ const typesetter = ViewPlugin.fromClass(class {
   update(u: ViewUpdate) {
     const knownChanged = u.startState.field(knownField) !== u.state.field(knownField)
       || u.startState.field(highlightField) !== u.state.field(highlightField)
+      || u.startState.field(highlightLinesField) !== u.state.field(highlightLinesField)
     if (u.docChanged || u.selectionSet || u.focusChanged || knownChanged) this.decorations = typography(u.view)
   }
 }, { decorations: v => v.decorations })
@@ -518,6 +530,8 @@ const theme = EditorView.theme({
     fontFamily: 'var(--ed-prose-font, serif)', fontSize: 'calc(var(--ed-size, 13px) * 0.8)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
     maxWidth: '24rem', padding: '0.5rem 0.7rem', lineHeight: '1.4',
   },
+  // A line a hovered element of the figure came from: a rule in the accent colour beside it.
+  '.cm-source-line': { boxShadow: 'inset 3px 0 0 var(--ed-arg, #f40)', backgroundColor: 'color-mix(in srgb, var(--ed-arg, #f40) 12%, transparent)' },
   // A name whose point is hovered in the figure: set in reverse, as Byrne would colour it.
   '.tok-lit': {
     backgroundColor: 'var(--ed-arg, #f40)', color: 'var(--ed-paper, #000)', textShadow: 'none', borderRadius: '2px',
@@ -545,7 +559,7 @@ onMounted(() => {
         history(),
         keys,
         keymap.of([...defaultKeymap, ...historyKeymap]),
-        marksField, knownField, errorField, highlightField, reasonsField, pointer, signatureTooltip,
+        marksField, knownField, errorField, highlightField, highlightLinesField, reasonsField, pointer, signatureTooltip,
         markGutter, typesetter, theme,
         EditorView.lineWrapping,
         autocompletion({ override: [complete], icons: false }),
@@ -571,6 +585,7 @@ watch(() => props.marks, m => view?.dispatch({ effects: setMarks.of(m ?? []) }),
 watch(() => props.known, k => view?.dispatch({ effects: setKnown.of(k ?? null) }))
 watch(() => props.error, e => view?.dispatch({ effects: setError.of(e ?? null) }))
 watch(() => props.highlight, h => view?.dispatch({ effects: setHighlight.of(new Set(h ?? [])) }))
+watch(() => props.highlightLines, h => view?.dispatch({ effects: setHighlightLines.of(new Set(h ?? [])) }))
 watch(() => props.readonly, ro => view?.dispatch({
   effects: editable.reconfigure([EditorView.editable.of(!ro), EditorState.readOnly.of(!!ro)]),
 }))

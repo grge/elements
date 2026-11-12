@@ -47,6 +47,18 @@
         <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
+      <!-- Wide invisible strokes over each element: hovering one says where it came from. -->
+      <g v-if="!dragging" class="hits">
+        <line v-for="(l, i) in scene.lines" :key="`hl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]"
+          @pointerenter="hoverElement({ facts: scene.meta.lines[i], mark: null })" @pointerleave="hoverElement(null)" />
+        <circle v-for="(c, i) in scene.circles" :key="`hc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]"
+          @pointerenter="hoverElement({ facts: scene.meta.circles[i], mark: null })" @pointerleave="hoverElement(null)" />
+        <line v-for="(l, i) in scene.segments" :key="`hs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]"
+          @pointerenter="hoverElement(scene.meta.segments[i])" @pointerleave="hoverElement(null)" />
+        <path v-for="(a, i) in scene.arcs" :key="`ha${i}`" :d="a.d"
+          @pointerenter="hoverElement(scene.meta.arcs[i])" @pointerleave="hoverElement(null)" />
+      </g>
+
       <!-- Points stay crisp and grabbable everywhere, even under the text. -->
       <g
         v-for="p in scene.points"
@@ -74,6 +86,7 @@
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { solve, type WitnessModel } from '../geometry/solver'
 import type { Figure } from '../geometry/figure'
+import type { ElementRef } from '../geometry/provenance'
 import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
 import { buildScene, emphasise, type Emphasis, type Helper } from '../geometry/scene'
 import type { GroundPredicate } from '../kb/inference'
@@ -107,6 +120,8 @@ const emit = defineEmits<{
   'update:construction': [state: ConstructionState]
   /** The point under the pointer, or null when it leaves. */
   'hover-point': [name: string | null]
+  /** The element (line, circle, segment, arc) under the pointer, or null when it leaves. */
+  'hover-element': [element: ElementRef | null]
 }>()
 
 const VEIL_FADE = 48
@@ -212,6 +227,10 @@ function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments' 
 }
 const lit = (name: string) => !!emphasis.value?.points.has(name)
 const dimPoint = (name: string) => !!emphasis.value && !!props.focus?.facts.length && !emphasis.value.points.has(name)
+
+function hoverElement(el: ElementRef | null) {
+  emit('hover-element', el ? { facts: el.facts, mark: el.mark } : null)
+}
 
 function hoverPoint(name: string | null) {
   if (dragging.value) return
@@ -418,6 +437,9 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
   stroke-dasharray: 0.1 10;
   opacity: 0.45;
 }
+
+/* ── hovering an element ── */
+.hits line, .hits circle, .hits path { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
 
 /* ── points ── */
 .pt { cursor: grab; }

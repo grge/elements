@@ -50,6 +50,7 @@
         :touch="stepHover"
         @update:construction="ws.setConstruction"
         @hover-point="p => (pointHover = p)"
+        @hover-element="e => (elementHover = e)"
       >
         <template #empty><span class="empty">nothing to draw yet</span></template>
       </GeometryDiagram>
@@ -64,6 +65,7 @@
             :known="knownNames"
             :error="ws.parseError.value"
             :highlight="codeHighlight"
+            :highlight-lines="sourceLines"
             placeholder="circle a b c"
             @hover="h => (editorHover = h)"
             @open="openByName"
@@ -117,6 +119,8 @@ import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor, { type EditorHover } from '../components/CodeEditor.vue'
 import { extract } from '../geometry/extraction'
+import { provenance, type ElementRef } from '../geometry/provenance'
+import type { GroundPredicate } from '../kb/inference'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import { useThumbnails } from '../composables/useThumbnails'
@@ -255,6 +259,31 @@ const editorHover = ref<EditorHover>(null)
 const pointHover = ref<string | null>(null)
 /** The point of the construction step hovered in the list: the figure shows its route. */
 const stepHover = ref<string | null>(null)
+/** The element of the figure under the pointer: the page says where it came from. */
+const elementHover = ref<ElementRef | null>(null)
+
+/** Where a written fact is on the page (1-based): its own line, or for the page's subject, its definition. */
+function lineOf(f: GroundPredicate): number | null {
+  const same = (p: { name: string; args: readonly string[] }) => p.name === f.name && p.args.join(' ') === f.args.join(' ')
+  for (const item of ws.items.value) {
+    if (item.kind === 'goal' && same(item.pred)) return item.sourceRef?.startLine ?? null
+  }
+  if (ws.mode.value === 'predicate' && f.name === ws.selectedPred.value) {
+    const def = ws.items.value.find(i => i.kind === 'rule' && i.rule.head.name === f.name)
+    return def?.sourceRef?.startLine ?? null
+  }
+  return null
+}
+
+const elementInfo = computed(() => {
+  const el = elementHover.value, figure = ws.figure.value, rt = ws.runtime.value
+  if (!el || !figure || !rt) return null
+  const written = rt.configuration.allFacts()
+  const p = provenance(figure, el, written, lineOf)
+  const lines = p.origins.flatMap(o => { const l = written[o] ? lineOf(written[o]) : null; return l ? [l - 1] : [] })
+  return { text: p.text, lines }
+})
+const sourceLines = computed(() => elementInfo.value?.lines ?? [])
 
 /**
  * A name in the source as a point of the figure: the point itself, or, for a variable of the page's
@@ -269,6 +298,15 @@ function pointOf(name: string): string | null {
 /** What the figure brings forward: the hovered name's point, or everything the hovered atom draws. */
 const figureFocus = computed(() => {
   if (stepHover.value) return { facts: [], points: [stepHover.value] }
+  const el = elementHover.value, figure = ws.figure.value
+  if (el && figure) {
+    // A mark brings forward its whole class: what made each equality in its chain.
+    const cls = el.mark ? figure.marks[el.mark.mark] : null
+    const facts: GroundPredicate[] = cls
+      ? cls.edges.flatMap(e => e.source.kind === 'stated' ? [e.source.fact] : e.source.facts)
+      : el.facts.flatMap(k => { const f = figure.sources.get(k); return f ? [f] : [] })
+    return facts.length ? { facts, points: [] } : null
+  }
   const h = editorHover.value
   if (!h) return null
   if (h.kind === 'name') {
@@ -319,6 +357,7 @@ const unreadNote = computed(() => {
   return names.length ? `Not drawn: ${names.join(', ')} (the figure has no reading for ${names.length > 1 ? 'them' : 'it'}).` : ''
 })
 const status = computed(() => {
+  if (elementInfo.value?.text) return elementInfo.value.text
   if (ws.construction.value && !ws.construction.value.valid) {
     return 'No configuration satisfies every fact with this construction; drawn numerically instead.'
   }
