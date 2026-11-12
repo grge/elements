@@ -73,6 +73,15 @@ const figures: Array<{ text: string; dof: number; mayFail?: boolean }> = [
   { text: 'bisect-angle a b c d', dof: 6, mayFail: true },     // only possible when ba < bc
   { text: 'perpendicular a c d', dof: 4 },
   { text: 'drop-perpendicular p e f m', dof: 5 },
+  // Chains of equal angles: two arms from one vertex meet only there, so the second equality is
+  // taken up by another point, not by collapsing one onto a vertex.
+  { text: 'eq-angle a b c d e f\neq-angle d e f g h i', dof: 16 },
+  { text: 'eq-angle a b c d e f\neq-angle a b c g h i', dof: 16 },
+  { text: 'eq-angle a b c c b d\neq-angle c b d d b e', dof: 8 },
+  { text: 'eq-angle a b c d b e\neq-angle d b e g b h', dof: 12 },
+  { text: 'supp a b c d e f\nsupp d e f g h i', dof: 16 },
+  { text: 'eq-angle a b c d e f\neq-angle b c a e f d', dof: 10 },     // similar triangles
+  { text: 'eq-angle a b c a c b', dof: 5 },                            // equal base angles: a perpendicular bisector
 ]
 
 describe('construction planning', () => {
@@ -209,4 +218,16 @@ describe('the other intersection', () => {
     const cp = plan(buildModel(factsOf('eq-triangle o a b\neq-triangle o b c')))
     expect(minGap(realise(cp).drawing.coords)).toBeGreaterThan(1e-6)
   })
+})
+
+describe('no point collapses onto another', () => {
+  // Two loci through one placed point meet only there; such a point used to be drawn on top of it.
+  for (const text of ['eq-angle a b c d e f\neq-angle d e f g h i', 'eq-angle a b c c b d\neq-angle c b d d b e', 'eq-angle a b c d e f\neq-angle d e f a b c']) {
+    it(text.replace(/\n/g, '; '), () => {
+      const { drawing } = realise(plan(buildModel(factsOf(text))))
+      const ps = [...drawing.coords.values()]
+      const closest = Math.min(...ps.flatMap((p, i) => ps.slice(i + 1).map(q => Math.hypot(p[0] - q[0], p[1] - q[1]))))
+      expect(closest).toBeGreaterThan(1e-3)
+    })
+  }
 })

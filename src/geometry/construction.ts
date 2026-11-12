@@ -158,6 +158,12 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
     } else if (occurrences === 2 && t1.includes(p) && t2.includes(p) && t1[1] === t2[1] && t1[1] !== p) {
       const a = t1[0] === p ? t1[2] : t1[0], b = t2[0] === p ? t2[2] : t2[0]
       if (a !== b && a !== t1[1] && b !== t1[1]) out.push({ kind: 'angle-bisector', vertex: t1[1], arms: [a, b], outer: m.name === 'supp' })
+    } else if (occurrences === 2 && m.name === 'eq-angle' && t1[1] !== p && t2[1] !== p && t1[1] !== t2[1]) {
+      // Equal base angles: p's angle at u towards v equals its angle at v towards u. Then p is as far
+      // from u as from v (I.6): it is on the perpendicular bisector of u-v.
+      const [u, v] = [t1[1], t2[1]]
+      const other = (t: string[]) => t[0] === p ? t[2] : t[0]
+      if (other(t1) === v && other(t2) === u) out.push({ kind: 'bisector', of: [u, v] })
     }
   }
   for (const cls of model.lengths) {
@@ -173,7 +179,34 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
       for (let i = 1; i < others.length; i++) out.push({ kind: 'bisector', of: [others[0], others[i]] })
     }
   }
-  return out
+  // Two straight loci through the same placed point meet only there: the rays of two copied angles
+  // at one vertex, a line and a ray from a point on it. They are not two conditions on p but one
+  // condition between the angles, which another point must take up; so of such loci only the first
+  // counts.
+  // The same locus twice (a perpendicular bisector from equal lengths and from equal base angles)
+  // is one condition too.
+  const kept: Locus[] = []
+  for (const l of out) {
+    const through = pivots(l)
+    if (through.length && kept.some(k => pivots(k).some(q => through.includes(q)))) continue
+    if (kept.some(k => sameLocus(k, l))) continue
+    kept.push(l)
+  }
+  return kept
+}
+
+function sameLocus(a: Locus, b: Locus): boolean {
+  if (a.kind === 'bisector' && b.kind === 'bisector') return new Set([...a.of, ...b.of]).size === 2
+  return JSON.stringify(a) === JSON.stringify(b)
+}
+
+/** The placed points a straight locus always passes through (none for a circle or a perpendicular bisector). */
+function pivots(l: Locus): string[] {
+  switch (l.kind) {
+    case 'line': return [...l.through]
+    case 'angle': case 'angle-bisector': return [l.vertex]
+    default: return []
+  }
 }
 
 function countEquations(model: ConstructionModel): number {
@@ -182,6 +215,9 @@ function countEquations(model: ConstructionModel): number {
 }
 
 const DP_LIMIT = 18
+
+/** Where a slider on a ray starts, as a fraction of the arm it was copied along: just off the vertex. */
+const RAY_START = 0.02
 
 export interface PlanOptions {
   /** Points that must be free inputs (placed before anything constrains them). */
@@ -489,7 +525,8 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         : curves[0]
       if (curve.kind === 'line') {
         const found = lineDomain(x, curve, orders, at, tol())
-        const domain: [number, number] = curve.ray ? [Math.max(0, found.domain[0]), found.domain[1]] : found.domain
+        // A ray's point stays off its vertex: there it would make an angle with an arm of no length.
+        const domain: [number, number] = curve.ray ? [Math.max(RAY_START, found.domain[0]), found.domain[1]] : found.domain
         const applied = found.applied
         if (domain[0] > domain[1] + 1e-12) return fail(`no point of ${describeLocus(step.locus)} satisfies its order`)
         decided = applied
@@ -530,9 +567,12 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         .map(({ fact: { args: [p, q] } }) => p === x ? q : p).filter(q => q !== x)
       const allowed = ok.filter(c => apart.every(q => !coincides(c, q)))
       if (allowed.length === 0) return fail(`where ${step.loci.map(describeLocus).join(' and ')} meet is ${apart.map(displayName).join(', ')}, which ${displayName(x)} must differ from`)
-      // The drawing takes distinct names for distinct points: prefer a meeting point not already used.
-      const unused = allowed.filter(c => ![...at.keys()].some(q => coincides(c, q)))
-      const choices = unused.length ? unused : allowed
+      // The drawing takes distinct names for distinct points: a meeting point already used is not one.
+      const choices = allowed.filter(c => ![...at.keys()].some(q => coincides(c, q)))
+      if (choices.length === 0) {
+        const taken = [...at.keys()].filter(q => allowed.some(c => coincides(c, q)))
+        return fail(`${step.loci.map(describeLocus).join(' and ')} meet only at ${taken.map(displayName).join(', ')}, which ${displayName(x)} must differ from`)
+      }
       const near = target ?? options.previous?.get(x)
       pos = near ? choices.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best) : choices[0]
     }

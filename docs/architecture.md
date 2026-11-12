@@ -176,7 +176,13 @@ angle lies on one of two rays from the vertex (either side of the placed arm), a
 equal angles with two placed arms lies on their bisector (the outer bisector for supplements; for a
 straight angle, the perpendicular). Of the two rays the drawing keeps the one the point is on, as it
 keeps an intersection's branch. An angle condition on a point already on a line through the vertex is
-not used: that line meets the rays only at the vertex. Angles a figure states but cannot use (a theorem,
+not used: that line meets the rays only at the vertex. More generally, two straight loci through the
+same placed point (two copied angles at one vertex, a line and a ray from a point on it) meet only there:
+they are one condition between the angles, not two on the point, so only the first counts and another
+point takes up the rest; the same locus reached twice counts once. A point with equal base angles
+towards two placed points is on their perpendicular bisector (I.6). A point on a ray stays just off
+its vertex, and a meeting point already taken by another point is a failure, not a fallback: the
+drawing takes distinct names for distinct points. Angles a figure states but cannot use (a theorem,
 such as the isosceles triangle's) are checked on every frame.
 
 The order of construction is chosen by an exact search, dynamic programming over the set of placed
