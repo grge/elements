@@ -24,7 +24,7 @@ proves it from the chapter's axioms.
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # vitest, about 20 s
+npm test          # vitest, about 10 s
 npm run build     # type-check and build to dist/
 ```
 

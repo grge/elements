@@ -1,232 +1,87 @@
-# Language Semantics and Formalism
+# Language
 
-This document outlines the formal semantics and design principles of the Horn-clause language used in the elements geometry system.
+elements is written in Horn clauses: one clause form, read by a small set of conventions instead of
+extra syntax. This page covers the syntax, what it means, and what the checker does with it. For how
+the engine computes it see [architecture.md](architecture.md); for the book written in it see
+[book.md](book.md).
 
-## Overview
+## Names and comments
 
-This language is a minimal, declarative system built around Horn clauses. It supports:
+A name is letters, digits, `_` and `-`: `eq-triangle`, `a`, `p1`. An atom is a predicate name followed
+by its arguments, separated by spaces: `circle a b c`. A predicate has one arity everywhere; using a
+name with two arities is a parse error.
 
-- **Universal rules** (axioms and Horn clauses)
-- **Concrete facts** (ground configurations)
-- **Two kinds of queries:**
-  - Theory-level queries (lemmas / theorems)
-  - Ground-level queries (facts in a configuration)
+`#` starts a comment, to the end of the line. Comments directly above an item, with no blank line
+between, are its *doc comment*: a predicate's page shows it above the clause. Because `#` can never be
+part of a name, the engine's own names for auxiliary points (`d#1`, shown `d₁`) can never collide with
+a name you write.
 
-The design goal is to keep the language uniform while clearly separating:
-- **Schema-level reasoning** (universal statements)
-- **Ground-level reasoning** (specific configurations)
+`false`, with no arguments, is reserved for contradiction (see [below](#distinct-points-and-contradiction)).
 
-Important note: several distinctions made below are **conceptual** rather than distinct AST node types.
-In particular:
-- an **axiom** is just a Horn clause with an empty body
-- a **theorem** is just a queried Horn clause with an empty body
-- a **lemma** is just a queried Horn clause with a non-empty body
+## What you can write
 
-So the language should stay structurally simple. The main top-level distinction that really matters
-syntactically is between:
-- `? H` — a ground query, and
-- `? H: B` / `? H: -` — a queried Horn clause.
+| Item | Example | Meaning |
+|------|---------|---------|
+| clause | `midpoint m a b: between a m b, eq-lines a m m b` | for all values of its variables, the head holds when the body does |
+| axiom | `eq-point a a: -` | a clause with no body: the head always holds |
+| fact | `eq-triangle a b c` | this holds, for these particular points |
+| lemma | `? eq-lines a b b c: eq-triangle a b c` | does the head follow from the body? |
+| theorem | `? between a a b: -` | does the head hold outright? |
+| ground query | `? eq-lines a b b c` | does it follow from the page's facts? |
 
-We define the **knowledge base** to mean the set of all Horn clauses and axioms (the schema level).
+A body is written on one line, separated by commas, or indented, one atom per line:
 
-We define a **universe** to mean the set of objects currently in scope for inference.
-
-We define a **fact set** to mean the currently known ground facts over a given universe.
-
-We define a **configuration** to mean the session-level pair of universe + fact set used for interactive ground reasoning.
-
-The model-theoretic interpretation is:
-
-```
-? H : B   holds iff  H ∈ least model of comp(K) ∪ {B}
-? H       holds iff  H ∈ least model of comp(K) ∪ F,  where F is the current ground fact set
-```
-
-where `K` denotes the knowledge base and `comp(K)` reads every **defined** predicate as
-if-and-only-if (see [Definitions](#definitions)): from `eq-triangle a b c` we may conclude
-`circle a b c`, not only the other way round. All other clauses are one-way implications.
-
-The checker is a sound but incomplete implementation of this semantics, so failure to prove a lemma
-does not necessarily mean it is false in the model.
-
----
-
-## Core Syntax
-
-The language operates at two levels:
-
-### Ground Level
-- **Facts:** `circle a b c`
-- **Queries:** `? eq-lines a b a c`
-
-### Theory/Schema Level
-- **Rules:** `eq-triangle a b c: circle a b c, circle b a c`
-- **Axioms:** `eq-point a a: -`
-- **Lemmas:** `? eq-lines a b a c: circle a b c`
-- **Theorems:** `? between a a b: -`
-
-### Horn Clauses
-
-A Horn clause has the form:
-
-```
-head: body1, body2, ..., bodyn
-```
-
-Where `head`, `body1`, `body2`, etc. are all predicates.
-
-**Semantics:** Whenever all body predicates `body1, body2, ..., bodyn` are true, the `head` is also true.
-
-**Example:**
-```
-eq-triangle a b c: circle a b c, circle b a c
-```
-
-Horn clauses can also be written in indented form:
-```
+```txt
 eq-triangle a b c:
     circle a b c
     circle b a c
 ```
 
-**Syntax rules:**
-- Inline bodies must be comma-separated on one line
-- Indented bodies must have one predicate per line
+Lemmas can be indented the same way. Mixing the two (`circle a b c, circle b a c` on an indented line)
+is an error.
 
-The following is **not allowed:**
-```
-eq-triangle a b c:
-    circle a b c, circle b a c   # invalid
-```
+The book's `.geo` files hold clauses, axioms and lemmas only. A page holds anything: its clauses extend
+the knowledge base while the page is open, its facts are drawn, and its `?` lines are checked. Your own
+predicates, made from the contents, are kept in your browser.
 
-### Axioms
+## Meaning
 
-An axiom is a Horn clause with no body. We use `-` to explicitly indicate that there is no body:
+### Clauses and variables
 
-```
-eq-point a a: -
-```
-
-This asserts that every point is equal to itself.
-
-**Semantics:** Axioms represent universally quantified rules: for all objects `a`, `eq-point a a` holds.
-
-Axioms are treated as invariants over objects: whenever a new object `x` is introduced, all applicable axiom instances are added automatically.
-
-### Lemmas
-
-A lemma is a queried Horn clause:
-
-```
-? eq-lines a b a c: circle a b c
-```
-
-**Semantics:** This asks: does the head follow from the body under the rules of the theory? Formally, is the Horn clause `eq-lines a b a c: circle a b c` derivable?
-
-Like Horn clauses, lemmas can also be written in indented form:
-
-```
-? eq-lines a b a c:
-    circle a b c
-```
-
-### Theorems
-
-A theorem is not a separate language construct; it is simply a queried Horn clause with no body:
-
-```
-? between a a b: -
-```
-
-**Semantics:** This asks: is the head predicate universally true, i.e., derivable without assumptions?
-
-### Bare Facts (Ground Configurations)
-
-The language supports ground facts:
-
-```
-circle a b c
-collinear a b d
-```
-
-**Semantics:** These form a ground conjunction. They introduce concrete objects `a`, `b`, `c`, `d` and assert that the listed predicates hold.
-
-**Important distinction:** `circle a b c` means "for these specific objects, this relation holds", whereas `circle a b c: -` means "for all triples (a, b, c), the relation holds".
-
-### Ground Queries
-
-A ground query has no `:`:
-
-```
-? eq-lines a b a c
-```
-
-**Semantics:** This asks: is this predicate derivable in the current configuration? It depends on the current ground facts, the axioms (invariants), and all rules in the theory.
-
-**Compare these two examples:**
-
-```
-circle a b c
-? eq-lines a b a c
-```
-
-versus:
-
-```
-? eq-lines a b a c: circle a b c
-```
-
-Operationally these do similar work, but in the former the objects exist in the configuration space (introduced by the ground fact `circle a b c`), whereas in the latter the objects only exist within the lemma closure.
-
-Lemmas are self-contained and depend only on the knowledge base together with a temporary proof universe induced by the symbols in the lemma statement. Ground queries depend on the session fact set and the session universe, as well as the knowledge base.
-
----
-
-## Inference
-
-### Forward and Backward Chaining
-
-Forward and backward chaining can be thought of as traversing Horn clauses in different directions.
-
-Consider the Horn clause: `eq-triangle a b c: circle a b c, circle b a c`
-
-**Backward chaining** means starting with a predicate like `eq-triangle a b c` and replacing it with the conjunction `circle a b c, circle b a c`, then repeating this procedure recursively for each predicate in the conjunction until we reach a natural stopping point.
-
-**Defined predicates** (see [Definitions](#definitions)) are automatically unfolded via backward chaining. This can be employed as:
-- **Proof strategy:** "To prove `eq-triangle a b c`, replace that goal with two new goals: `circle a b c` and `circle b a c`"
-- **Construction strategy:** "To construct a witness for `eq-triangle a b c`, construct witnesses for `circle a b c` and `circle b a c`"
-
-Predicates without a definition are where unfolding stops. These become the foundation for forward chaining.
+Every clause holds for all values of its variables. A variable may appear in the head only: in
+`foo a: bar b`, once some `bar` holds, `foo` holds of every object, including objects introduced later.
+An axiom is the case with an empty body. A variable in the body only is an ordinary existential: the
+rule fires whenever some value makes the body hold.
 
 ### Definitions
 
-The language has one clause form, but a clause can play two roles: a **definition** (read as
-if-and-only-if) or a one-way **implication**. There is no syntax for the difference; the definition of
-a predicate is recognised:
+A clause can be a **definition**, read as *if and only if*, or a one-way implication. There is no
+syntax for the difference; the definition is recognised:
 
 > A predicate is **defined** by clause `D` when `D` has a non-empty body, `D` is not recursive (the
 > predicate is not reachable from `D`'s own body through the rules), and every other clause for the
 > predicate is provable from `D`. When several clauses qualify, the first in source order is used.
 > Every other predicate is **open**: it is derived, never unfolded.
 
-This is exactly the condition under which the completion of all of a predicate's clauses is a single
-conjunction, i.e. still Horn. Consequences:
+This is exactly the case in which the completion of all the predicate's clauses is a single
+conjunction, so it is still Horn. Consequences:
 
 - A predicate's only clause is its definition. `tall x: giraffe x` on its own says that being tall
-  *means* being a giraffe; if that is not intended, it is an error in the knowledge base, not in the
-  engine. Write definitions as definitions.
-- Adding a clause that follows from the definition (e.g. the true symmetry
-  `eq-triangle a b c: eq-triangle b c a`) never changes the meaning of anything.
-- Adding a weaker clause (`eq-triangle a b c: circle a b c`) makes it the definition, because that is
-  what the clauses now say together.
-- Genuinely alternative clauses leave the predicate open.
+  *means* being a giraffe; if that is not what was meant, the mistake is in the knowledge base.
+- Adding a clause that follows from the definition (`eq-triangle a b c: eq-triangle b c a`) never
+  changes a meaning. Adding a weaker one (`eq-triangle a b c: circle a b c`) makes it the definition,
+  because that is what the clauses now say together. Genuinely alternative clauses leave the
+  predicate open.
 - Axioms about a predicate in terms of itself (common notion 3 for `eq-lines`) are recursive, so they
-  are never mistaken for definitions.
+  are never taken for definitions. The geometry primitives (`eq-point`, `eq-lines`, `between`,
+  `collinear`, `distinct`) are open; `circle` is defined (`circle a b c: eq-lines a b a c`).
 
-**Auxiliary objects.** Variables that occur in a definition's body but not its head are existential.
-In Euclid's construction for copying a segment (kept in `tests/fixtures/constructions.geo`),
+**Unfolding** replaces an atom of a defined predicate by its definition's body, recursively, until only
+open predicates remain. A definition's body-only variables are a construction's auxiliary points; each
+unfolding gives them fresh names (`d#1`, `d#2`, …), so two constructions in one figure never share
+them. In Euclid's construction for copying a segment (kept in `tests/fixtures/constructions.geo`),
 
-```
+```txt
 copy-segment a l b c:
     eq-triangle d a b
     circle b c g
@@ -235,173 +90,63 @@ copy-segment a l b c:
     between d a l
 ```
 
-the apex `d` and the point `g` exist whenever the construction does. Every unfolding gives them fresh
-names (`d#1`, `g#1`, … shown as `d₁`, `g₁`). `#` starts a comment, so these never collide with names a
-user can write, and two constructions in one figure never share auxiliary points. A lemma cannot refer
-to a construction's auxiliary points: in `? eq-lines d a d b: copy-segment a l b c`, `d` is an
-arbitrary new point.
+`d` and `g` exist whenever the construction does. A lemma cannot refer to them: in
+`? eq-lines d a d b: copy-segment a l b c`, `d` is an arbitrary new point.
 
-**Forward chaining** means starting with one or more facts and inferring new facts via Horn clauses. If ground facts successfully unify with the body of a Horn clause in the knowledge base, we can add the corresponding head predicate to our fact set.
+### What a `?` line asks
 
-**Summary:**
-- **Backward chaining** is used for **construction / search**
-- **Forward chaining** is used for **logical consequence**
-
-### Lemma Checking Procedure
-
-To check a lemma:
-
-1. **Unfold** every hypothesis through definitions, giving auxiliary objects fresh names, until only
-   open predicates remain (or the goal would repeat).
-2. **Forward chaining:** compute the closure of the unfolded facts under all clauses.
-3. **Check:** verify that the head is in the closure.
-
-There is no notion of "primitive predicates": the boundary between unfolding and forward chaining
-comes from the knowledge base itself (which predicates are defined).
-
-In practice we don't need to compute the full closure — we can stop early and return success as soon as we see the head.
-
-### Axioms and Theorems
-
-Axioms and theorems (clauses with no body) require slightly specialised treatment during inference. An axiom like `eq-point a a: -` would never be invoked during ordinary forward chaining since it has no body to match against. Similarly, a theorem like `? eq-point a a: -` cannot get started via forward chaining since there are no predicates to initiate the inference procedure.
-
-To handle these cases:
-1. Introduce abstract objects corresponding to the variables in the theorem's head
-2. Apply all axioms (invariants) to those objects immediately
-3. Run forward chaining as normal
-
-More generally, the same issue arises for any Horn clause where some head variables do not appear in the body — including non-axiom rules. Consider:
+Write `K` for the knowledge base and `comp(K)` for `K` with every defined predicate read as if and only
+if. Then
 
 ```
-foo a: bar b
+? H: B   holds iff  H is in the least model of comp(K) ∪ B
+? H      holds iff  H is in the least model of comp(K) ∪ F,  F the page's facts
 ```
 
-During forward chaining, when we see a fact `bar x` (for some concrete `x`), we cannot straightforwardly unify the body `bar b` with the head `foo a` and derive `foo a` for a specific `a` — because `a` is unconstrained. The correct behaviour is to treat this as a triggered invariant: as soon as any instance of `bar _` is derived, `foo a` holds for **every** object `a` in the current universe. This also applies to any objects introduced later in the same session.
+where `B`'s variables are new constants (a body-only variable is some object, a head-only variable an
+arbitrary one). A ground query is about the page's configuration: one that mentions a point no fact
+introduces is rejected rather than read as introducing it.
 
-Concretely, forward chaining handles such rules as follows:
+The checker is sound but incomplete, and reports one of three verdicts:
 
-- When a fact matching the body is first derived, assert the head for all currently known objects
-- Whenever a new object is introduced into the universe, re-check whether any such triggered rules apply and assert the corresponding head facts
+- ✓ the head follows;
+- ⊥ the hypotheses are contradictory (they derive `false`), so the lemma holds only vacuously. This
+  takes precedence over ✓: anything follows from a contradiction, and a ✓ would hide the mistake;
+- ✗ the head could not be derived. That does not make it false: the proof may need a case split, or the
+  check may have run out of its budget of derivations.
 
-This is consistent with the axiom treatment: an axiom `eq-point a a: -` is just the degenerate case where the body is empty, so the trigger fires immediately on object introduction rather than waiting for a matching fact.
+### How it is checked
 
----
+1. **Unfold** each hypothesis, giving auxiliary points fresh names.
+2. **Forward chaining**: compute the closure of the unfolded facts under every clause.
+3. **Look** for the head. The search stops as soon as the head appears, unless `false` is derivable at
+   all from the kinds of facts involved; then it runs to the end to rule out a contradiction.
 
-# Other Language Features
+Forward chaining terminates: over a finite set of objects a set of Horn clauses reaches its least
+fixpoint after finitely many new facts. A recursive clause is never a definition, so unfolding cannot
+loop.
 
-## Comments
+## Distinct points and contradiction
 
-Python-style `#` comments are supported. Comments should be preserved in the AST and associated with the object they annotate, regardless of which file it came from.
+There is no negation. Distinctness is an ordinary relation, `distinct a b`, with its rules in the book
+like any other (symmetry, substitution of equals, how it spreads along segments and orders). It lets
+axioms be stated honestly, such as Euclid's first postulate: two *distinct* points determine a line.
 
-**Rule:** Attach a comment to an object if it either:
-- Appears within the source text of that object, or
-- Immediately precedes the source text, with no blank lines separating them
-
-## Namespace and Scope
-
-The knowledge base is a flat namespace, loaded from `.geo` files. These files can contain clauses, lemmas, theorems, and axioms, but not ground facts or ground queries. Each item is loaded into the knowledge base along with metadata about its source file provenance.
-
-## Interactive Session / Scratchpad
-
-The user interacts with the system through the scratchpad page in the web interface. The scratchpad accepts the full language: Horn clauses, axioms, lemmas, theorems, ground facts, and ground queries.
-
-Rules and axioms defined in the scratchpad are session-scoped — they extend the knowledge base for the duration of the session but are not persisted to `.geo` files unless explicitly saved.
-
-Ground facts in the scratchpad contribute to the current session configuration. That configuration has:
-- a **session universe**: the objects currently introduced by ground facts
-- a **session fact set**: the currently asserted ground facts over that universe
-
-Lemmas and theorems are not checked against the session configuration directly. Instead, they induce a temporary **proof universe** from the symbols appearing in the statement being checked, together with a temporary proof fact set built from their hypotheses.
-
-Ground queries, by contrast, are checked against the existing session configuration and do not silently extend it. If a ground query mentions objects outside the configuration universe, it is treated as an invalid query against the current configuration rather than as an instruction to enlarge that configuration.
-
----
-
-# Design Notes
-
-## Primitive Predicates
-
-The previous design had a hardcoded set of "primitive predicates" as the boundary between backward and forward chaining. This was ad hoc and made it difficult to extend the language to new domains. That notion has been dispensed with entirely.
-
-Instead, the boundary emerges from the knowledge base: defined predicates are unfolded, open ones are
-not (see [Definitions](#definitions)). The geometry primitives (`collinear`, `between`, `eq-lines`,
-`eq-point`) are simply open predicates: each has several clauses, or only recursive ones.
-
-The drawing layer does have a list of predicates it knows how to draw. That list belongs to the
-renderer, not to the logic.
-
-## Variable Quantification
-
-Unlike most logic languages, this language has no range restriction on variables. Variables can appear in the head without appearing in the body, and vice versa.
-
-Consider:
-```
-foo a: bar b
-```
-
-The semantics are: "if `bar b` holds for any `b`, then `foo a` holds for any `a`." This is a natural extension of axioms. Similarly, the lemma `? foo a: bar b` asks: "does `foo a` hold for all `a`, given that `bar b` holds for some `b`?"
-
-**Inference behaviour for head-only variables:**
-
-- **Unfolding:** if `foo a: bar b` is the definition of `foo`, then `foo x` unfolds to `bar b#1`: some
-  `b` with `bar b` exists. The head-only variable `a` simply does not occur in the body.
-- **Forward chaining:** `foo a: bar b` acts more like a triggered invariant. As soon as any instance of `bar b` is seen, `foo a` is added for every existing object `a` — and for any object introduced in the future.
-
-Variables that appear in the body but not the head are common in geometric constructions (an
-intermediate point that is needed to build a result but not named in the goal). When a definition is
-unfolded they become fresh auxiliary objects; see [Definitions](#definitions).
-
-## Negation, Distinctness and Contradiction
-
-Only positive Horn clauses are supported; there is no negation-as-failure.
-
-Distinctness is stated positively, as an ordinary relation: `distinct a b` says that a and b are
-different points. Its rules live in the book (symmetry, substitution of equals, how distinctness
-spreads along segments and orders) like those of any other relation, and it is what lets axioms be
-stated honestly ("two *distinct* points determine a line").
-
-`false`, with no arguments, is reserved for contradiction. Rules may conclude it
-(`false: eq-point a b, distinct a b`), and a lemma whose hypotheses lead to it is reported as
-**vacuous** (shown `⊥`) rather than proven: anything follows from a contradiction, so a ✓ would hide
-the mistake. A lemma is checked for contradictory hypotheses whenever `false` could be derived from
-them at all.
-
-A lemma that fails to check is not necessarily false, only not provable by this procedure (for
-example, a fact true in every configuration but whose proof needs a case split, or a run that hit the
-derivation budget).
+A rule may conclude `false` (`false: eq-point a b, distinct a b`), and a lemma whose hypotheses derive
+it is reported as ⊥. The drawing reads `distinct` too: it rules out an intersection that would land on
+the given point, "the other intersection".
 
 ## Equality
 
-`eq-point` and similar predicates are ordinary predicates, and their properties are ordinary Horn
-clauses written in the knowledge base (reflexivity, symmetry, transitivity, substitution into other
-predicates). Those clauses are the whole meaning.
+Equality of points (`eq-point`) and of segments (`eq-lines`) is written as ordinary clauses:
+reflexivity, symmetry, transitivity, substitution of equals into other predicates. Those clauses are
+the whole meaning. For speed the engine proves which predicates are equivalences, into which argument
+positions equals may be substituted, and which argument permutations leave a predicate unchanged, and
+uses union-find and canonical argument orders instead of firing those clauses. It computes the same
+closure; see [architecture.md](architecture.md#the-knowledge-base).
 
-For speed, the engine **recognises** such structure by proving it from each predicate's own clauses
-(on fresh constants, so the proof holds for every instance):
+## Not in the language
 
-- a binary relation that is an equivalence and admits substitution into argument positions of other
-  predicates is used as **the equality**: objects are kept in classes, and those positions are stored
-  as class representatives;
-- a relation of arity 2k that is an equivalence between its first and last k arguments (such as
-  `eq-lines`, on unordered pairs) is kept as classes of argument tuples;
-- a relation invariant under permuting its arguments (such as `between` or `collinear`) is stored in
-  a canonical order.
-
-Clauses that this structure already implies are not fired; all others are. The result is the same
-closure the clauses define, so nothing is privileged: another knowledge base with an equivalence and
-symmetric relations of its own gets the same treatment. See `src/kb/structure.ts` and
-`src/kb/saturate.ts`.
-
-## Recursion and Termination
-
-A recursive clause is never a definition, so unfolding cannot loop; recursive clauses are used only
-by forward chaining.
-
-Forward chaining is robust in the presence of recursive rules because, over a finite set of object names, repeated rule application reaches a least fixpoint after finitely many new facts have been added.
-
-## Lemma Compilation
-
-Once a lemma has been checked, it could be added to the knowledge base as a Horn clause, enabling its
-reuse in forward chaining. For a defined predicate this is already safe: a clause that follows from
-the definition never changes the predicate's meaning (see [Definitions](#definitions)). The tradeoff
-is knowledge base bloat and harder debugging. Not currently done automatically.
+Negation as failure, comparisons of size, arithmetic on quantities and case splits. Comparisons and
+adding quantities are open questions in [book.md](book.md#open-questions); case splits and the other
+logic work are on the [roadmap](roadmap.md#logic).

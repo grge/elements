@@ -1,11 +1,14 @@
 # Plates — a considered interface concept for Elements
 
 Date: 2026-06-09
-Status: concept proposal, with working prototype
+Status: concept, not built. Parts of it shaped the current page (see [design.md](../design.md)); it is
+the starting point for step 4 of the [roadmap](../roadmap.md) (more than one page, a more playful
+layout). Read it as a proposal against the app of June 2026.
 Companion artifact: `concept-prototype.html` (open it in a browser; everything described below is interactive)
 
 This document takes the vision captured in `UI_OVERHAUL_DESIGN.md` and the visual language
-distilled in `EUCLID_STYLE_NOTES.md`, and commits to a specific design. Where the earlier
+distilled in `EUCLID_STYLE_NOTES.md` (both now in the history only: `git show
+a16fe3c:notes/ui-design/UI_OVERHAUL_DESIGN.md`), and commits to a specific design. Where the earlier
 notes deliberately left questions open, this one answers them — so the answers can be
 argued with concretely rather than abstractly.
 

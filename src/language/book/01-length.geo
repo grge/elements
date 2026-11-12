@@ -2,7 +2,9 @@
 #
 # When are two points the same, when do two segments have the same length, and when does a point
 # lie between two others? From these, circles, and the first constructions: the equilateral
-# triangle, the rhombus, the midpoint, doubling and marching a segment.
+# triangle, the rhombus, the midpoint, doubling and marching a segment, the regular hexagon. Then
+# constructions built from those: reflection, Euclid's I.2 and I.3, the midpoint with a compass
+# alone, the circumcentre.
 #
 # The chapter opens with its axioms, as Euclid's Book I opens with postulates and common notions.
 # They are ordinary clauses. The engine recognises their structure (equality of points, equality
@@ -138,7 +140,8 @@ eq-triangle a b c:
 ? eq-triangle a b c: eq-lines a b a c, eq-lines a b b c
 ? eq-triangle b c a: eq-triangle a b c
 
-# Two equilateral triangles on a-b, one on each side: a rhombus a-c-b-d.
+# Two equilateral triangles on a-b. Drawn on opposite sides (the clauses allow either), they make
+# a rhombus a-c-b-d.
 vesica a b c d:
     eq-triangle a b c
     eq-triangle a b d
@@ -260,8 +263,8 @@ compass-midpoint a b m:
     circle e a m
     distinct m a
 
-# Where the lines through the rhombuses on a-b and on b-c meet: the centre of the circle through a, b
-# and c. That o is as far from a as from b needs congruent triangles (chapter 2); drag a, b or c and
+# Where the second diagonals of the rhombuses on a-b and on b-c meet: the centre of the circle through
+# a, b and c. That o is as far from a as from b needs congruent triangles (chapter 2); drag a, b or c and
 # watch it hold.
 circumcentre a b c o:
     vesica a b p q

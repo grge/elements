@@ -27,7 +27,7 @@ see [design.md](design.md).
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, or are symmetric |
 | `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure |
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
-| `src/kb/runtime.ts`, `configuration.ts` | The page's own rules and ground facts |
+| `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
 | `src/geometry/extraction.ts` | From facts to drawable facts, and to a `GeometryProblem` |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
@@ -100,12 +100,13 @@ blocks.
 
 ## From facts to a figure
 
-**Extraction** (`extraction.ts`) unfolds the page's facts down to the four relations the drawing layer
-understands: `collinear`, `between`, `circle`, `eq-lines`. That list belongs to the drawing layer, not
-to the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
-auxiliary points. Facts that cannot be drawn are skipped. Each drawable fact keeps its depth, the number
-of definitions unfolded to reach it (the shallowest if it is reached twice); lines and circles merged by
-canonicalisation keep the shallowest of theirs, and the figure draws deeper elements thinner and fainter.
+**Extraction** (`extraction.ts`, `drawableFacts`) unfolds the page's facts down to the relations the
+drawing layer understands: `collinear`, `between`, `circle`, `eq-lines` and `distinct`. That list
+belongs to the drawing layer, not to the logic. One supply of fresh names is shared by the whole figure,
+so two constructions never share auxiliary points. Facts that cannot be drawn are skipped. Each drawable
+fact keeps its depth, the number of definitions unfolded to reach it (the shallowest if it is reached
+twice); lines and circles merged by canonicalisation keep the shallowest of theirs, and the figure draws
+deeper elements thinner and fainter.
 
 From the drawable facts two representations are built:
 
@@ -204,6 +205,6 @@ good reference for how `between` and distinctness should eventually work).
 | `structure.test.ts`, `saturate.test.ts`, `forward-closure.test.ts` | recognised structure; the fast and reference engines agreeing |
 | `checker.test.ts`, `runtime.test.ts`, `configuration.test.ts` | checking pipeline and page state |
 | `lemmas.test.ts` | every proposition in the book, and the engine's regression lemmas (`fixtures/regression.geo`, expected failures listed) |
-| `construction.test.ts` | 12 figures (including Euclid I.2 and I.3, kept as fixtures in `fixtures/constructions.geo`): degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact |
+| `construction.test.ts` | 13 figures (including Euclid I.2 and I.3, kept as fixtures in `fixtures/constructions.geo`): degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact |
 | `geometry.test.ts` | extraction and the numerical solver |
 | `useKB.test.ts` | source references for bundled clauses |

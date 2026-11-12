@@ -21,9 +21,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 1. **Correctness.** Done in November 2026: a predicate's page draws its signature, ticks are as
    bold as Byrne's and mark circles' radii too, the solver switch is gone, and the figure draws
    the construction it used, in layers by depth (see *Construction and drawing*).
-2. **A careful pass over everything**, file by file: code, docs and the book's comments. Looking for
-   dead paths, comments that over-explain, inconsistent names, and anything that claims more than it
-   does.
+2. **A careful pass over everything.** Done in November 2026: dead code removed, language.md
+   rewritten, the two March proposals folded into this page, the book's comments brought up to date.
+   The structural findings are under *Code structure* below.
 3. **The editor.** Wrapping that suits the page: a hanging indent, and no breaks inside a name (today
    a comment breaks `c-d` across lines). Then the smaller polish.
 4. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
@@ -53,7 +53,8 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
   `saturate.ts` (lemmas with `distinct` facts take 0.3–0.5 s, mostly the full closure that rules out a
   contradiction); keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
 - **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
-- Open question: one arity per predicate name, or `foo/1` distinct from `foo/2`?
+- One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
+  a reason first.
 
 ## Construction and drawing
 
@@ -61,8 +62,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
   planner, so derived facts become loci or checks.
 - ~~Draw the construction actually used~~ (November 2026): the planner's loci the figure lacks are
   drawn one level below the point they place, and every element is drawn thinner and fainter the
-  more deeply nested the definition it comes from. Next: let the reader choose how many levels to
-  show (the [progressive rendering](proposals/progressive-rendering.md) proposal's detail levels).
+  more deeply nested the definition it comes from. Next, from the March 2026 progressive rendering
+  proposal: let the reader choose how many levels to show, and weight elements by role as well as
+  depth (a construction's key properties, such as its equal sides, in front of its guide circles).
 - **Continuity near tangencies**: nearest-branch tracking can jump; consider complex tracing.
 - **Order facts on circles** restrict sliders to arcs (today they are only checked).
 - **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,
@@ -84,11 +86,24 @@ predicate views with lemma layers, the boffin panel and an entry page. Smaller i
 - Hover a predicate name for its arity, provenance and status.
 - Inline proof marks in reading mode.
 
-## Proposals
+## Code structure
 
-Written earlier, not implemented, worth revisiting in the light of the principles above:
+From the November 2026 review. The layering (language → kb → geometry → composables → views) holds
+up, and nothing calls for a rewrite. Worth doing when the code next changes nearby:
 
-- [Embedded lemmas](proposals/embedded-lemmas.md): attach a construction's key properties to its
-  definition. As written it adds syntax.
-- [Progressive rendering](proposals/progressive-rendering.md): weight elements by role and nesting
-  depth so complex figures show their essentials first.
+- **One geometry model.** Segment classes are built three times (`canonicalization.ts`,
+  `construction.ts`'s `buildModel`, `scene.ts`'s ticks) and collinear groups twice. The planner's
+  `ConstructionModel` is now the primary model; `GeometryProblem` mainly serves the numerical
+  fallback. Derive both from one pass, or draw from the model and keep `GeometryProblem` for the
+  solver alone.
+- **`PageView.vue` holds the whole page** (themes, layout, contents, the steps in words). Split it when
+  step 4 above reshapes the page, not before.
+- **The worker gets every rule with every request** (also under *Logic*, performance).
+
+## Earlier proposals
+
+Two proposals from March 2026, folded into this page and removed (`git show d2efd7a:docs/proposals/`
+has them): *progressive rendering* (above, under *Construction and drawing*) and *embedded lemmas*,
+which attached a construction's properties to its definition with `?` lines in the body. The page
+already shows each predicate with the lemmas about it, by convention rather than syntax, which was
+most of that proposal's point.
