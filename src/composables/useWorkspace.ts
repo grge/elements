@@ -4,7 +4,7 @@ import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { extract } from '../geometry/extraction'
 import { drawFigure, type Figure } from '../geometry/figure'
-import { mergedMarks } from './useClosure'
+import { marksNow, mergedMarks } from './useClosure'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
 import { useKB, bookLemmas, type Namespace } from './useKB'
 
@@ -172,17 +172,22 @@ export function useWorkspace() {
     try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value) }
     catch (e) { console.warn('Figure error:', e); return null }
   })
-  // Its marks merged by the forward closure, which arrives from a worker (useClosure.ts); until then
-  // the figure shows the classes its stated and proven equalities give.
+  // Its marks merged by the forward closure (useClosure.ts): at once if the answer is remembered,
+  // otherwise when the worker answers; until then only the marks that cannot change are drawn.
   const merged = shallowRef<{ from: Figure; figure: Figure } | null>(null)
   watch(drawn, f => {
     const rt = runtime.value
-    if (!f || !rt) return
+    if (!f || !rt || marksNow(rt.kb, extraction.value, f).settled) return
     mergedMarks(rt.kb, extraction.value, f)
-      .then(m => { if (m && drawn.value === f) merged.value = { from: f, figure: m } })
+      .then(m => { if (drawn.value === f) merged.value = { from: f, figure: m } })
       .catch(e => console.warn('Closure error:', e))
   }, { immediate: true })
-  const figure = computed(() => merged.value && merged.value.from === drawn.value ? merged.value.figure : drawn.value)
+  const figure = computed(() => {
+    const f = drawn.value, rt = runtime.value
+    if (!f || !rt) return f
+    if (merged.value?.from === f) return merged.value.figure
+    return marksNow(rt.kb, extraction.value, f).figure
+  })
 
   // Positions from the last drawing: re-planning after an edit keeps points where they were.
   let lastCoords: Map<string, Point> | undefined

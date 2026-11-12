@@ -226,8 +226,11 @@ equilateral triangles each prove their own three angles equal, nothing links one
 another's, and five classes drew 1 to 5 concentric arcs, 45 in all. So classes are then merged by the
 forward closure of the figure's facts (built November 2026: `closureQueries` and `mergeByClosure` in
 marks.ts, answered in a worker, `useClosure.ts`). Two classes are one when the engine derives a member of
-each equal. The members stay those stated or proven: the closure joins classes, it adds no marks. The
-figure is drawn at once and its classes merge when the closure answers (a second or two). A join is
+each equal. The members stay those stated or proven: the closure joins classes, it adds no marks. While the
+closure is pending the figure draws only the classes that cannot change (a relation's only class), so it
+never shows a mark it will take back; the rest appear when the answer arrives, a second or few. Answers
+are remembered across visits (localStorage, keyed by the rules, the facts and the questions), so the
+book's figures and thumbnails wait only on the first visit. A join is
 explained as *follows from the figure's facts*, until proof traces can say how. Equalities the book
 cannot derive stay apart: the circumcentre's equilateral triangles on two different sides keep two
 classes of arcs, since showing both are 60° needs similarity.

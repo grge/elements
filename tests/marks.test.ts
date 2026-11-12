@@ -10,7 +10,7 @@ import { parseSource } from '../src/language/parser'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
 import { drawFigure } from '../src/geometry/figure'
-import { markClasses, chain, closureQueries, mergeByClosure, equalities, type Equality } from '../src/geometry/marks'
+import { markClasses, chain, closureQueries, mergeByClosure, equalities, settledClasses, type Equality } from '../src/geometry/marks'
 import { saturate } from '../src/kb/saturate'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { computeRenderTransform } from '../src/geometry/view'
@@ -114,3 +114,11 @@ describe('classes merged by the closure', () => {
     expect(after.filter(c => c.k === 3)).toHaveLength(2)
   })
 }, 60000)
+
+describe('while the closure is pending', () => {
+  it('draws only the classes that cannot change: the hexagon keeps its sides, its angles wait', () => {
+    const x = extract(kb, [{ name: 'hexagon', args: 'o a b c d e f'.split(' ') }])
+    const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
+    expect(settledClasses(classes).map(c => c.name)).toEqual(['eq-lines'])
+  })
+})

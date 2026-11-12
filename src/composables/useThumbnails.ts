@@ -10,7 +10,7 @@
 import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
 import { extract, type Extraction } from '../geometry/extraction'
-import { mergedMarks } from './useClosure'
+import { marksNow, mergedMarks } from './useClosure'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import { drawFigure, type Figure } from '../geometry/figure'
 import type { Lemma } from '../language/parser'
@@ -57,11 +57,13 @@ export function useThumbnails() {
       if (!known) cache.set(kb, known = new Map())
       if (!known.has(name)) {
         try {
-          const th = computeThumbnail(kb, name, args, bookLemmas)
+          const raw = computeThumbnail(kb, name, args, bookLemmas)
+          // Marks as far as the closure is known: the rest are drawn when it answers.
+          const now = raw && marksNow(kb, raw.extraction, raw.figure)
+          const th = raw && now ? { ...raw, figure: now.figure } : null
           known.set(name, th)
-          // Its marks merge when the closure answers.
-          if (th) void mergedMarks(kb, th.extraction, th.figure, 'background').then(figure => {
-            if (!figure || known!.get(name) !== th) return
+          if (raw && th && !now!.settled) void mergedMarks(kb, raw.extraction, raw.figure, 'background').then(figure => {
+            if (known!.get(name) !== th) return
             const next = { ...th, figure }
             known!.set(name, next)
             if (thumbnails.value.get(name) === th) { thumbnails.value.set(name, next); triggerRef(thumbnails) }

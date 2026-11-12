@@ -209,3 +209,14 @@ export function mergeByClosure(classes: readonly MarkClass[], queries: ReturnTyp
     }
   })
 }
+
+/**
+ * The classes that cannot change when the closure answers: those whose relation has no other class
+ * to merge with. While the closure is pending the figure draws only these, so it never shows a mark it
+ * will take back.
+ */
+export function settledClasses(classes: readonly MarkClass[]): MarkClass[] {
+  const count = new Map<string, number>()
+  for (const c of classes) count.set(c.name, (count.get(c.name) ?? 0) + 1)
+  return classes.filter(c => count.get(c.name) === 1)
+}
