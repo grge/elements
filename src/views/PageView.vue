@@ -282,9 +282,17 @@ const status = computed(() => {
   --ed-arg: var(--accent);
   --ed-punct: var(--soft);
   --ed-ink-readonly: var(--ink);
-  --ed-font: 'JetBrains Mono', 'Courier New', monospace;
+  /* Each face falls back to the nearest system face that keeps its role: a heavy grotesque for the
+     display voice (asked for at 900, so a family without Archivo Black's single weight still shouts),
+     a modern system monospace rather than Courier, a book serif (Iowan Old Style on Apple devices is
+     itself a Caslon-like face). */
+  --font-display: 'Archivo Black', 'Arial Black', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  --font-prose: 'Libre Caslon Text', 'Iowan Old Style', Georgia, 'Noto Serif', 'Times New Roman', serif;
+
+  --ed-font: var(--font-mono);
   /* Byrne's edition was set in Caslon: the book's running text, beside the clauses' monospace. */
-  --ed-prose-font: 'Libre Caslon Text', Georgia, 'Times New Roman', serif;
+  --ed-prose-font: var(--font-prose);
   --ed-prose: var(--ink);
   --ed-size: 19px;
   --ed-leading: 1.7;
@@ -305,7 +313,7 @@ const status = computed(() => {
   --dg-soft: var(--soft);
   --dg-stroke: 3.5;
   --dg-label-size: 26px;
-  --dg-font: 'Archivo Black', 'Arial Black', sans-serif;
+  --dg-font: var(--font-display);
 
   display: flex; flex-direction: column;
   height: 100vh; height: 100dvh; overflow: hidden;
@@ -324,16 +332,16 @@ const status = computed(() => {
 .wordmark {
   background: var(--ink); color: var(--paper);
   border: 0; padding: 0 2rem; cursor: pointer;
-  font: 400 1.7rem 'Archivo Black', 'Arial Black', sans-serif;
+  font: 900 1.7rem var(--font-display);
   letter-spacing: 0.04em; text-transform: uppercase;
 }
 .title {
   margin: 0; align-self: center; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  font: 400 2rem 'Archivo Black', 'Arial Black', sans-serif;
+  font: 900 2rem var(--font-display);
   letter-spacing: 0.04em; text-transform: uppercase;
 }
 .arg { color: var(--accent); margin-left: 0.8rem; }
-.ns { align-self: center; color: var(--soft); font: 0.85rem 'JetBrains Mono', monospace; }
+.ns { align-self: center; color: var(--soft); font: 0.85rem var(--font-mono); }
 .masthead > .quiet { align-self: center; }
 
 .themes { margin-left: auto; margin-right: 1.5rem; align-self: center; display: flex; align-items: center; gap: 0.45rem; }
@@ -366,7 +374,7 @@ const status = computed(() => {
   margin: auto 0 0; padding: 1rem 0 0; list-style: none; flex: none; max-height: 30%; overflow: auto;
   scrollbar-width: thin; scrollbar-color: var(--soft) transparent;
   border-top: 2px solid var(--soft);
-  font: 0.9rem/1.7 'JetBrains Mono', monospace; color: var(--soft);
+  font: 0.9rem/1.7 var(--font-mono); color: var(--soft);
   text-shadow: var(--halo);
 }
 .steps b { color: var(--accent); font-weight: 600; margin-right: 0.5rem; }
@@ -380,14 +388,14 @@ const status = computed(() => {
 .foot > * { pointer-events: auto; }
 .status {
   flex: 1; margin: 0; min-height: 1em;
-  font: 0.85rem/1.4 'JetBrains Mono', monospace; color: var(--ink);
+  font: 0.85rem/1.4 var(--font-mono); color: var(--ink);
   text-shadow: var(--halo);
 }
-.empty { color: var(--soft); font-family: 'JetBrains Mono', monospace; padding-left: var(--veil); }
+.empty { color: var(--soft); font-family: var(--font-mono); padding-left: var(--veil); }
 
 .quiet {
   background: none; border: 0; color: var(--soft); cursor: pointer; white-space: nowrap;
-  font: 0.8rem 'JetBrains Mono', monospace; text-decoration: underline; text-underline-offset: 3px;
+  font: 0.8rem var(--font-mono); text-decoration: underline; text-underline-offset: 3px;
 }
 .quiet:hover { color: var(--ink); }
 
@@ -399,7 +407,7 @@ const status = computed(() => {
 .contents-inner { padding: 2rem 2.5rem 4rem; max-width: 1400px; }
 .entry {
   display: block; background: none; border: 0; padding: 0.1rem 0; cursor: pointer; color: var(--ink);
-  font: 400 1.5rem 'Archivo Black', 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 0.03em; text-align: left;
+  font: 900 1.5rem var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; text-align: left;
 }
 .entry:hover { color: var(--accent); }
 .entry.scratch { font-size: 2.2rem; margin-bottom: 1.2rem; }
@@ -407,7 +415,7 @@ const status = computed(() => {
 .chapters { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-bottom: 1.6rem; }
 .chapter-tab {
   background: none; border: 0; padding: 0 0 0.25rem; cursor: pointer; color: var(--soft);
-  font: 400 0.8rem 'JetBrains Mono', monospace; letter-spacing: 0.15em; text-transform: uppercase;
+  font: 400 0.8rem var(--font-mono); letter-spacing: 0.15em; text-transform: uppercase;
   border-bottom: 2px solid transparent;
 }
 .chapter-tab:hover { color: var(--ink); }
@@ -426,14 +434,14 @@ const status = computed(() => {
 }
 .card:hover :deep(.figure-thumb), .card.current :deep(.figure-thumb) { background: color-mix(in srgb, var(--ink) 13%, transparent); }
 .card-name {
-  font: 400 1rem 'Archivo Black', 'Arial Black', sans-serif; text-transform: uppercase; letter-spacing: 0.03em;
+  font: 900 1rem var(--font-display); text-transform: uppercase; letter-spacing: 0.03em;
   overflow-wrap: anywhere;
 }
 .card:hover .card-name, .card.current .card-name { color: var(--accent); }
-.card-args { font: 0.8rem 'JetBrains Mono', monospace; color: var(--accent); letter-spacing: 0.2em; }
+.card-args { font: 0.8rem var(--font-mono); color: var(--accent); letter-spacing: 0.2em; }
 .card.add {
   justify-content: center; align-items: center; min-height: 8rem;
-  font: 0.95rem 'JetBrains Mono', monospace; color: var(--soft);
+  font: 0.95rem var(--font-mono); color: var(--soft);
   border: 2px dashed color-mix(in srgb, var(--ink) 25%, transparent);
 }
 .card.add:hover { color: var(--ink); }

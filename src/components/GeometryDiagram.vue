@@ -390,6 +390,7 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
 
 .label {
   font-family: var(--dg-font, sans-serif);
+  font-weight: 900;  /* the display face has one weight; a fallback family takes its heaviest */
   font-size: var(--dg-label-size, 24px);
   fill: var(--dg-accent, #f40);
   /* A halo in the paper colour, so lines break around the letters. */
