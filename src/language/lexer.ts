@@ -27,6 +27,11 @@ export const TokenType = {
   EOF:        'EOF'        as const,
 }
 
+/** A syntax error in source text, with the (1-based) line it is on. */
+export class ParseError extends SyntaxError {
+  constructor(message: string, readonly line: number) { super(message) }
+}
+
 export interface Token {
   type: TokenType
   value: string
@@ -63,7 +68,7 @@ export function tokenize(text: string): Token[] {
         tokens.push({ type: TokenType.DEDENT, value: '', line: lineNum })
       }
       if (indentStack[indentStack.length - 1] !== indentLevel) {
-        throw new SyntaxError(`Indentation error at line ${lineNum}`)
+        throw new ParseError('this line is indented to a depth no line above it has', lineNum)
       }
     }
 
@@ -97,7 +102,7 @@ function tokenizeLine(content: string, lineNum: number, out: Token[]): void {
       out.push({ type: TokenType.IDENTIFIER, value: content.slice(start, i), line: lineNum })
       continue
     }
-    i++
+    throw new ParseError(`unexpected character '${ch}'`, lineNum)
   }
 }
 

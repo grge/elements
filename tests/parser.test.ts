@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { tokenize, TokenType } from '../src/language/lexer'
 import { bookRules } from './book'
-import { parseSource, parseRules, parseGeoFile, validateConsistentArities } from '../src/language/parser'
+import { ParseError, parseSource, parseRules, parseGeoFile, validateConsistentArities } from '../src/language/parser'
 
 const foundationRules = bookRules
 
@@ -112,6 +112,17 @@ describe('parser', () => {
 
   it('rejects ground queries in .geo validation', () => {
     expect(() => parseGeoFile('? circle a b c', 'test.geo')).toThrow(/ground queries/)
+  })
+
+  it('reports the line a syntax error is on, in plain words', () => {
+    const at = (text: string) => { try { parseSource(text) } catch (e) { return e instanceof ParseError ? [e.line, e.message] : null } }
+    expect(at('circle a b c\n\nfoo a: , b')).toEqual([3, "expected a body after ':', found ','"])
+    expect(at('foo a: bar a,')).toEqual([1, 'expected a predicate name, found the end of the line'])
+    expect(at('foo a: bar a\nfoo b: -')).toBeUndefined()
+    expect(at('foo a:\nbar a')).toEqual([1, "expected a body after ':': indented lines below, or - for none"])
+    expect(at('circle a b c.')).toEqual([1, "unexpected character '.'"])
+    expect(at('circle a b c\ncircle a b')).toEqual([2, 'circle has 2 arguments here but 3 where it is first used'])
+    expect(at('foo a:\n        bar a\n    baz a')?.[0]).toBe(3)
   })
 
   it('tells ground queries from queried clauses', () => {

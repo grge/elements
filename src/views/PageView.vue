@@ -57,7 +57,9 @@
             v-model="ws.text.value"
             :readonly="ws.readOnly.value"
             :marks="marks"
-            :predicates="predicateNames"
+            :predicates="completions"
+            :known="knownNames"
+            :error="ws.parseError.value"
             placeholder="circle a b c"
           />
         </div>
@@ -192,7 +194,14 @@ onBeforeUnmount(() => {
 
 const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value)
 const marks = computed(() => verificationMarks.value)
-const predicateNames = computed(() => [...new Set(ws.predicates.value.map(p => p.name))])
+// Completion offers each predicate once, with its arguments and the start of its doc comment.
+const completions = computed(() => {
+  const seen = new Map<string, { name: string; args: string[]; doc?: string }>()
+  for (const p of ws.predicates.value) if (!seen.has(p.name)) seen.set(p.name, { name: p.name, args: p.args, doc: p.doc })
+  return [...seen.values()]
+})
+// Every name the knowledge base mentions; the editor marks a name outside it that the page uses once.
+const knownNames = computed(() => new Set(ws.kb.value.allRules().flatMap(r => [r.head.name, ...r.body.map(b => b.name)])))
 
 // The predicate's signature, as the contents show it (its definition's argument names).
 const headArgs = computed(() => ws.signature.value ?? [])
@@ -274,6 +283,8 @@ const status = computed(() => {
   --ed-punct: var(--soft);
   --ed-ink-readonly: var(--ink);
   --ed-font: 'JetBrains Mono', 'Courier New', monospace;
+  --ed-prose-font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --ed-prose: var(--ink);
   --ed-size: 19px;
   --ed-leading: 1.7;
   --ed-pad: 0.2rem 0;

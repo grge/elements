@@ -10,7 +10,7 @@
  */
 
 import { ref, computed } from 'vue'
-import { parseRules, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
+import { parseRules, parseSource, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
 
 /** A chapter's id (its file name without `.geo`), or 'user'. */
@@ -35,6 +35,8 @@ export interface PredicateEntry {
   arity: number
   /** Argument names to show: its definition's (`vesica a b c d`), or plain letters if it has none. */
   args: string[]
+  /** The first paragraph of its first clause's doc comment, if it has one. */
+  doc?: string
 }
 
 export interface ClauseItem {
@@ -46,6 +48,8 @@ export interface ClauseItem {
   sourceRef?: SourceRef
   /** For a rule, its head's arguments. */
   args?: string[]
+  /** For a rule, the first paragraph of its doc comment. */
+  doc?: string
 }
 
 const chapterSources = import.meta.glob('../language/book/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -83,6 +87,11 @@ function withDocComment(source: string, item: TopLevel): string {
   return `${paragraphs.map(p => `# ${p}`).join('\n#\n')}\n${source}`
 }
 
+/** The first paragraph of a doc comment, as one line. */
+function firstParagraph(doc: string | undefined): string | undefined {
+  return doc?.split(/\n\s*\n/)[0].split('\n').map(l => l.trim()).join(' ') || undefined
+}
+
 function ruleToSource(r: Rule): string {
   const head = `${r.head.name} ${r.head.args.join(' ')}`
   if (!r.body || r.body.length === 0) return `${head}: -`
@@ -110,6 +119,7 @@ function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
         readOnly: true,
         sourceRef: item.sourceRef,
         args: item.rule.head.args,
+        doc: firstParagraph(item.docComment),
       }]
     case 'lemma':
       return [{
@@ -166,14 +176,18 @@ const predicates = computed<PredicateEntry[]>(() => {
         readOnly: true,
         arity: arityOf(item),
         args: item.args ?? [],
+        doc: item.doc,
       })
-    } else if (!entry.args.length && item.args) {
-      entry.args = item.args
+    } else {
+      if (!entry.args.length && item.args) entry.args = item.args
+      entry.doc ??= item.doc
     }
   }
   for (const c of userClauses.value) {
     try {
-      for (const r of parseRules(c.source)) {
+      for (const item of parseSource(c.source)) {
+        if (item.kind !== 'rule') continue
+        const r = item.rule
         const key = `user:${r.head.name}`
         if (!seen.has(key)) {
           seen.set(key, {
@@ -182,6 +196,7 @@ const predicates = computed<PredicateEntry[]>(() => {
             readOnly: false,
             arity: r.head.args.length,
             args: r.head.args,
+            doc: firstParagraph(item.docComment),
           })
         }
       }

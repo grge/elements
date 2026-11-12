@@ -1,5 +1,5 @@
 import { ref, computed, shallowRef, watch } from 'vue'
-import { parseSource } from '../language/parser'
+import { ParseError, parseSource, type TopLevel } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { drawableFacts, geometryProblemFromFacts } from '../geometry/extraction'
@@ -74,7 +74,8 @@ export function useWorkspace() {
 
   function newUserPredicate(name: string): boolean {
     if (!/^[a-zA-Z][a-zA-Z0-9_-]*$/.test(name)) return false
-    kbApi.addUserClause(`${name} x y: `)
+    // A clause that parses and draws, to be rewritten: an empty body is a syntax error now.
+    kbApi.addUserClause(`# What ${name} means.\n${name} a b c:\n    circle a b c`)
     openPredicate(name, 'user')
     return true
   }
@@ -96,12 +97,31 @@ export function useWorkspace() {
     return predicates.value.find(p => p.name === selectedPred.value && p.namespace === selectedNamespace.value)?.args ?? null
   })
 
+  /** The page's text, parsed; or where it fails to parse, and why. */
+  const parsed = computed<{ items: TopLevel[] } | { error: { line: number; message: string } }>(() => {
+    try { return { items: parseSource(text.value) } }
+    catch (e) {
+      return { error: { line: e instanceof ParseError ? e.line : 1, message: e instanceof Error ? e.message : String(e) } }
+    }
+  })
+  const parseError = computed(() => 'error' in parsed.value ? parsed.value.error : null)
+
+  // While the text does not parse (a line half typed), the page keeps its last figure.
+  let lastGood: { page: string; runtime: RuntimeState | null } | null = null
+
   const runtime = computed<RuntimeState | null>(() => {
     if (!kb.value) return null
+    const page = `${mode.value}:${selectedNamespace.value}:${selectedPred.value}`
+    if ('error' in parsed.value) return lastGood?.page === page ? lastGood.runtime : null
+    const rt = buildRuntime(parsed.value.items)
+    lastGood = { page, runtime: rt }
+    return rt
+  })
+
+  function buildRuntime(parsed: TopLevel[]): RuntimeState | null {
     try {
-      if (mode.value === 'scratchpad') return buildRuntimeState(kb.value, parseSource(scratch.value))
+      if (mode.value === 'scratchpad') return buildRuntimeState(kb.value, parsed)
       if (!clause.value.trim()) return null
-      const parsed = parseSource(clause.value)
       const isUser = selectedNamespace.value === 'user'
       const base = isUser
         ? new KnowledgeBase(kb.value.allRules().filter(r => r.head.name !== selectedPred.value))
@@ -115,7 +135,7 @@ export function useWorkspace() {
       console.warn('Runtime construction error:', e)
       return null
     }
-  })
+  }
 
   /** Drawable facts of the figure, after unfolding definitions. */
   const facts = computed(() => {
@@ -165,7 +185,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    runtime, facts, problem, construction, drawing, setConstruction,
+    parseError, runtime, facts, problem, construction, drawing, setConstruction,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

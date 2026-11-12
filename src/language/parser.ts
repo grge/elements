@@ -11,7 +11,8 @@
  *   Queried theorem:       ? head args: -
  */
 
-import { tokenize, TokenType } from './lexer'
+import { ParseError, tokenize, TokenType } from './lexer'
+export { ParseError }
 import type { Token } from './lexer'
 
 // ── AST types ─────────────────────────────────────────────────────────
@@ -89,7 +90,7 @@ class Parser {
       } else if (this.current.type === TokenType.IDENTIFIER) {
         item = this.parseRuleOrGoal()
       } else {
-        this.advance()
+        throw new ParseError(`unexpected ${this.describe()}`, this.current.line)
       }
 
       if (item) {
@@ -128,7 +129,25 @@ class Parser {
       const hypotheses = this.parseBody()
       return { kind: 'lemma', lemma: { head, hypotheses } }
     }
+    this.expectLineEnd()
     return { kind: 'ground-query', pred: head }
+  }
+
+  /** What the current token is, in words. */
+  private describe(): string {
+    const t = this.current
+    return {
+      IDENTIFIER: `'${t.value}'`, COLON: "':'", DASH: "'-'", COMMA: "','", QUESTION: "'?'",
+      NEWLINE: 'the end of the line', EOF: 'the end of the text', INDENT: 'an indented line', DEDENT: 'the end of a body',
+    }[t.type as string] ?? 'something else'
+  }
+
+  /** Nothing but a comment may follow on this line. */
+  private expectLineEnd(): void {
+    const t = this.current.type
+    if (t !== TokenType.NEWLINE && t !== TokenType.COMMENT && t !== TokenType.EOF) {
+      throw new ParseError(`unexpected ${this.describe()}`, this.current.line)
+    }
   }
 
   private parseRuleOrGoal(): TopLevel {
@@ -139,6 +158,7 @@ class Parser {
       const body = this.parseBody()
       return { kind: 'rule', rule: { head, body } }
     } else {
+      this.expectLineEnd()
       return { kind: 'goal', pred: head }
     }
   }
@@ -146,27 +166,33 @@ class Parser {
   private parseBody(): Predicate[] {
     if (this.current.type === TokenType.DASH) {
       this.advance()
+      this.expectLineEnd()
       return []
     }
 
-    if (this.current.type === TokenType.NEWLINE) {
-      this.advance()
+    if (this.current.type === TokenType.IDENTIFIER) {
+      const body = this.parseSingleLineBody()
+      this.expectLineEnd()
+      return body
+    }
+
+    if (this.current.type === TokenType.NEWLINE || this.current.type === TokenType.COMMENT) {
+      const line = this.current.line
+      this.consume(TokenType.NEWLINE, TokenType.COMMENT)
+      if ((this.current.type as TokenType) !== TokenType.INDENT) {
+        throw new ParseError("expected a body after ':': indented lines below, or - for none", line)
+      }
       return this.parseMultiLineBody()
     }
 
-    if (this.current.type === TokenType.IDENTIFIER) {
-      return this.parseSingleLineBody()
-    }
-
-    return this.parseMultiLineBody()
+    throw new ParseError(`expected a body after ':', found ${this.describe()}`, this.current.line)
   }
 
   private parseSingleLineBody(): Predicate[] {
-    const body: Predicate[] = []
-    while (this.current.type === TokenType.IDENTIFIER) {
-      body.push(this.parsePredicate())
-      if ((this.current.type as TokenType) !== TokenType.COMMA) break
+    const body: Predicate[] = [this.parsePredicate()]
+    while (this.current.type === TokenType.COMMA) {
       this.advance()
+      body.push(this.parsePredicate())
     }
     return body
   }
@@ -181,7 +207,7 @@ class Parser {
       body.push(this.parsePredicate())
       const current = this.current
       if (current.type === TokenType.COMMA) {
-        throw new SyntaxError(`Indented bodies must have exactly one predicate per line (line ${current.line})`)
+        throw new ParseError('Indented bodies must have exactly one predicate per line', current.line)
       }
       if (current.type === TokenType.COMMENT) this.advance()
     }
@@ -191,9 +217,10 @@ class Parser {
 
   private parsePredicate(): Predicate {
     if (this.current.type !== TokenType.IDENTIFIER) {
-      throw new SyntaxError(`Expected predicate name at line ${this.current.line}, got ${this.current.type}`)
+      throw new ParseError(`expected a predicate name, found ${this.describe()}`, this.current.line)
     }
-    const name = this.advance().value
+    const nameToken = this.advance()
+    const name = nameToken.value
     const args: string[] = []
 
     while (this.current.type === TokenType.IDENTIFIER) {
@@ -203,8 +230,9 @@ class Parser {
     const arity = args.length
     const known = this.predicateArities.get(name)
     if (known !== undefined && known !== arity) {
-      throw new SyntaxError(
-        `Predicate '${name}' used with arity ${arity} but previously seen with arity ${known}`
+      throw new ParseError(
+        `${name} has ${arity} argument${arity === 1 ? '' : 's'} here but ${known} where it is first used`,
+        nameToken.line,
       )
     }
     this.predicateArities.set(name, arity)

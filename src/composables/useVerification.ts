@@ -37,7 +37,8 @@ export function useVerification(text: () => string, kb: () => KnowledgeBase | nu
     return lines
       .map((l, i) => ({ i, isQuery: l.trimStart().startsWith('?') }))
       .filter(x => x.isQuery)
-      .map(x => ({ line: x.i, type: 'unknown' as const, message: 'Checking…' }))
+      // A line keeps its last verdict while it is re-checked, so the page does not jump as you type.
+      .map(x => verificationMarksState.value.find(m => m.line === x.i) ?? { line: x.i, type: 'unknown' as const, message: 'checking…' })
   }
 
   watch([text, kb], ([textContent, currentKb]) => {
@@ -62,7 +63,7 @@ export function useVerification(text: () => string, kb: () => KnowledgeBase | nu
         rules: currentKb.allRules() as Rule[],
       })
     } catch {
-      verificationMarksState.value = []
+      // The text does not parse (a line half typed): keep the marks until it does.
     }
   }, { immediate: true })
 

@@ -24,8 +24,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 2. **A careful pass over everything.** Done in November 2026: dead code removed, language.md
    rewritten, the two March proposals folded into this page, the book's comments brought up to date.
    The structural findings are under *Code structure* below.
-3. **The editor.** Wrapping that suits the page: a hanging indent, and no breaks inside a name (today
-   a comment breaks `c-d` across lines). Then the smaller polish.
+3. **The editor.** Done in November 2026: prose comments, hanging indents, no breaks inside names,
+   reasons for ✗ and ⊥ and syntax errors shown under their lines, unknown names marked, completion
+   with argument fields, Enter and Tab that know the layout (see design.md, *Source*).
 4. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
    help. Sketched before built; [the Plates concept](plates-concept/REDESIGN_CONCEPT.md) is a starting

@@ -64,7 +64,7 @@ describe('queried-clause checker', () => {
     const [query] = parseSource(`? collinear a b d`).filter((x): x is Extract<ReturnType<typeof parseSource>[number], { kind: 'ground-query' }> => x.kind === 'ground-query')
     const result = checkGroundQuery(query.pred, kb, cfg)
     expect(result.result).toBe('invalid-query')
-    expect(result.message).toMatch(/not in the configuration universe/)
+    expect(result.message).toMatch(/which no fact on this page introduces/)
   })
 
   it('reports contradictory hypotheses as vacuous, not as proven', () => {

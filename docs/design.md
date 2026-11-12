@@ -43,8 +43,16 @@ says how they move: solid points are free, points with a standing ring slide alo
 open points are determined by the construction (dragging one re-plans the construction so that it
 becomes free), and small quiet points cannot be moved. Auxiliary points (`d₁`) are smaller.
 
-**Source.** CodeMirror with predicate names in ink and variables in the accent colour; `?` lines get
-`✓`, `✗`, or `⊥` (contradictory hypotheses) in a gutter beside them.
+**Source.** Set as a page rather than as code. Clauses are monospace, predicate names in ink and
+variables in the accent colour; comments are prose, in Archivo, with the `#` shown only on the line
+being edited. Names never break across lines, and wrapped lines hang: a comment under its first word,
+a clause line one indent deeper than it starts. `?` lines get `✓`, `✗` or `⊥` (contradictory
+hypotheses) in a gutter beside them, and a `✗` or `⊥` its reason in small type underneath. A line
+that does not parse is underlined, with the reason underneath, and the figure stays as it was until
+the text parses again; a predicate name nothing defines or uses gets a dotted underline. Completion
+offers each predicate with its arguments as fields to fill in (Tab moves between them) and the start
+of its doc comment; Enter after a `:` indents the body, Enter in a comment continues it, and Enter on
+an empty indented or comment line steps out.
 
 **The construction in words** sits under the source ("g₁ where line bd₁ meets circle about b with
 radius bc"). If the figure cannot be constructed in its current position, the failing step is marked and

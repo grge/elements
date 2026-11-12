@@ -103,7 +103,7 @@ export function checkGroundQuery(
     return {
       result: 'invalid-query',
       facts: configuration.allFacts(),
-      message: `Ground query mentions objects not in the configuration universe: ${missing.join(', ')}`,
+      message: `mentions ${missing.join(', ')}, which no fact on this page introduces`,
     }
   }
   return runCheckPipeline(toGroundPredicate(pred), configuration.allFacts(), kb, maxDerivations)
