@@ -35,9 +35,10 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
    `eq-angle` on angle triples and Wildberger's `eq-spread` on pairs of lines, recognised as
    equivalences, measured in checks, the solver and numeric evidence, with Byrne's arcs for equal
    angles (`tests/fixtures/angles.geo`: the isosceles triangle in both, all lemmas well under a
-   second). Still to do: decide the book's content (angles, spreads, or both; book.md, *Open
-   questions*), then the copied angle as a locus, so figures with angle hypotheses construct instead
-   of falling back to the solver.
+   second). Content decided: angles as the thread, spreads to close (book.md, *Chapter 2*). Written so
+   far: the axioms (with `triangle`, three points not on a line, which angle-side-angle needs: on a
+   line it derived false equal lengths) and the triangle theorems. Next: the constructions, chapter
+   1's debts, spreads; the copied angle as a locus.
 6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
    help. Sketched before built, once two chapters show what it lays out; [the Plates
@@ -124,8 +125,10 @@ would sit naturally beside the algebraic lens.
   an explicit initial universe.
 - **Performance for larger knowledge bases**: the reference closure is semi-naive with argument
   indexes (November 2026); the same for
-  `saturate.ts` (lemmas with `distinct` facts take 0.3–0.5 s, mostly the full closure that rules out a
-  contradiction); keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
+  `saturate.ts`. Lemmas with `distinct` facts run the closure to the end to rule out a contradiction,
+  and chapter 2 made that dearer: its arm and supplement axioms hold for every third point, so each
+  `between` fact spawns angle facts for all points (`march`'s order lemmas went from 0.4 s to 3.6 s,
+  `hexagon`'s take 2.6 s). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
 - **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
 - One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
   a reason first.

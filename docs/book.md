@@ -2,7 +2,7 @@
 
 elements ships with a book: the content of Euclid's plane geometry, rebuilt in an order that suits
 writing it as Horn clauses. Not a faithful edition: we keep what Euclid achieves and choose our own
-route to it. This page is the plan; chapter 1 exists.
+route to it. This page is the plan; chapter 1 exists, and chapter 2 is under way.
 
 ## What Euclid's plane geometry achieves
 
@@ -89,16 +89,40 @@ stepping the radius around a circle, each vertex "the other intersection". That 
 sixth side is a radius too) shows in the figure but needs angles to prove: a first task for chapters 2
 and 3.
 
-### 2. Angle
+### 2. Angle  *(in progress: `book/02-angle.geo`)*
 
-`eq-angle a b c d e f` (angle *abc* equals angle *def*): an equivalence on angle triples, the same angle
-read backwards (*abc* = *cba*), unchanged when a point moves along its ray. SAS as an axiom, SSS and ASA
-as axioms or theorems. Results: the isosceles triangle, the perpendicular bisector (proving the midpoint
-construction of chapter 1), bisecting an angle, perpendiculars, right angles, copying an angle, a
-triangle from three lengths.
+Euclid Book I's results that need no parallel postulate, for an engine with equalities but no sums or
+inequalities. Angles are the main thread; spreads close the chapter.
 
-*Needs:* angle facts as checks in the drawing layer; later, the copied angle as a locus (a ray, with a
-choice of side).
+1. **Axioms.** `eq-angle a b c d e f` (angle *abc* equals angle *def*): an equivalence on angle
+   triples, the same angle read backwards, equal points substituted, unchanged when a point moves along
+   an arm away from the vertex. Side-angle-side (I.4) as an axiom, as in Hilbert, since Euclid proves it
+   by superposition. **Supplements without addition**: `supp a b c d e f` (the two angles together make a
+   straight line), with one axiom, that b between a and d makes a-b-c and c-b-d supplements; angles with
+   a common supplement are equal. A **right angle** is one equal to its own supplement, and all right
+   angles are equal (Euclid's fourth postulate). Side-side-side (I.8) and angle-side-angle (I.26) are
+   axioms too, honestly: their proofs argue about which side of a line a point lies on, which the
+   engine cannot do yet.
+2. **Triangles.** The isosceles triangle (I.5) by Pappus's proof, and its converse (I.6); the three
+   angles of an equilateral triangle; vertical angles (I.15).
+3. **Constructions**, all drawn with circles alone: bisecting an angle (I.9), bisecting a segment
+   (I.10), the perpendicular at a point (I.11) and from a point (I.12), copying an angle (I.23; with a
+   compass that carries lengths, equal radii on both arms and a triangle of three equal sides).
+4. **Chapter 1's debts.** The midpoint's construction proven (the rhombus's second diagonal halves its
+   first); every point of a segment's perpendicular bisector is as far from one end as the other, so
+   the circumcentre is equidistant from a and b; reflection keeps a figure the same (side-side-side).
+5. **Spreads.** Wildberger's spread between two lines, the angle up to its supplement, with the bridge
+   from equal angles to equal spreads. Vertical and supplementary angles have equal spreads at once,
+   perpendicularity needs no choice of side, and the algebraic lens (roadmap, *Beyond*) will speak in
+   spreads.
+
+Left for later: I.13–14 as sums (their supplement form is in 1), I.16–25 (inequalities), the hexagon
+closing (the angle sum, chapter 3), the compass-only midpoint (similar triangles, chapter 6).
+
+*Needs:* angle and spread facts as checks in the drawing layer, and Byrne's arcs (done); the copied
+angle as a locus (a ray from a point at a given angle, with a choice of side), so that figures *stated*
+with equal angles construct rather than fall back to the solver; a right angle's square mark;
+symmetry recognition for six-place relations such as `supp` (it stops at five today).
 
 ### 3. Direction
 

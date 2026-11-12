@@ -8,7 +8,7 @@ ruler and compass, as a figure whose points you can drag.
 
 elements comes with a book, in progress, that will cover the content of Euclid's plane geometry in its
 own order, one chapter per kind of equality: length, angle, direction, area, ratio (see
-[docs/book.md](docs/book.md)). The page above is from chapter 1, which exists so far. The construction
+[docs/book.md](docs/book.md)). The page above is from chapter 1; chapter 2, angle, is under way. The construction
 
 ```txt
 vesica a b c d:

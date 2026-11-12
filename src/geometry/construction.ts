@@ -87,7 +87,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
       case 'circle': equal(f.args[0], f.args[1], f.args[0], f.args[2]); break
       case 'eq-lines': equal(f.args[0], f.args[1], f.args[2], f.args[3]); break
       case 'distinct': if (f.args[0] !== f.args[1]) distinct.push([f.args[0], f.args[1]]); break
-      case 'eq-angle': case 'eq-spread': measures.push({ name: f.name, args: [...f.args] }); break
+      case 'eq-angle': case 'eq-spread': case 'supp': measures.push({ name: f.name, args: [...f.args] }); break
     }
   }
 

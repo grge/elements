@@ -11,7 +11,7 @@ import type {
 } from './constraints'
 import { canonicalise } from './canonicalization'
 
-export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-lines', 'distinct', 'eq-angle', 'eq-spread'])
+export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-lines', 'distinct', 'eq-angle', 'eq-spread', 'supp'])
 
 export class UnsupportedPrimitiveError extends Error {}
 
@@ -77,8 +77,8 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
     case 'distinct':
       break  // no constraint on positions; the construction planner keeps the points apart
 
-    case 'eq-angle': case 'eq-spread':
-      if (goal.args.length !== (goal.name === 'eq-angle' ? 6 : 8)) throw new MalformedFactError(`${goal.name} needs ${goal.name === 'eq-angle' ? 6 : 8} points`)
+    case 'eq-angle': case 'eq-spread': case 'supp':
+      if (goal.args.length !== (goal.name === 'eq-spread' ? 8 : 6)) throw new MalformedFactError(`${goal.name} needs ${goal.name === 'eq-spread' ? 8 : 6} points`)
       constraints.push({ kind: 'measure', name: goal.name, args: [...goal.args], depth })
       break
 

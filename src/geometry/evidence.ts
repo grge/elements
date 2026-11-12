@@ -86,7 +86,7 @@ export function holds(f: GroundPredicate, coords: Map<string, Point>): boolean {
       const t = ((b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1])) / (ac * ac)
       return cross <= tol && t >= -tol / ac && t <= 1 + tol / ac
     }
-    case 'eq-angle': case 'eq-spread': {
+    case 'eq-angle': case 'eq-spread': case 'supp': {
       const r = measureResidual(f.name, f.args, p => coords.get(p))
       return Number.isNaN(r) || r <= 1e-7
     }
