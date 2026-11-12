@@ -2,7 +2,7 @@ import { ref, computed, shallowRef, watch } from 'vue'
 import { parseSource } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { GEOMETRY_FRONTIER, frontierFactsFromRuntime, geometryProblemFromFacts, seedPredicateHeadFact } from '../geometry/extraction'
+import { drawableFacts, geometryProblemFromFacts } from '../geometry/extraction'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
 import { useKB, type Namespace } from './useKB'
 
@@ -109,7 +109,7 @@ export function useWorkspace() {
       const rt = buildRuntimeState(base, isUser ? parsed : parsed.filter(i => i.kind !== 'rule'))
       const firstRule = parsed.find((i): i is Extract<typeof i, { kind: 'rule' }> => i.kind === 'rule')
       const args = signature.value ?? firstRule?.rule.head.args
-      if (args) rt.configuration.addFacts([seedPredicateHeadFact({ name: selectedPred.value, args })])
+      if (args) rt.configuration.addFact({ name: selectedPred.value, args: [...args] })
       return rt
     } catch (e) {
       console.warn('Runtime construction error:', e)
@@ -120,7 +120,7 @@ export function useWorkspace() {
   /** Drawable facts of the figure, after unfolding definitions. */
   const facts = computed(() => {
     if (!runtime.value) return []
-    try { return frontierFactsFromRuntime(runtime.value).filter(f => GEOMETRY_FRONTIER.has(f.name)) }
+    try { return drawableFacts(runtime.value.kb, runtime.value.configuration.allFacts()) }
     catch (e) { console.warn('Geometry extraction error:', e); return [] }
   })
 

@@ -6,7 +6,6 @@ import { Universe } from './universe'
 export class Configuration {
   readonly universe: Universe
   private facts = new Map<string, GroundPredicate>()
-  private byPredicate = new Map<string, GroundPredicate[]>()
 
   constructor(universe = new Universe()) {
     this.universe = universe
@@ -17,8 +16,6 @@ export class Configuration {
     if (this.facts.has(key)) return
     this.facts.set(key, pred)
     this.universe.introduce(pred.args)
-    if (!this.byPredicate.has(pred.name)) this.byPredicate.set(pred.name, [])
-    this.byPredicate.get(pred.name)!.push(pred)
   }
 
   addFacts(preds: readonly GroundPredicate[]): void {
@@ -31,9 +28,5 @@ export class Configuration {
 
   allFacts(): GroundPredicate[] {
     return [...this.facts.values()]
-  }
-
-  factsForPredicate(name: string): GroundPredicate[] {
-    return [...(this.byPredicate.get(name) ?? [])]
   }
 }

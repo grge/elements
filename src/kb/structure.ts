@@ -158,19 +158,3 @@ function analyse(rules: readonly Rule[]): Structure {
 
   return { arity, equivalences, equality, congruent, symmetries }
 }
-
-/** A short human-readable account of what was recognised, for the UI and for debugging. */
-export function describeStructure(s: Structure): string[] {
-  const out: string[] = []
-  if (s.equality) {
-    const into = [...s.congruent].filter(([p, m]) => p !== s.equality && m.some(Boolean))
-      .map(([p, m]) => m.every(Boolean) ? p : `${p} (positions ${m.map((x, i) => x ? i + 1 : 0).filter(Boolean).join(', ')})`)
-    out.push(`${s.equality}: equality${into.length ? `, substitutable into ${into.join(', ')}` : ''}`)
-  }
-  for (const [p, e] of s.equivalences) {
-    if (p === s.equality) continue
-    out.push(`${p}: equivalence between ${e.k}-tuples${e.blockGroup.length > 1 ? ` (${e.blockGroup.length} orderings of a tuple are the same)` : ''}`)
-  }
-  for (const [p, g] of s.symmetries) out.push(`${p}: invariant under ${g.length - 1} argument permutation${g.length > 2 ? 's' : ''}`)
-  return out
-}

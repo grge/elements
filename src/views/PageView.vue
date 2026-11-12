@@ -108,7 +108,7 @@ import CodeEditor from '../components/CodeEditor.vue'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import { useThumbnails } from '../composables/useThumbnails'
-import type { Locus, Step } from '../geometry/construction'
+import { describeLocus, type Step } from '../geometry/construction'
 import { displayName } from '../kb/names'
 import type { Namespace } from '../composables/useKB'
 
@@ -190,11 +190,7 @@ onBeforeUnmount(() => {
 
 // ── source, verification, contents ──
 
-const { verificationMarks } = useVerification(
-  () => ws.text.value,
-  () => ws.kb.value,
-  () => ws.mode.value,
-)
+const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value)
 const marks = computed(() => verificationMarks.value)
 const predicateNames = computed(() => [...new Set(ws.predicates.value.map(p => p.name))])
 
@@ -234,14 +230,6 @@ function addUser() {
 
 // ── the construction, in words ──
 
-function describeLocus(l: Locus): string {
-  const n = (ps: readonly string[]) => ps.map(displayName).join('')
-  switch (l.kind) {
-    case 'line': return `line ${n(l.through)}`
-    case 'circle': return `circle about ${displayName(l.center)} with radius ${n(l.radius)}`
-    case 'bisector': return `the perpendicular bisector of ${n(l.of)}`
-  }
-}
 function describe(s: Step): string {
   switch (s.kind) {
     case 'free': return 'anywhere'
@@ -261,7 +249,7 @@ const status = computed(() => {
   }
   const d = ws.drawing.value
   if (!usingConstruction.value || !d) return ''
-  if (d.failure) return `${displayName(d.failure.point)}: ${d.failure.reason.replace(/[a-z]#\d+/g, displayName)}`
+  if (d.failure) return `${displayName(d.failure.point)}: ${d.failure.reason}`
   if (d.violations.length) return `Does not hold here: ${d.violations.map(v => v.what).join('; ')}`
   return ''
 })

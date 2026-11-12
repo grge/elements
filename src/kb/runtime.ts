@@ -1,54 +1,20 @@
-import type { Predicate, Rule, TopLevel, Lemma } from '../language/parser'
-import { Configuration } from './configuration'
-import { KnowledgeBase, type GroundPredicate } from './inference'
+/**
+ * A page's runtime: the knowledge base extended with the page's own rules, and the configuration
+ * holding its ground facts. Queries are checked separately (checker.ts, in the worker).
+ */
 
-export interface RuntimeAnalysis {
-  parsed: TopLevel[]
-  rules: Rule[]
-  groundFacts: Predicate[]
-  groundQueries: Predicate[]
-  queriedClauses: Lemma[]
-  geometryGoals: Predicate[]
-}
+import type { TopLevel } from '../language/parser'
+import { Configuration } from './configuration'
+import { KnowledgeBase } from './inference'
 
 export interface RuntimeState {
-  analysis: RuntimeAnalysis
   kb: KnowledgeBase
   configuration: Configuration
 }
 
-export function analyzeRuntime(parsed: TopLevel[]): RuntimeAnalysis {
-  const rules = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'rule' }> => item.kind === 'rule')
-    .map(item => item.rule)
-
-  const groundFacts = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'goal' }> => item.kind === 'goal')
-    .map(item => item.pred)
-
-  const groundQueries = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'ground-query' }> => item.kind === 'ground-query')
-    .map(item => item.pred)
-
-  const queriedClauses = parsed
-    .filter((item): item is Extract<TopLevel, { kind: 'lemma' }> => item.kind === 'lemma')
-    .map(item => item.lemma)
-
-  return {
-    parsed,
-    rules,
-    groundFacts,
-    groundQueries,
-    queriedClauses,
-    geometryGoals: groundFacts,
-  }
-}
-
 export function buildRuntimeState(baseKB: KnowledgeBase, parsed: TopLevel[]): RuntimeState {
-  const analysis = analyzeRuntime(parsed)
-  const kb = baseKB.extend(analysis.rules)
+  const kb = baseKB.extend(parsed.flatMap(item => item.kind === 'rule' ? [item.rule] : []))
   const configuration = new Configuration()
-  const facts: GroundPredicate[] = analysis.groundFacts.map(pred => ({ name: pred.name, args: pred.args }))
-  configuration.addFacts(facts)
-  return { analysis, kb, configuration }
+  configuration.addFacts(parsed.flatMap(item => item.kind === 'goal' ? [{ name: item.pred.name, args: item.pred.args }] : []))
+  return { kb, configuration }
 }

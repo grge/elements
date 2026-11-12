@@ -1,12 +1,11 @@
 /** From facts to geometry: unfolding to drawable facts, extraction, and the numerical solver. */
 
 import { describe, it, expect } from 'vitest'
-import { parseSource, parseRules, parseGoals } from '../src/language/parser'
+import { parseSource, parseRules } from '../src/language/parser'
 import { KnowledgeBase, unfold } from '../src/kb/inference'
 import { saturate } from '../src/kb/saturate'
 import { buildRuntimeState } from '../src/kb/runtime'
-import { extractProblem, geometryProblemFromRuntime, seedPredicateHeadFact } from '../src/geometry/extraction'
-import { canonicalise } from '../src/geometry/canonicalization'
+import { drawableFacts, geometryProblemFromFacts } from '../src/geometry/extraction'
 import { solve } from '../src/geometry/solver'
 import { bookRules, fixtureRules } from './book'
 
@@ -40,14 +39,8 @@ describe('inference', () => {
 // ── Geometry pipeline ──────────────────────────────────────────────────
 
 function solveGoal(goalStr: string) {
-  const goals = parseGoals(goalStr)
-  const problem = { points: new Set<string>(), constraints: [] as any[], lines: [] as any[], circles: [] as any[] }
-  for (const g of goals) {
-    const p = extractProblem(g, kb)
-    p.points.forEach(pt => problem.points.add(pt))
-    problem.constraints.push(...p.constraints)
-  }
-  canonicalise(problem)
+  const goals = parseSource(goalStr).flatMap(i => i.kind === 'goal' ? [i.pred] : [])
+  const problem = geometryProblemFromFacts(drawableFacts(kb, goals))!
   return { problem, witness: solve(problem) }
 }
 
@@ -135,18 +128,18 @@ describe('runtime to geometry extraction', () => {
   it('constructs a geometry problem from runtime ground facts', () => {
     const kb = new KnowledgeBase(parseRules(`eq-triangle a b c: circle a b c, circle b a c`))
     const runtime = buildRuntimeState(kb, parseSource('eq-triangle a b c'))
-    const problem = geometryProblemFromRuntime(runtime)
+    const problem = geometryProblemFromFacts(drawableFacts(runtime.kb, runtime.configuration.allFacts()))
     expect(problem).not.toBeNull()
     expect(problem?.circles.length).toBe(2)
   })
 
-  it('supports predicate-mode style seeding via a grounded head fact', () => {
+  it('draws a predicate from its head, as its page does', () => {
     const runtime = buildRuntimeState(
       new KnowledgeBase([]),
       parseSource('eq-triangle a b c: circle a b c, circle b a c')
     )
-    runtime.configuration.addFacts([seedPredicateHeadFact({ name: 'eq-triangle', args: ['a', 'b', 'c'] })])
-    const problem = geometryProblemFromRuntime(runtime)
+    runtime.configuration.addFact({ name: 'eq-triangle', args: ['a', 'b', 'c'] })
+    const problem = geometryProblemFromFacts(drawableFacts(runtime.kb, runtime.configuration.allFacts()))
     expect(problem).not.toBeNull()
     expect(problem?.circles.length).toBe(2)
   })

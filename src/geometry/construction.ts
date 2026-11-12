@@ -27,7 +27,7 @@
  */
 
 import type { GroundPredicate } from '../kb/inference'
-import { isAuxiliary } from '../kb/names'
+import { displayName, isAuxiliary } from '../kb/names'
 
 export type Point = [number, number]
 
@@ -389,11 +389,13 @@ export interface Drawing {
   violations: { step: number; what: string }[]
 }
 
-function describeLocus(l: Locus): string {
+/** A locus in words, with points as they are shown (`d₁`). */
+export function describeLocus(l: Locus): string {
+  const n = (ps: readonly string[]) => ps.map(displayName).join('')
   switch (l.kind) {
-    case 'line': return `line ${l.through.join('')}`
-    case 'circle': return `circle about ${l.center} with radius ${l.radius.join('')}`
-    case 'bisector': return `bisector of ${l.of.join('')}`
+    case 'line': return `line ${n(l.through)}`
+    case 'circle': return `circle about ${displayName(l.center)} with radius ${n(l.radius)}`
+    case 'bisector': return `the perpendicular bisector of ${n(l.of)}`
   }
 }
 
@@ -448,7 +450,7 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       pi += 1
     } else {
       const [u, v] = step.loci.map(l => curveOf(l, at))
-      if (!u || !v) return fail(`a locus of ${x} is degenerate`)
+      if (!u || !v) return fail(`a locus of ${displayName(x)} is degenerate`)
       const found = intersect(u, v)
       if (found === 'same') return fail(`${step.loci.map(describeLocus).join(' and ')} coincide`)
       if (found.length === 0) return fail(`${step.loci.map(describeLocus).join(' and ')} do not meet`)
@@ -458,13 +460,13 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         at.delete(x)
         return good
       })
-      if (ok.length === 0) return fail(`neither meeting point of ${step.loci.map(describeLocus).join(' and ')} satisfies ${orders.map(o => `between ${o.between.join(' ')}`).join(', ')}`)
+      if (ok.length === 0) return fail(`neither meeting point of ${step.loci.map(describeLocus).join(' and ')} satisfies ${orders.map(o => `between ${o.between.map(displayName).join(' ')}`).join(', ')}`)
       decided = new Set(orders)
       // "The other intersection": a meeting point on a point x must differ from is ruled out.
       const coincides = (c: Point, q: string) => dist(c, at.get(q)!) <= tol()
       const apart = cp.distinct.filter(d => d.step === k).map(d => d.points[0] === x ? d.points[1] : d.points[0])
       const allowed = ok.filter(c => apart.every(q => !coincides(c, q)))
-      if (allowed.length === 0) return fail(`where ${step.loci.map(describeLocus).join(' and ')} meet is ${apart.join(', ')}, which ${x} must differ from`)
+      if (allowed.length === 0) return fail(`where ${step.loci.map(describeLocus).join(' and ')} meet is ${apart.map(displayName).join(', ')}, which ${displayName(x)} must differ from`)
       // The drawing takes distinct names for distinct points: prefer a meeting point not already used.
       const unused = allowed.filter(c => ![...at.keys()].some(q => coincides(c, q)))
       const choices = unused.length ? unused : allowed
@@ -477,15 +479,15 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
 
     for (const c of cp.checks.filter(c => c.step === k)) {
       const curve = curveOf(c.locus, at)
-      if (curve && residual(at.get(c.point)!, curve) > tol()) violations.push({ step: k, what: `${c.point} on ${describeLocus(c.locus)}` })
+      if (curve && residual(at.get(c.point)!, curve) > tol()) violations.push({ step: k, what: `${displayName(c.point)} on ${describeLocus(c.locus)}` })
     }
     for (const { points: [p, q] } of cp.distinct.filter(d => d.step === k)) {
-      if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${p} and ${q} distinct` })
+      if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${displayName(p)} and ${displayName(q)} distinct` })
     }
     for (const order of orders) {
       if (decided.has(order)) continue
       const [a, b, d] = order.between
-      if (!isBetween(at.get(a)!, at.get(b)!, at.get(d)!, tol())) violations.push({ step: k, what: `between ${a} ${b} ${d}` })
+      if (!isBetween(at.get(a)!, at.get(b)!, at.get(d)!, tol())) violations.push({ step: k, what: `between ${[a, b, d].map(displayName).join(' ')}` })
     }
   }
   options.onParams?.(used)

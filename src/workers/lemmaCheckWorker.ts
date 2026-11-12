@@ -7,7 +7,6 @@ interface VerifyRequest {
   requestId: number
   text: string
   rules: Rule[]
-  mode: 'scratchpad' | 'predicate'
 }
 
 interface VerifyMark {

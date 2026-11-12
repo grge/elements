@@ -211,10 +211,6 @@ function arityOf(item: ClauseItem): number {
   return firstLine ? firstLine.split(/\s+/).length - 1 : 0
 }
 
-function predicatesInNS(ns: Namespace): PredicateEntry[] {
-  return predicates.value.filter(p => p.namespace === ns)
-}
-
 function clausesForPredicate(name: string, ns: Namespace): ClauseItem[] {
   if (ns === 'user') {
     return userClauses.value
@@ -253,7 +249,6 @@ export function useKB() {
   return {
     kb,
     predicates,
-    predicatesInNS,
     userClauses,
     chapters,
     addUserClause,

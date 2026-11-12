@@ -35,14 +35,5 @@ describe('Configuration', () => {
     cfg.addFact(fact1)
     cfg.addFact(fact1)
     expect(cfg.allFacts()).toHaveLength(1)
-    expect(cfg.factsForPredicate('circle')).toHaveLength(1)
-  })
-
-  it('indexes facts by predicate name', () => {
-    const cfg = new Configuration()
-    cfg.addFacts([fact1, fact2])
-    expect(cfg.factsForPredicate('circle')).toEqual([fact1])
-    expect(cfg.factsForPredicate('between')).toEqual([fact2])
-    expect(cfg.factsForPredicate('eq-lines')).toEqual([])
   })
 })

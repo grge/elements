@@ -39,8 +39,6 @@ export type DefinitionStatus =
     }
   | { kind: 'open'; reason: string }
 
-export { showRule }
-
 const cache = new Lru<Map<string, DefinitionStatus>>(16)
 
 export function analyseDefinitions(rules: readonly Rule[]): Map<string, DefinitionStatus> {

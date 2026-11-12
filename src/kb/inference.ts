@@ -157,10 +157,6 @@ function unify(goal: GroundPredicate, head: Predicate, s: Subst): Subst | null {
   return out
 }
 
-// ── Exceptions ────────────────────────────────────────────────────────
-
-export class DepthExceeded extends Error {}
-
 // ── Unfolding definitions ─────────────────────────────────────────────
 
 export interface UnfoldResult {

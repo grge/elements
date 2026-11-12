@@ -1,7 +1,7 @@
 /**
  * Numerical solver: finds coordinates satisfying a GeometryProblem by minimising an energy with
- * Adam gradient descent (analytic gradients, random restarts). Used only when a figure has no
- * ruler-and-compass construction (see construction.ts), and for the "numerical solver" mode.
+ * Adam gradient descent (analytic gradients, random restarts). Used only when no configuration
+ * satisfies every fact with the ruler-and-compass construction (see construction.ts).
  */
 
 import type { GeometryProblem, WitnessModel, Line, Circle, Constraint } from './constraints'

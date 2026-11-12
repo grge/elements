@@ -9,9 +9,7 @@
 
 import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
-import { Configuration } from '../kb/configuration'
-import { analyzeRuntime } from '../kb/runtime'
-import { GEOMETRY_FRONTIER, frontierFactsFromRuntime, geometryProblemFromFacts } from '../geometry/extraction'
+import { drawableFacts, geometryProblemFromFacts } from '../geometry/extraction'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import type { GeometryProblem } from '../geometry/constraints'
 
@@ -22,10 +20,7 @@ export interface Thumbnail {
 
 /** The figure of `name args`, or null if there is nothing to draw. */
 export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[]): Thumbnail | null {
-  const configuration = new Configuration()
-  configuration.addFacts([{ name, args }])
-  const facts = frontierFactsFromRuntime({ analysis: analyzeRuntime([]), kb, configuration })
-    .filter(f => GEOMETRY_FRONTIER.has(f.name))
+  const facts = drawableFacts(kb, [{ name, args }])
   const problem = geometryProblemFromFacts(facts)
   if (!problem) return null
   const { drawing } = realise(plan(buildModel(facts)))

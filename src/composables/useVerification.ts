@@ -1,5 +1,6 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { parseSource, type Rule } from '../language/parser'
+import type { KnowledgeBase } from '../kb/inference'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 type WorkerMessage =
@@ -7,11 +8,8 @@ type WorkerMessage =
   | { requestId: number; kind: 'done' }
   | { requestId: number; kind: 'error'; message: string }
 
-export function useVerification(
-  text: () => string,
-  kb: () => any,
-  mode: () => string
-) {
+/** Checks the `?` lines of the text in a worker, as marks for the editor's gutter. */
+export function useVerification(text: () => string, kb: () => KnowledgeBase | null) {
   const worker = new Worker(new URL('../workers/lemmaCheckWorker.ts', import.meta.url), { type: 'module' })
   const lastRequestId = ref(0)
   const verificationMarksState = ref<EditorMark[]>([])
@@ -42,7 +40,7 @@ export function useVerification(
       .map(x => ({ line: x.i, type: 'unknown' as const, message: 'Checking…' }))
   }
 
-  watch([text, kb, mode], ([textContent, currentKb, currentMode]) => {
+  watch([text, kb], ([textContent, currentKb]) => {
     if (!textContent.trim() || !currentKb) {
       verificationMarksState.value = []
       return
@@ -62,7 +60,6 @@ export function useVerification(
         requestId,
         text: textContent,
         rules: currentKb.allRules() as Rule[],
-        mode: currentMode,
       })
     } catch {
       verificationMarksState.value = []

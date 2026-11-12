@@ -52,12 +52,12 @@ function runCheckPipeline(
   goal: GroundPredicate,
   seeds: readonly GroundPredicate[],
   kb: KnowledgeBase,
-  maxSteps: number,
+  maxDerivations: number,
 ): CheckResponse {
   // One supply of fresh names for the whole check, so auxiliaries of different hypotheses stay distinct.
   const fresh = new FreshNames()
   const frontier = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
-  const budget = { maxDerivations: maxSteps * 100 }
+  const budget = { maxDerivations }
   const sat = saturate(kb, frontier, { goal, ...budget })
   // The search stops at the goal; to rule out a contradiction it must be carried on to the end,
   // which is only worth doing if `false` is derivable at all from these kinds of facts.
@@ -83,20 +83,20 @@ function withMissingHeadObjects(seeds: readonly GroundPredicate[], lemma: Lemma)
 export function checkLemma(
   lemma: Lemma,
   kb: KnowledgeBase,
-  maxSteps = 2000,
+  maxDerivations = 200_000,
 ): CheckResponse {
   const seeds = withMissingHeadObjects(
     lemma.hypotheses.map(toGroundPredicate),
     lemma,
   )
-  return runCheckPipeline(toGroundPredicate(lemma.head), seeds, kb, maxSteps)
+  return runCheckPipeline(toGroundPredicate(lemma.head), seeds, kb, maxDerivations)
 }
 
 export function checkGroundQuery(
   pred: Predicate,
   kb: KnowledgeBase,
   configuration: Configuration,
-  maxSteps = 2000,
+  maxDerivations = 200_000,
 ): CheckResponse {
   const missing = pred.args.filter(arg => !configuration.universe.has(arg))
   if (missing.length > 0) {
@@ -106,5 +106,5 @@ export function checkGroundQuery(
       message: `Ground query mentions objects not in the configuration universe: ${missing.join(', ')}`,
     }
   }
-  return runCheckPipeline(toGroundPredicate(pred), configuration.allFacts(), kb, maxSteps)
+  return runCheckPipeline(toGroundPredicate(pred), configuration.allFacts(), kb, maxDerivations)
 }

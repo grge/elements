@@ -1,11 +1,10 @@
 /**
- * Extraction: from the facts of a configuration to drawable facts (collinear, between, circle,
- * eq-lines) by unfolding definitions, and from those to a GeometryProblem.
+ * Extraction: from facts to drawable facts (collinear, between, circle, eq-lines, distinct) by
+ * unfolding definitions, and from those to a GeometryProblem.
  */
 
 import { KnowledgeBase, unfold, type GroundPredicate } from '../kb/inference'
 import { FreshNames } from '../kb/names'
-import type { RuntimeState } from '../kb/runtime'
 import type {
   GeometryProblem, Constraint,
   CollinearConstraint, BetweenConstraint, OnCircleConstraint, EqualDistConstraint,
@@ -85,12 +84,6 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
   return { points, constraints, lines: [], circles: [] }
 }
 
-/** Legacy/single-goal entrypoint: unfold one goal to the geometry frontier, then map it. */
-export function extractProblem(goal: GroundPredicate, kb: KnowledgeBase): GeometryProblem {
-  const frontier = unfold(goal, kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name) }).frontier
-  return mergeProblems(frontier.map(problemFromPrimitive))
-}
-
 /**
  * A drawable fact, with its depth: how many definitions were unfolded to reach it. A fact written
  * on the page is 0; the circles of an `eq-triangle` written there are 1; those of an `eq-triangle`
@@ -98,15 +91,16 @@ export function extractProblem(goal: GroundPredicate, kb: KnowledgeBase): Geomet
  */
 export type DrawableFact = GroundPredicate & { depth: number }
 
-export function frontierFactsFromRuntime(runtime: RuntimeState): DrawableFact[] {
-  const facts = runtime.configuration.allFacts()
+/** Unfold facts to the drawable facts they mean; anything else they unfold to is dropped. */
+export function drawableFacts(kb: KnowledgeBase, facts: readonly GroundPredicate[]): DrawableFact[] {
   const frontier = new Map<string, DrawableFact>()
   // Shared across facts: two constructions in one drawing must not share auxiliary points.
   const fresh = new FreshNames()
 
   for (const fact of facts) {
-    const u = unfold(fact, runtime.kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh })
+    const u = unfold(fact, kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh })
     u.frontier.forEach((pred, i) => {
+      if (!GEOMETRY_FRONTIER.has(pred.name)) return
       const key = `${pred.name}(${pred.args.join(',')})`
       const depth = Math.min(u.depths[i], frontier.get(key)?.depth ?? Infinity)
       frontier.set(key, { ...pred, depth })
@@ -129,12 +123,4 @@ export function geometryProblemFromFacts(facts: readonly GroundPredicate[]): Geo
   const merged = mergeProblems(problems)
   canonicalise(merged)
   return merged
-}
-
-export function geometryProblemFromRuntime(runtime: RuntimeState): GeometryProblem | null {
-  return geometryProblemFromFacts(frontierFactsFromRuntime(runtime))
-}
-
-export function seedPredicateHeadFact(head: GroundPredicate): GroundPredicate {
-  return { name: head.name, args: [...head.args] }
 }

@@ -3,7 +3,7 @@
 import { describe, it, expect } from 'vitest'
 import { tokenize, TokenType } from '../src/language/lexer'
 import { bookRules } from './book'
-import { parseSource, parseRules, parseGroundQueries, parseGeoFile, validateConsistentArities } from '../src/language/parser'
+import { parseSource, parseRules, parseGeoFile, validateConsistentArities } from '../src/language/parser'
 
 const foundationRules = bookRules
 
@@ -114,9 +114,9 @@ describe('parser', () => {
     expect(() => parseGeoFile('? circle a b c', 'test.geo')).toThrow(/ground queries/)
   })
 
-  it('parseGroundQueries extracts only bare queried predicates', () => {
-    const queries = parseGroundQueries('? foo a\n? bar a b\n? baz a: qux a')
-    expect(queries.map(q => q.name)).toEqual(['foo', 'bar'])
+  it('tells ground queries from queried clauses', () => {
+    const kinds = parseSource('? foo a\n? bar a b\n? baz a: qux a').map(i => i.kind)
+    expect(kinds).toEqual(['ground-query', 'ground-query', 'lemma'])
   })
 
   it('loads the book', () => {

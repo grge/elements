@@ -320,7 +320,6 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
   animatedTransform.value = fit(baseWitness.value)
 }, { immediate: true })
 
-defineExpose({ activeWitness, baseWitness })
 </script>
 
 <style scoped>
