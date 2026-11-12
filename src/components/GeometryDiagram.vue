@@ -40,6 +40,10 @@
         <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
         <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
         <path v-for="(a, i) in scene.arcs" :key="`a${i}`" class="arc" :d="a.d" :style="weight(a.level)" />
+        <template v-for="(r, i) in scene.route" :key="`r${i}`">
+          <line v-if="r.kind === 'line'" class="route" :x1="r.x1" :y1="r.y1" :x2="r.x2" :y2="r.y2" />
+          <circle v-else class="route" :cx="r.cx" :cy="r.cy" :r="r.r" />
+        </template>
         <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
@@ -95,6 +99,8 @@ const props = defineProps<{
   padding?: number
   /** Bring forward what these facts draw and these points (what is hovered in the source). */
   focus?: { facts: GroundPredicate[]; points: string[] } | null
+  /** A point touched from outside the figure (a construction step hovered): its route is shown. */
+  touch?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -209,20 +215,26 @@ const dimPoint = (name: string) => !!emphasis.value && !!props.focus?.facts.leng
 
 function hoverPoint(name: string | null) {
   if (dragging.value) return
+  hovered.value = name
   emit('hover-point', name)
 }
 
-/** The loci the construction used, at the current positions: drawn where the figure lacks them. */
+/** The point touched (hovered, or held while dragging): its route is shown. */
+const hovered = ref<string | null>(null)
+const touched = computed(() => dragging.value ?? hovered.value ?? props.touch ?? null)
+
+/** The loci the construction used to place the touched point, at the current positions. */
 function helpersFor(coords: Map<string, Point>): Helper[] {
-  if (!planning.value) return []
+  if (!planning.value || !touched.value) return []
   const out: Helper[] = []
   for (const step of local.value!.plan.steps) {
+    if (step.point !== touched.value) continue
     const loci = step.kind === 'on' ? [step.locus] : step.kind === 'meet' ? step.loci : []
     for (const locus of loci) {
       const curve = curveNear(locus, coords, coords.get(step.point)!)
       if (!curve) continue
       out.push(curve.kind === 'line'
-        ? { point: step.point, kind: 'line', p: curve.p, d: curve.d }
+        ? { point: step.point, kind: 'line', p: curve.p, d: curve.d, ray: curve.ray }
         : { point: step.point, kind: 'circle', c: curve.c, r: curve.r })
     }
   }
@@ -384,6 +396,17 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
 }
 .crisp .tick { stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 .crisp .arc, .ghost path { fill: none; stroke: var(--dg-ink, #fff); stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
+
+/* The route: the loci that placed the touched point. Not the figure, so drawn apart: thin, dashed,
+   in the accent colour. */
+.crisp .route {
+  fill: none;
+  stroke: var(--dg-accent, #f40);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 5;
+  opacity: 0.9;
+  pointer-events: none;
+}
 
 /* Behind the text the figure becomes a dotted ghost, like a construction pencilled in. */
 .ghost line, .ghost circle {

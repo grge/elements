@@ -47,6 +47,7 @@
         :veil="veil"
         :padding="48"
         :focus="figureFocus"
+        :touch="stepHover"
         @update:construction="ws.setConstruction"
         @hover-point="p => (pointHover = p)"
       >
@@ -69,7 +70,10 @@
           />
         </div>
         <ol v-if="planSteps.length" class="steps">
-          <li v-for="(s, i) in planSteps" :key="i" :class="{ failed: failure?.step === i }"><b>{{ s.point }}</b> {{ s.how }}</li>
+          <li
+            v-for="(s, i) in planSteps" :key="i" :class="{ failed: failure?.step === i, touched: stepHover === s.name }"
+            @pointerenter="stepHover = s.name" @pointerleave="stepHover = null"
+          ><b>{{ s.point }}</b> {{ s.how }}</li>
         </ol>
       </section>
 
@@ -247,6 +251,8 @@ function addUser() {
 
 const editorHover = ref<EditorHover>(null)
 const pointHover = ref<string | null>(null)
+/** The point of the construction step hovered in the list: the figure shows its route. */
+const stepHover = ref<string | null>(null)
 
 /**
  * A name in the source as a point of the figure: the point itself, or, for a variable of the page's
@@ -260,6 +266,7 @@ function pointOf(name: string): string | null {
 
 /** What the figure brings forward: the hovered name's point, or everything the hovered atom draws. */
 const figureFocus = computed(() => {
+  if (stepHover.value) return { facts: [], points: [stepHover.value] }
   const h = editorHover.value
   if (!h) return null
   if (h.kind === 'name') {
@@ -296,7 +303,7 @@ function describe(s: Step): string {
   }
 }
 const planSteps = computed(() =>
-  (ws.construction.value?.plan.steps ?? []).map(s => ({ point: displayName(s.point), how: describe(s) })))
+  (ws.construction.value?.plan.steps ?? []).map(s => ({ name: s.point, point: displayName(s.point), how: describe(s) })))
 
 // Ruler and compass when a valid construction exists; otherwise the numerical solver.
 const usingConstruction = computed(() => !!ws.construction.value?.valid)
@@ -434,6 +441,7 @@ const status = computed(() => {
   text-shadow: var(--halo);
 }
 .steps b { color: var(--accent); font-weight: 600; margin-right: 0.5rem; }
+.steps li.touched { color: var(--ink); }
 .steps li.failed { color: var(--ink); text-decoration: underline wavy var(--accent); }
 
 .foot {

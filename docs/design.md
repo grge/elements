@@ -167,6 +167,10 @@ grabbing it to drag) shows its locus: the circle a slider runs on, the ray at a 
 bisector of a right angle, the two loci an intersection came from. Letting go hides it again. So the
 figure shows what was written, and a point shows where it can go and why it is where it is.
 
+Built (November 2026): the route is drawn thin, dashed and in the accent colour, apart from the
+figure, for the point hovered or dragged, or the point of the construction step hovered in the list
+under the source. A ray at a copied angle is drawn as a half-line.
+
 ### Marks: from statements and proofs
 
 Tick marks and angle arcs mark equalities, and an equality is marked only if it is

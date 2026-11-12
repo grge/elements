@@ -28,6 +28,8 @@ export interface Scene {
    * number of concentric arcs. SVG path data, with the level.
    */
   arcs: { d: string; level: number }[]
+  /** The loci that placed the touched point, if any (see Helper), in screen coordinates. */
+  route: ({ kind: 'line'; x1: number; y1: number; x2: number; y2: number } | { kind: 'circle'; cx: number; cy: number; r: number })[]
   /** Which points each element is drawn through, parallel to the arrays above (for emphasis). */
   meta: {
     /** The named points on each line (none for a construction's helper line). */
@@ -41,12 +43,11 @@ export interface Scene {
 }
 
 /**
- * A line or circle the construction used to place `point` (in world coordinates), drawn when the
- * figure does not already show it: the compass carrying a length, a bisector. It is one level
- * deeper than the point it places.
+ * A locus the construction used to place `point` (in world coordinates): the compass carrying a
+ * length, a bisector, a ray at a copied angle (`ray`: only the half from p along d).
  */
 export type Helper =
-  | { point: string; kind: 'line'; p: Point; d: Point }
+  | { point: string; kind: 'line'; p: Point; d: Point; ray?: boolean }
   | { point: string; kind: 'circle'; c: Point; r: number }
 
 export function buildScene(
@@ -101,26 +102,20 @@ export function buildScene(
     meta.circles.push({ center: circle.center, points: [...circle.points] })
   }
 
-  // The construction actually used: loci the figure does not already show, one level below the
-  // point they place.
+  // The route: loci the construction used to place the touched point. Not part of the figure; drawn
+  // apart, only while a point is touched (design.md, "The planner's route: shown on touch").
+  const route: Scene['route'] = []
   for (const h of helpers) {
-    const lv = level((pointDepth.get(h.point) ?? base) + 1)
     if (h.kind === 'circle') {
-      const [cx, cy, r] = [tx(h.c[0]), ty(h.c[1]), h.r * t.scale]
-      if (r < 1 || circles.some(o => Math.hypot(o[0] - cx, o[1] - cy) < 1 && Math.abs(o[2] - r) < 1)) continue
-      circles.push([cx, cy, r, lv])
-      meta.circles.push({ center: '', points: [] })
-    } else {
-      const [ax, ay] = [tx(h.p[0]), ty(h.p[1])]
-      const len = Math.hypot(h.d[0], h.d[1])
-      if (len < 1e-12) continue
-      const [ux, uy] = [h.d[0] / len, h.d[1] / len]
-      const shown = lines.some(o => {
-        const [ox, oy] = [o[2] - o[0], o[3] - o[1]], ol = Math.hypot(ox, oy)
-        return Math.abs(ux * oy - uy * ox) / ol < 1e-3 && Math.abs((ax - o[0]) * oy - (ay - o[1]) * ox) / ol < 1
-      })
-      if (!shown) { lineThrough(ax, ay, ux, uy, lv); meta.lines.push([]) }
+      const r = h.r * t.scale
+      if (r >= 1) route.push({ kind: 'circle', cx: tx(h.c[0]), cy: ty(h.c[1]), r })
+      continue
     }
+    const len = Math.hypot(h.d[0], h.d[1])
+    if (len < 1e-12) continue
+    const [ax, ay] = [tx(h.p[0]), ty(h.p[1])]
+    const [ux, uy] = [h.d[0] / len, h.d[1] / len]
+    route.push({ kind: 'line', x1: h.ray ? ax : ax - ux * reach, y1: h.ray ? ay : ay - uy * reach, x2: ax + ux * reach, y2: ay + uy * reach })
   }
 
   // Equal segments: group them into classes, the first class gets one tick, the next two, and so on.
@@ -210,7 +205,7 @@ export function buildScene(
   }
 
   const points = [...coords].map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
-  return { lines, circles, segments, ticks, points, arcs, meta }
+  return { lines, circles, segments, ticks, points, arcs, route, meta }
 }
 
 /** Which elements of a scene to bring forward: those that the given drawable facts draw. */
