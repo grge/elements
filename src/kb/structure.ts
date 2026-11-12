@@ -6,7 +6,8 @@
  * representatives), symmetry under permuting arguments (a canonical argument order). Nothing is
  * declared: each property is PROVEN from the predicate's own rules with the plain reference engine
  * (`forwardClosure`), on fresh constants. Rules have no constants, so a derivation on fresh constants
- * is a derivation for every instance; the recognition is exact, not a heuristic.
+ * is a derivation for every instance: what is recognised is proven, not guessed. A block's reorderings
+ * are looked for among those its rules state directly (each proven, closed under composition).
  *
  * The rules stay the meaning. `saturate` uses this structure only to compute the same closure faster,
  * and skips exactly those rules the structure already implies (see `saturate.ts`).

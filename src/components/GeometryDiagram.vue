@@ -31,6 +31,7 @@
         <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
         <line v-for="(l, i) in scene.segments" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
         <line v-for="(l, i) in scene.ticks" :key="`gk${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
+        <path v-for="(a, i) in scene.arcs" :key="`ga${i}`" :d="a.d" :style="weight(a.level)" />
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
@@ -38,6 +39,7 @@
         <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
         <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
         <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
+        <path v-for="(a, i) in scene.arcs" :key="`a${i}`" class="arc" :d="a.d" :style="weight(a.level)" />
         <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
@@ -377,6 +379,7 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
   stroke-width: var(--dg-stroke, 3);
 }
 .crisp .tick { stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
+.crisp .arc, .ghost path { fill: none; stroke: var(--dg-ink, #fff); stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 
 /* Behind the text the figure becomes a dotted ghost, like a construction pencilled in. */
 .ghost line, .ghost circle {

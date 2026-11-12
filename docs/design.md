@@ -84,6 +84,9 @@ definition with the propositions about it, each checked.
 the same length. The figure's own circles count their radii as equal segments, so the equilateral
 triangle's two circles draw its three sides, one tick each, as Byrne would.
 
+**Equal angles** are marked as Byrne marks them: concentric arcs at the vertex, the same number on
+angles stated equal, and the angle's arms drawn if the figure does not draw them already.
+
 **Layers by depth.** Every line, circle and segment is drawn thinner and fainter the more deeply
 nested the definition it comes from: a construction's own elements in front, the constructions it
 uses behind, theirs further behind (`cut` shows three layers). The construction actually used is drawn

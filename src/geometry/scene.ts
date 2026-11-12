@@ -22,6 +22,11 @@ export interface Scene {
   /** Tick marks across those segments, one per stroke; equal segments share a number of ticks. */
   ticks: number[][]
   points: { name: string; x: number; y: number }[]
+  /**
+   * Arcs marking equal angles at their vertices, as Byrne marks them: angles stated equal share a
+   * number of concentric arcs. SVG path data, with the level.
+   */
+  arcs: { d: string; level: number }[]
   /** Which points each element is drawn through, parallel to the arrays above (for emphasis). */
   meta: {
     /** The named points on each line (none for a construction's helper line). */
@@ -166,8 +171,54 @@ export function buildScene(
     }
   }
 
+  const drawnSegments = new Set(meta.segments.map(seg => key(seg)))
+  // Equal angles: classes of angles (vertex, unordered arms), one more arc for each class.
+  const arcs: Scene['arcs'] = []
+  const angleParent = new Map<string, string>()
+  const aFind = (k: string): string => { while (angleParent.get(k) !== k) k = angleParent.get(k)!; return k }
+  const angleKey = (a: string, b: string, c: string) => [b, ...[a, c].sort()].join('\u0001')
+  const angleDepth = new Map<string, number>()
+  for (const c of problem.constraints) {
+    if (c.kind !== 'measure' || c.name !== 'eq-angle') continue
+    const k1 = angleKey(c.args[0], c.args[1], c.args[2]), k2 = angleKey(c.args[3], c.args[4], c.args[5])
+    for (const k of [k1, k2]) {
+      if (!angleParent.has(k)) angleParent.set(k, k)
+      angleDepth.set(k, Math.min(depthOf(c.depth), angleDepth.get(k) ?? Infinity))
+    }
+    angleParent.set(aFind(k1), aFind(k2))
+  }
+  const angleClass = new Map<string, number>()
+  for (const k of angleParent.keys()) {
+    const [b, a, c] = k.split('\u0001').map(at)
+    if (!a || !b || !c) continue
+    const root = aFind(k)
+    if (!angleClass.has(root)) angleClass.set(root, angleClass.size)
+    const n = angleClass.get(root)! + 1
+    const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
+    let sweep = uc - ua
+    while (sweep <= -Math.PI) sweep += 2 * Math.PI
+    while (sweep > Math.PI) sweep -= 2 * Math.PI
+    const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
+    // An angle is drawn with its arms, as Byrne draws it: the two segments from the vertex, if the
+    // figure does not draw them already.
+    const [nb, na, nc] = k.split('\u0001')
+    for (const [p, q, P, Q] of [[nb, na, b, a], [nb, nc, b, c]] as const) {
+      if (drawnSegments.has(key([p, q]))) continue
+      drawnSegments.add(key([p, q]))
+      segments.push([P[0], P[1], Q[0], Q[1], level(angleDepth.get(k))])
+      meta.segments.push([p, q])
+    }
+    for (let i = 0; i < n; i++) {
+      const r = Math.min(tick * 2.2 + i * tick * 0.75, 0.45 * Math.min(reachA, reachC))
+      if (r < 2) continue
+      const p0 = [b[0] + r * Math.cos(ua), b[1] + r * Math.sin(ua)]
+      const p1 = [b[0] + r * Math.cos(ua + sweep), b[1] + r * Math.sin(ua + sweep)]
+      arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 0 ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: level(angleDepth.get(k)) })
+    }
+  }
+
   const points = [...coords].map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
-  return { lines, circles, segments, ticks, points, meta }
+  return { lines, circles, segments, ticks, points, arcs, meta }
 }
 
 /** Which elements of a scene to bring forward: those that the given drawable facts draw. */

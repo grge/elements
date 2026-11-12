@@ -64,7 +64,9 @@ equality alone has n⁴ ground facts. So the engine *proves*, from each predicat
 constants, which predicates are equivalences (on single objects or on argument tuples, such as unordered
 pairs of points), into which argument positions equals may be substituted, and which argument
 permutations a predicate is invariant under. Rules contain no constants, so a proof on fresh constants
-holds for every instance: the recognition is exact. Nothing in the engine knows a predicate name; a map
+holds for every instance: what is recognised is proven, not guessed. (A block's reorderings are
+looked for among those the rules state directly, each proven, closed under composition; trying every
+reordering by proof is ruinous for blocks of four.) Nothing in the engine knows a predicate name; a map
 colouring knowledge base with its own equivalence gets the same treatment (see `tests/structure.test.ts`).
 
 ## Checking lemmas and queries
@@ -112,7 +114,8 @@ blocks.
 ## From facts to a figure
 
 **Extraction** (`extraction.ts`, `drawableFacts`) unfolds the page's facts down to the relations the
-drawing layer understands: `collinear`, `between`, `circle`, `eq-lines` and `distinct`. That list
+drawing layer understands: `collinear`, `between`, `circle`, `eq-lines`, `distinct`, and the measures
+`eq-angle` and `eq-spread` (`measure.ts`; checked and solved, not yet constructed). That list
 belongs to the drawing layer, not to the logic. One supply of fresh names is shared by the whole figure,
 so two constructions never share auxiliary points. Facts that cannot be drawn are skipped. Each drawable
 fact keeps its depth, the number of definitions unfolded to reach it (the shallowest if it is reached

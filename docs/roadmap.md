@@ -31,10 +31,13 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 4. **Honest verdicts.** Done in November 2026: numeric evidence on sampled figures, and five verdicts
    (✓ proven, ✗ false, ? not proven with the reason, ⊥ vacuous, ! alarm; see architecture.md). Next
    under *Logic*: show a ✗'s counterexample figure.
-5. **Chapter 2, angle.** One chapter is a thin demo, and this one tests the engine: a six-place
-   equivalence on angle triples (structure recognition has not met blocks of three; matching over
-   every tuple class may be slow), angle facts as checks in the drawing, Byrne's coloured angle marks.
-   Decide first between `eq-angle` and spreads, or both (see book.md, *Open questions*).
+5. **Chapter 2, angle.** The engine and drawing support for both candidates is in (November 2026):
+   `eq-angle` on angle triples and Wildberger's `eq-spread` on pairs of lines, recognised as
+   equivalences, measured in checks, the solver and numeric evidence, with Byrne's arcs for equal
+   angles (`tests/fixtures/angles.geo`: the isosceles triangle in both, all lemmas well under a
+   second). Still to do: decide the book's content (angles, spreads, or both; book.md, *Open
+   questions*), then the copied angle as a locus, so figures with angle hypotheses construct instead
+   of falling back to the solver.
 6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
    help. Sketched before built, once two chapters show what it lays out; [the Plates
@@ -119,7 +122,8 @@ would sit naturally beside the algebraic lens.
   recognised equivalence, substitution or symmetry.
 - **Replace the `__object__` bootstrap** the checker uses to introduce a lemma's head-only objects with
   an explicit initial universe.
-- **Performance for larger knowledge bases**: semi-naive evaluation and argument indexes in
+- **Performance for larger knowledge bases**: the reference closure is semi-naive with argument
+  indexes (November 2026); the same for
   `saturate.ts` (lemmas with `distinct` facts take 0.3–0.5 s, mostly the full closure that rules out a
   contradiction); keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
 - **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
