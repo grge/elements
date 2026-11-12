@@ -2,7 +2,8 @@ import { ref, computed, shallowRef, watch } from 'vue'
 import { ParseError, parseSource, type TopLevel } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { extract, geometryProblemFromFacts } from '../geometry/extraction'
+import { extract } from '../geometry/extraction'
+import { figureOf } from '../geometry/figure'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
 import { useKB, type Namespace } from './useKB'
 
@@ -146,11 +147,11 @@ export function useWorkspace() {
   /** The constraints the planner builds the figure from. */
   const facts = computed(() => extraction.value.constraints)
 
-  // Never throw from here: the page renders from this, and a render error tears down the whole
-  // page in production, editor included, which loses focus mid-typing.
-  const problem = computed(() => {
-    try { return geometryProblemFromFacts(extraction.value.depicted) }
-    catch (e) { console.warn('Geometry problem error:', e); return null }
+  // What the figure draws. Never throw from here: the page renders from this, and a render error
+  // tears down the whole page in production, editor included, which loses focus mid-typing.
+  const figure = computed(() => {
+    try { return figureOf(extraction.value.depicted) }
+    catch (e) { console.warn('Figure error:', e); return null }
   })
 
   // Positions from the last drawing: re-planning after an edit keeps points where they were.
@@ -187,7 +188,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    parseError, runtime, extraction, facts, problem, construction, drawing, setConstruction,
+    parseError, runtime, extraction, facts, figure, construction, drawing, setConstruction,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

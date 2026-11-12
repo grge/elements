@@ -4,7 +4,8 @@ import { describe, it, expect } from 'vitest'
 import { parseSource } from '../src/language/parser'
 import { KnowledgeBase } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
-import { extract, geometryProblemFromFacts } from '../src/geometry/extraction'
+import { extract } from '../src/geometry/extraction'
+import { figureOf } from '../src/geometry/figure'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { computeRenderTransform } from '../src/geometry/view'
 import { buildScene, emphasise } from '../src/geometry/scene'
@@ -15,10 +16,10 @@ const kb = new KnowledgeBase(bookRules)
 function sceneOf(text: string) {
   const rt = buildRuntimeState(kb, parseSource(text))
   const { constraints: facts, depicted } = extract(rt.kb, rt.configuration.allFacts())
-  const problem = geometryProblemFromFacts(depicted)!
+  const figure = figureOf(depicted)!
   const { drawing } = realise(plan(buildModel(facts)))
-  const t = computeRenderTransform({ coords: drawing.coords, energy: 0 }, 800, 600, 40, problem)!
-  return buildScene(problem, drawing.coords, t, 800, 600)
+  const t = computeRenderTransform({ coords: drawing.coords, energy: 0 }, 800, 600, 40, figure)!
+  return buildScene(figure, drawing.coords, t, 800, 600)
 }
 
 describe('emphasis', () => {

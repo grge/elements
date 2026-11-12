@@ -30,10 +30,11 @@ see [design.md](design.md).
 | `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
 | `src/geometry/relations.ts` | The relation table: what each relation the figure knows is to the model, the checks and the evidence |
-| `src/geometry/extraction.ts` | From facts to constraints, what is drawn and what is unread; and a `GeometryProblem` |
+| `src/geometry/extraction.ts` | From facts to constraints, what is drawn and what is unread |
+| `src/geometry/figure.ts` | What the figure draws through the points: lines, circles, equal segments and angles |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
 | `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
-| `src/geometry/canonicalization.ts`, `constraints.ts` | Lines and circles for rendering and the solver |
+| `src/geometry/classes.ts` | Equal segments (union-find) and merged lines, shared by the model and the figure |
 | `src/geometry/view.ts`, `scene.ts` | Fitting a figure to the screen; the figure in screen coordinates (shared by the diagram and the thumbnails) |
 | `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the worker), `useThumbnails` (contents miniatures) |
 | `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure), `FigureThumb` (a miniature) |
@@ -121,8 +122,7 @@ per relation the drawing layer knows, with its number of points, how the constru
 (`read`), whether the figure draws it as itself (`depicted`), whether it holds at given positions
 (`holds`), and for the solver how far it is from holding (`residual`). Extraction, the model, the
 checks a drawing is held to and numeric evidence all ask the table instead of switching on names. How
-each relation is drawn is still `scene.ts`'s business, and the solver and canonicalisation still work
-on `GeometryProblem`; both change when the figure is drawn from one model.
+each relation is drawn is still the business of `figure.ts` and `scene.ts`.
 
 **Extraction** (`extraction.ts`, `extract`) unfolds the page's facts as the logic does, all the way to
 open predicates, keeping the tree (`unfoldTree` in `inference.ts`), and reads three things off it. The
@@ -134,13 +134,18 @@ is the logic's business, not the drawing's. Leaves the model cannot read (`eq-po
 user's open predicate, a fact with the wrong number of points) are *unread* and the page says so. That
 list belongs to the drawing layer, not to the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
 auxiliary points. Each fact keeps its depth, the number of definitions unfolded to reach it (the
-shallowest if it is reached twice); lines and circles merged by canonicalisation keep the shallowest of
-theirs, and the figure draws deeper elements thinner and fainter.
+shallowest if it is reached twice); merged lines and circles keep the shallowest of theirs, and the
+figure draws deeper elements thinner and fainter.
 
-From the drawable facts two representations are built:
+Two things are built from the extraction, one from each list:
 
-- a `ConstructionModel` for the planner: collinear groups, classes of equal segments, and order facts;
-- a `GeometryProblem` (canonical lines and circles) for rendering and for the numerical solver.
+- from the constraints, one **`ConstructionModel`** (`buildModel`): collinear groups, classes of equal
+  segments, order facts, pairs kept apart, measures, and the facts themselves. The planner places points
+  from it, and when no construction works the numerical solver (`solver.ts`) places them from the same
+  model, with an energy per class of equal segments, per line, per order fact and per measure;
+- from the depicted facts, the **`Figure`** (`figure.ts`): what to draw through the points, whoever
+  placed them. Lines are collinear groups merged where they share two points; a circle is a centre and
+  a radius, so circles with one centre and radii stated equal are one.
 
 **Planning** (`construction.ts`) turns the model into a straight-line program in which each point is
 

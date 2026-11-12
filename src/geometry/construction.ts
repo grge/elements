@@ -31,6 +31,7 @@ import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
 import { angle as angleAt } from './measure'
 import { relationOf, type ModelReader } from './relations'
+import { UnionFind, mergeLines, segmentKey, segmentEnds } from './classes'
 
 export type Point = [number, number]
 
@@ -55,29 +56,18 @@ export interface ConstructionModel {
 export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel {
   const points: string[] = []
   const see = (p: string) => { if (!points.includes(p)) points.push(p) }
-  const groups: Set<string>[] = []
-  const segParent = new Map<string, string>()
+  const groups: { points: Set<string>; depth: number }[] = []
+  const segments = new UnionFind()
   const between: [string, string, string][] = []
   const distinct: [string, string][] = []
   const measures: { name: string; args: string[] }[] = []
 
-  const segKey = (a: string, b: string) => a < b ? `${a}\u0001${b}` : `${b}\u0001${a}`
-  const segFind = (k: string): string => {
-    let r = k
-    for (let p = segParent.get(r); p !== undefined && p !== r; p = segParent.get(r)) r = p
-    return r
-  }
   const equal = (a: string, b: string, c: string, d: string) => {
-    if (a === b || c === d) return
-    const k1 = segKey(a, b), k2 = segKey(c, d)
-    if (!segParent.has(k1)) segParent.set(k1, k1)
-    if (!segParent.has(k2)) segParent.set(k2, k2)
-    const r1 = segFind(k1), r2 = segFind(k2)
-    if (r1 !== r2) segParent.set(r2, r1)
+    if (a !== b && c !== d) segments.union(segmentKey(a, b), segmentKey(c, d))
   }
   const read: GroundPredicate[] = []
   const reader: ModelReader = {
-    collinear: pts => { const set = new Set(pts); if (set.size >= 3) groups.push(set) },
+    collinear: pts => { const set = new Set(pts); if (set.size >= 3) groups.push({ points: set, depth: 0 }) },
     equal,
     between: (a, b, c) => { if (new Set([a, b, c]).size === 3) between.push([a, b, c]) },
     distinct: (a, b) => { if (a !== b) distinct.push([a, b]) },
@@ -92,36 +82,14 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
     read.push({ name: f.name, args: [...f.args] })
   }
 
-  // Merge collinear groups sharing two points (assumes distinct names are distinct points).
-  for (let merged = true; merged;) {
-    merged = false
-    outer: for (let i = 0; i < groups.length; i++) {
-      for (let j = i + 1; j < groups.length; j++) {
-        if ([...groups[i]].filter(p => groups[j].has(p)).length >= 2) {
-          groups[j].forEach(p => groups[i].add(p))
-          groups.splice(j, 1)
-          merged = true
-          break outer
-        }
-      }
-    }
-  }
-
-  const classes = new Map<string, [string, string][]>()
-  for (const k of segParent.keys()) {
-    const r = segFind(k)
-    if (!classes.has(r)) classes.set(r, [])
-    const [a, b] = k.split('\u0001')
-    classes.get(r)!.push([a, b])
-  }
 
   // Named points first, then auxiliary ones, each in order of mention.
   points.sort((x, y) => Number(isAuxiliary(x)) - Number(isAuxiliary(y)))
   const order = (pts: Iterable<string>) => [...pts].sort((x, y) => points.indexOf(x) - points.indexOf(y))
   return {
     points,
-    lines: groups.map(order),
-    lengths: [...classes.values()].filter(c => c.length >= 2),
+    lines: mergeLines(groups).map(g => order(g.points)),
+    lengths: segments.classes().filter(c => c.length >= 2).map(c => c.map(segmentEnds)),
     between,
     distinct,
     measures,

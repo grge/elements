@@ -1,11 +1,13 @@
-/** From facts to geometry: unfolding to drawable facts, extraction, and the numerical solver. */
+/** From facts to geometry: unfolding, what the figure draws, and the numerical solver. */
 
 import { describe, it, expect } from 'vitest'
 import { parseSource, parseRules } from '../src/language/parser'
 import { KnowledgeBase, unfold } from '../src/kb/inference'
 import { saturate } from '../src/kb/saturate'
 import { buildRuntimeState } from '../src/kb/runtime'
-import { extract, geometryProblemFromFacts } from '../src/geometry/extraction'
+import { extract } from '../src/geometry/extraction'
+import { figureOf } from '../src/geometry/figure'
+import { buildModel } from '../src/geometry/construction'
 import { solve } from '../src/geometry/solver'
 import { bookRules, fixtureRules } from './book'
 
@@ -40,8 +42,9 @@ describe('inference', () => {
 
 function solveGoal(goalStr: string) {
   const goals = parseSource(goalStr).flatMap(i => i.kind === 'goal' ? [i.pred] : [])
-  const problem = geometryProblemFromFacts(extract(kb, goals).depicted)!
-  return { problem, witness: solve(problem) }
+  const x = extract(kb, goals)
+  // The solver works from the same model as the planner; the figure is what is drawn through it.
+  return { figure: figureOf(x.depicted)!, witness: solve(buildModel(x.constraints)) }
 }
 
 /** Run solveGoal multiple times and expect at least `minPasses` successes */
@@ -54,16 +57,24 @@ function reliableSolve(goalStr: string, minPasses = 4, runs = 5) {
   return passes >= minPasses
 }
 
-describe('geometry extraction', () => {
-  it('eq-triangle extracts 2 circles', () => {
-    const { problem } = solveGoal('eq-triangle a b c')
-    expect(problem.circles.length).toBe(2)
-    expect(problem.lines.length).toBe(0)
+describe('the figure', () => {
+  it('eq-triangle draws 2 circles', () => {
+    const { figure } = solveGoal('eq-triangle a b c')
+    expect(figure.circles.length).toBe(2)
+    expect(figure.lines.length).toBe(0)
   })
 
-  it('line-line-intersection extracts 2 lines', () => {
-    const { problem } = solveGoal('line-line-intersection a b c d i')
-    expect(problem.lines.length).toBe(2)
+  it('line-line-intersection draws 2 lines', () => {
+    const { figure } = solveGoal('line-line-intersection a b c d i')
+    expect(figure.lines.length).toBe(2)
+  })
+
+  it('merges circles with the same centre and a radius stated equal', () => {
+    const figure = figureOf([
+      { name: 'circle', args: ['o', 'a', 'b'] }, { name: 'circle', args: ['o', 'c', 'd'] },
+      { name: 'eq-lines', args: ['o', 'a', 'o', 'c'] },
+    ])!
+    expect(figure.circles).toEqual([{ center: 'o', points: ['a', 'b', 'c', 'd'], depth: 0 }])
   })
 })
 
@@ -102,11 +113,11 @@ describe('geometry solver', () => {
     // Solve 5 times, check best
     let best = Infinity
     for (let i = 0; i < 5; i++) {
-      const { problem, witness } = solveGoal('eq-triangle a b c')
+      const { figure, witness } = solveGoal('eq-triangle a b c')
       if (witness.energy < best) {
         best = witness.energy
         // Check circle constraint
-        for (const circle of problem.circles) {
+        for (const circle of figure.circles) {
           const [cx, cy] = witness.coords.get(circle.center)!
           const radii = [...circle.points].map(p => {
             const [x, y] = witness.coords.get(p)!
@@ -125,12 +136,11 @@ describe('geometry solver', () => {
 // ── From a runtime configuration ───────────────────────────────────────
 
 describe('runtime to geometry extraction', () => {
-  it('constructs a geometry problem from runtime ground facts', () => {
+  it('draws the figure of runtime ground facts', () => {
     const kb = new KnowledgeBase(parseRules(`eq-triangle a b c: circle a b c, circle b a c`))
     const runtime = buildRuntimeState(kb, parseSource('eq-triangle a b c'))
-    const problem = geometryProblemFromFacts(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
-    expect(problem).not.toBeNull()
-    expect(problem?.circles.length).toBe(2)
+    const figure = figureOf(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
+    expect(figure?.circles.length).toBe(2)
   })
 
   it('draws a predicate from its head, as its page does', () => {
@@ -139,24 +149,21 @@ describe('runtime to geometry extraction', () => {
       parseSource('eq-triangle a b c: circle a b c, circle b a c')
     )
     runtime.configuration.addFact({ name: 'eq-triangle', args: ['a', 'b', 'c'] })
-    const problem = geometryProblemFromFacts(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
-    expect(problem).not.toBeNull()
-    expect(problem?.circles.length).toBe(2)
+    const figure = figureOf(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
+    expect(figure?.circles.length).toBe(2)
   })
 })
 
 describe('a line still being typed', () => {
-  it('skips a drawable fact with too few points instead of throwing', async () => {
-    const { geometryProblemFromFacts } = await import('../src/geometry/extraction')
+  it('skips a drawable fact with too few points instead of throwing', () => {
     const facts = [
       { name: 'circle', args: ['a', 'b', 'c'] },
       { name: 'between', args: ['a', 'b'] },
       { name: 'eq-lines', args: ['a', 'b', 'c'] },
       { name: 'circle', args: [] },
     ]
-    const problem = geometryProblemFromFacts(facts as any)
-    expect(problem).not.toBeNull()
-    expect([...problem!.points].sort()).toEqual(['a', 'b', 'c'])
-    expect(geometryProblemFromFacts([{ name: 'between', args: ['a'] }] as any)).toBeNull()
+    const figure = figureOf(facts)
+    expect(figure?.points.sort()).toEqual(['a', 'b', 'c'])
+    expect(figureOf([{ name: 'between', args: ['a'] }])).toBeNull()
   })
 })

@@ -32,8 +32,8 @@ const W = 160, H = 112, PAD = 14
 const scene = computed(() => {
   const th = props.thumbnail
   if (!th) return null
-  const t = computeRenderTransform({ coords: th.coords, energy: 0 }, W, H, PAD, th.problem)
-  return t ? buildScene(th.problem, th.coords, t, W, H, 5) : null
+  const t = computeRenderTransform({ coords: th.coords, energy: 0 }, W, H, PAD, th.figure)
+  return t ? buildScene(th.figure, th.coords, t, W, H, 5) : null
 })
 </script>
 

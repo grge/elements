@@ -41,7 +41,7 @@
     <main class="stage" :style="{ '--veil': `${veil}px` }">
       <GeometryDiagram
         class="figure"
-        :problem="ws.problem.value"
+        :figure="ws.figure.value"
         :construction="ws.construction.value"
         :use-planner="usingConstruction"
         :veil="veil"

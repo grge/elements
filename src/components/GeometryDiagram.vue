@@ -68,8 +68,8 @@
 
 <script setup lang="ts">
 import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
-import { solve } from '../geometry/solver'
-import type { GeometryProblem, WitnessModel } from '../geometry/constraints'
+import { solve, type WitnessModel } from '../geometry/solver'
+import type { Figure } from '../geometry/figure'
 import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
 import { buildScene, emphasise, type Emphasis, type Helper } from '../geometry/scene'
 import type { GroundPredicate } from '../kb/inference'
@@ -82,8 +82,12 @@ import { displayName, isAuxiliary } from '../kb/names'
 import type { ConstructionState } from '../composables/useWorkspace'
 
 const props = defineProps<{
-  problem: GeometryProblem | null
-  /** Ruler-and-compass construction; without it (or with usePlanner off) the numerical solver draws. */
+  /** What to draw through the points (figure.ts). */
+  figure: Figure | null
+  /**
+   * The construction model and, if one was found, its plan. With usePlanner the plan places the
+   * points; without it the numerical solver places them from the same model.
+   */
   construction?: ConstructionState | null
   usePlanner?: boolean
   /** Width in px of the strip on the left where text lies over the figure. */
@@ -122,7 +126,7 @@ const planning = computed(() => !!(props.usePlanner && local.value))
 const veilAt = computed(() => props.veil ?? 0)
 
 const baseWitness = computed<WitnessModel | null>(() => {
-  if (!props.problem) return null
+  if (!props.figure || !props.construction) return null
   try {
     if (planning.value) {
       // Keep each intersection on the branch it was on (continuity while dragging).
@@ -130,7 +134,7 @@ const baseWitness = computed<WitnessModel | null>(() => {
       if (!drawing.failure) lastCoords = drawing.coords
       return { coords: drawing.coords, energy: 0 }
     }
-    return solve(props.problem) || null
+    return solve(props.construction.model) || null
   } catch (e) {
     console.warn('Drawing error:', e)
     return null
@@ -145,7 +149,7 @@ function currentPadding() {
 }
 
 function fit(witness: WitnessModel) {
-  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.problem, veilAt.value)
+  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.figure, veilAt.value)
 }
 
 // ── how each point can be moved ──
@@ -227,10 +231,10 @@ function helpersFor(coords: Map<string, Point>): Helper[] {
 
 const scene = computed(() => {
   const witness = activeWitness.value, t = displayTransform.value
-  if (!props.problem || !witness || !t) return null
+  if (!props.figure || !witness || !t) return null
   let helpers: Helper[] = []
   try { helpers = helpersFor(witness.coords) } catch { /* a step whose points are missing: draw without */ }
-  const base = buildScene(props.problem, witness.coords, t, viewportWidth.value, viewportHeight.value, TICK, helpers)
+  const base = buildScene(props.figure, witness.coords, t, viewportWidth.value, viewportHeight.value, TICK, helpers)
   const points = base.points.map(p => {
     const kind = kindOf(p.name)
     return { ...p, kind, aux: isAuxiliary(p.name), label: displayName(p.name), title: `${displayName(p.name)}: ${TITLES[kind]}` }
@@ -294,7 +298,7 @@ function startInteraction(e: PointerEvent) {
     }
     const warmStart = new Map(witness!.coords)
     warmStart.set(point!, world)
-    try { draggedWitness.value = solve(props.problem!, 0, warmStart, new Map([[point!, world]])) }
+    try { draggedWitness.value = solve(props.construction!.model, 0, warmStart, new Map([[point!, world]])) }
     catch { draggedWitness.value = { coords: warmStart, energy: witness!.energy } }
   }
 
@@ -341,7 +345,7 @@ onUnmounted(() => {
 
 watch(() => props.construction, c => { local.value = c ?? null }, { immediate: true })
 
-watch([() => props.problem, () => props.usePlanner], () => {
+watch([() => props.figure, () => props.usePlanner], () => {
   draggedWitness.value = null
   frozenTransform.value = null
   animatedTransform.value = null

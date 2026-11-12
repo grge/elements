@@ -2,7 +2,8 @@
  * Mapping between world coordinates (the figure) and screen coordinates (the SVG).
  */
 
-import type { GeometryProblem, WitnessModel } from './constraints'
+import type { WitnessModel } from './solver'
+import type { Figure } from './figure'
 
 export interface RenderTransform {
   minX: number
@@ -22,7 +23,7 @@ export function computeRenderTransform(
   width = 400,
   height = 400,
   padding = 40,
-  problem?: GeometryProblem | null,
+  figure?: Figure | null,
   insetLeft = 0,
 ): RenderTransform | null {
   const coords = witness.coords
@@ -31,7 +32,7 @@ export function computeRenderTransform(
   const px = [...coords.values()].map(([x]) => x)
   const py = [...coords.values()].map(([, y]) => y)
   const ax = [...px], ay = [...py]
-  for (const circle of problem?.circles ?? []) {
+  for (const circle of figure?.circles ?? []) {
     const c = coords.get(circle.center)
     const onCircle = [...circle.points].map(p => coords.get(p)).filter((p): p is [number, number] => !!p)
     if (!c || !onCircle.length) continue

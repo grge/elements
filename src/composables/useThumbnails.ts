@@ -9,22 +9,22 @@
 
 import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
-import { extract, geometryProblemFromFacts } from '../geometry/extraction'
+import { extract } from '../geometry/extraction'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
-import type { GeometryProblem } from '../geometry/constraints'
+import { figureOf, type Figure } from '../geometry/figure'
 
 export interface Thumbnail {
-  problem: GeometryProblem
+  figure: Figure
   coords: Map<string, Point>
 }
 
 /** The figure of `name args`, or null if there is nothing to draw. */
 export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[]): Thumbnail | null {
   const { constraints: facts, depicted } = extract(kb, [{ name, args }])
-  const problem = geometryProblemFromFacts(depicted)
-  if (!problem) return null
+  const figure = figureOf(depicted)
+  if (!figure) return null
   const { drawing } = realise(plan(buildModel(facts)))
-  return drawing.coords.size ? { problem, coords: drawing.coords } : null
+  return drawing.coords.size ? { figure, coords: drawing.coords } : null
 }
 
 const cache = new WeakMap<KnowledgeBase, Map<string, Thumbnail | null>>()

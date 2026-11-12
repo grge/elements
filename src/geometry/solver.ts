@@ -1,11 +1,18 @@
 /**
- * Numerical solver: finds coordinates satisfying a GeometryProblem by minimising an energy with
- * Adam gradient descent (analytic gradients, random restarts). Used only when no configuration
- * satisfies every fact with the ruler-and-compass construction (see construction.ts).
+ * Numerical solver: finds coordinates satisfying a construction model (construction.ts, the same
+ * model the planner builds from) by minimising an energy with Adam gradient descent (analytic
+ * gradients, random restarts). Used only when no configuration satisfies every fact with the
+ * ruler-and-compass construction.
  */
 
-import type { GeometryProblem, WitnessModel, Line, Circle, Constraint } from './constraints'
+import type { ConstructionModel } from './construction'
 import { RELATIONS } from './relations'
+
+/** Positions for every point, and the energy left (0 when every fact holds). */
+export interface WitnessModel {
+  coords: Map<string, [number, number]>
+  energy: number
+}
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -56,10 +63,10 @@ function triAreaSqGrad(x: Coords, g: Grad, a: number, b: number, c: number, w: n
   g[a*2]   += k * (ay - by); g[a*2+1] += k * (bx - ax)
 }
 
-function collinearGrad(lines: Line[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e4): number {
+function collinearGrad(lines: string[][], x: Coords, g: Grad, cidx: CoordIdx, w = 1e4): number {
   let e = 0
   for (const line of lines) {
-    const pts = [...line.points].sort().map(p => cidx.get(p)!)
+    const pts = [...line].sort().map(p => cidx.get(p)!)
     if (pts.length < 2) continue
     // Anchor-pair formulation: perpendicular distance from line through pts[0],pts[1]
     // for all other points. O(n) terms, no collapse degeneracy.
@@ -85,57 +92,30 @@ function collinearGrad(lines: Line[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e
   return e
 }
 
-function circleGrad(circles: Circle[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
+// Equal lengths: within each class of segments, every length is pulled to the class's mean. (The
+// derivative of the mean drops out, since the differences from it sum to zero.)
+function lengthGrad(classes: [string, string][][], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
   let e = 0
-  for (const circle of circles) {
-    const ci = cidx.get(circle.center)!
-    const pts = [...circle.points].map(p => cidx.get(p)!)
-    if (!pts.length) continue
-    const n = pts.length
-    const radii = pts.map(pi => dist(x, ci, pi))
-    const mean = radii.reduce((a,b)=>a+b,0)/n
-
-    for (let i = 0; i < n; i++) {
-      const r = radii[i], pi = pts[i]
-      const dr = r - mean
-      e += w * dr * dr
-      if (r < 1e-10) continue
-      const dx = x[pi*2]-x[ci*2], dy = x[pi*2+1]-x[ci*2+1]
-      // Full derivative: dE/d(p_i) = 2w(r_i - mean) * d(r_i)/d(p_i)
-      // The mean-dependence terms cancel because sum(r_i - mean) = 0.
-      const kp = 2 * w * dr / r
-      g[pi*2]   += kp * dx;  g[pi*2+1] += kp * dy
-      // dE/d(center) accumulates -2w(r_i - mean) * d(r_i)/d(center) for each i
-      const kc = -2 * w * dr / r
-      g[ci*2]   += kc * dx;  g[ci*2+1] += kc * dy
-    }
+  for (const cls of classes) {
+    const ends = cls.map(([a, b]) => [cidx.get(a)!, cidx.get(b)!] as const)
+    const lens = ends.map(([a, b]) => dist(x, a, b))
+    const mean = lens.reduce((s, l) => s + l, 0) / lens.length
+    ends.forEach(([a, b], i) => {
+      const diff = lens[i] - mean
+      e += w * diff * diff
+      if (lens[i] < 1e-10) return
+      const k = 2 * w * diff / lens[i]
+      g[a*2]   += k*(x[a*2]-x[b*2]);   g[a*2+1] += k*(x[a*2+1]-x[b*2+1])
+      g[b*2]   += k*(x[b*2]-x[a*2]);   g[b*2+1] += k*(x[b*2+1]-x[a*2+1])
+    })
   }
   return e
 }
 
-function eqDistGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
+function betweenGrad(between: [string, string, string][], x: Coords, g: Grad, cidx: CoordIdx, w = 1e4): number {
   let e = 0
-  for (const c of cs) {
-    if (c.kind !== 'eq-dist') continue
-    const [a,b,p,q] = [c.pair1[0],c.pair1[1],c.pair2[0],c.pair2[1]].map(n=>cidx.get(n)!)
-    const d1 = dist(x, a, b), d2 = dist(x, p, q)
-    const diff = d1 - d2
-    e += w * diff * diff
-    if (d1 < 1e-10 || d2 < 1e-10) continue
-    const k1 = 2*w*diff/d1, k2 = -2*w*diff/d2
-    g[a*2]   += k1*(x[a*2]-x[b*2]);   g[a*2+1] += k1*(x[a*2+1]-x[b*2+1])
-    g[b*2]   += k1*(x[b*2]-x[a*2]);   g[b*2+1] += k1*(x[b*2+1]-x[a*2+1])
-    g[p*2]   += k2*(x[p*2]-x[q*2]);   g[p*2+1] += k2*(x[p*2+1]-x[q*2+1])
-    g[q*2]   += k2*(x[q*2]-x[p*2]);   g[q*2+1] += k2*(x[q*2+1]-x[p*2+1])
-  }
-  return e
-}
-
-function betweenGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e4): number {
-  let e = 0
-  for (const c of cs) {
-    if (c.kind !== 'between') continue
-    const [ai, bi, ci2] = [c.endpoints[0], c.middle, c.endpoints[1]].map(n=>cidx.get(n)!)
+  for (const triple of between) {
+    const [ai, bi, ci2] = triple.map(n=>cidx.get(n)!)
 
     // Collinearity term
     e += w * triAreaSq(x, ai, bi, ci2)
@@ -168,10 +148,9 @@ function betweenGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1
 
 // Equal angles and spreads: energy (difference)², gradient by central differences on the points
 // involved (a handful of coordinates per fact).
-function measureGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
+function measureGrad(cs: ConstructionModel['measures'], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
   let e = 0
   for (const c of cs) {
-    if (c.kind !== 'measure') continue
     const ids = c.args.map(p => cidx.get(p)!)
     const residualOf = RELATIONS.get(c.name)?.residual
     if (!residualOf) continue
@@ -212,35 +191,33 @@ function separationGrad(x: Coords, g: Grad, constrained: Set<string>, w = 1.0, m
   return e
 }
 
-function buildConstrainedPairs(problem: GeometryProblem, cidx: CoordIdx): Set<string> {
+function buildConstrainedPairs(model: ConstructionModel, cidx: CoordIdx): Set<string> {
   const s = new Set<string>()
   const pair = (a: number, b: number) => { const lo=Math.min(a,b), hi=Math.max(a,b); s.add(`${lo},${hi}`) }
-  for (const line of problem.lines) {
-    const pts = [...line.points].map(p => cidx.get(p)!)
+  for (const line of model.lines) {
+    const pts = line.map(p => cidx.get(p)!)
     for (let i = 0; i < pts.length; i++) for (let j = i+1; j < pts.length; j++) pair(pts[i], pts[j])
   }
-  for (const circle of problem.circles) {
-    const ci = cidx.get(circle.center)!
-    const cpts = [...circle.points].map(p => cidx.get(p)!)
-    for (const cp of cpts) pair(ci, cp)
-    // also exempt circumference-to-circumference pairs on the same circle
-    for (let i = 0; i < cpts.length; i++)
-      for (let j = i + 1; j < cpts.length; j++)
-        pair(cpts[i], cpts[j])
+  // A segment's ends, and the far ends of equal segments from a shared point (points on a circle).
+  for (const cls of model.lengths) {
+    for (const [a, b] of cls) pair(cidx.get(a)!, cidx.get(b)!)
+    for (const [a, b] of cls) for (const [c, d] of cls) {
+      const shared = a === c ? [b, d] : a === d ? [b, c] : b === c ? [a, d] : b === d ? [a, c] : null
+      if (shared && shared[0] !== shared[1]) pair(cidx.get(shared[0])!, cidx.get(shared[1])!)
+    }
   }
   return s
 }
 
-function computeGradient(x: Coords, problem: GeometryProblem, pts: string[], cidx: CoordIdx, constrained: Set<string>, pin?: Map<string, [number, number]>): [number, Grad] {
+function computeGradient(x: Coords, model: ConstructionModel, pts: string[], cidx: CoordIdx, constrained: Set<string>, pin?: Map<string, [number, number]>): [number, Grad] {
   const g = new Float64Array(x.length)
   // While dragging, the dragged point is held under the pointer (instead of the gauge).
   let e = pin?.size ? pinGrad(x, g, cidx, pin) : gaugeGrad(x, g, pts, cidx)
   e = e
-    + collinearGrad(problem.lines, x, g, cidx)
-    + circleGrad(problem.circles, x, g, cidx)
-    + eqDistGrad(problem.constraints, x, g, cidx)
-    + betweenGrad(problem.constraints, x, g, cidx)
-    + measureGrad(problem.constraints, x, g, cidx)
+    + collinearGrad(model.lines, x, g, cidx)
+    + lengthGrad(model.lengths, x, g, cidx)
+    + betweenGrad(model.between, x, g, cidx)
+    + measureGrad(model.measures, x, g, cidx)
     + separationGrad(x, g, constrained)
   return [e, g]
 }
@@ -273,7 +250,7 @@ function rng(seed: number): () => number {
 
 function adam(
   x0: Float64Array,
-  problem: GeometryProblem,
+  model: ConstructionModel,
   pts: string[],
   cidx: CoordIdx,
   constrained: Set<string>,
@@ -288,7 +265,7 @@ function adam(
   let energy = Infinity
 
   for (let t = 1; t <= steps; t++) {
-    const [e, g] = computeGradient(x, problem, pts, cidx, constrained, pin)
+    const [e, g] = computeGradient(x, model, pts, cidx, constrained, pin)
     energy = e
     for (let i = 0; i < x.length; i++) {
       m[i] = β1*m[i] + (1-β1)*g[i]
@@ -306,17 +283,17 @@ function adam(
 // ── Public solver ─────────────────────────────────────────────────────
 
 export function solve(
-  problem: GeometryProblem,
+  model: ConstructionModel,
   maxRestarts = 12,
   warmStart?: Map<string, [number, number]>,
   /** Points to hold where they are (the point being dragged). */
   pin?: Map<string, [number, number]>,
 ): WitnessModel {
-  const random = rng([...problem.points].sort().join(' ').split('').reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619), 2166136261))
-  const pts = [...problem.points].sort()
+  const random = rng([...model.points].sort().join(' ').split('').reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619), 2166136261))
+  const pts = [...model.points].sort()
   const cidx = new Map(pts.map((p, i) => [p, i]))
   const n = pts.length
-  const constrained = buildConstrainedPairs(problem, cidx)
+  const constrained = buildConstrainedPairs(model, cidx)
 
   let best: { x: Float64Array; energy: number } | null = null
 
@@ -353,7 +330,7 @@ export function solve(
 
     const steps = n > 6 ? 1200 : 800
     // A warm start continues from where the figure was: a short run, so a drag follows the pointer.
-    const result = adam(x0, problem, pts, cidx, constrained, r < 0 && pin ? 300 : steps, 0.05, pin)
+    const result = adam(x0, model, pts, cidx, constrained, r < 0 && pin ? 300 : steps, 0.05, pin)
     if (!best || result.energy < best.energy) best = result
     if (best.energy < 1e-4) break
   }

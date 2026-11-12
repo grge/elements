@@ -181,11 +181,6 @@ predicate views with lemma layers, the boffin panel and an entry page. Smaller i
 From the November 2026 review. The layering (language → kb → geometry → composables → views) holds
 up, and nothing calls for a rewrite. Worth doing when the code next changes nearby:
 
-- **One geometry model.** Segment classes are built three times (`canonicalization.ts`,
-  `construction.ts`'s `buildModel`, `scene.ts`'s ticks) and collinear groups twice. The planner's
-  `ConstructionModel` is now the primary model; `GeometryProblem` mainly serves the numerical
-  fallback. Derive both from one pass, or draw from the model and keep `GeometryProblem` for the
-  solver alone.
 - **`PageView.vue` holds the whole page** (themes, layout, contents, the steps in words). Split it when
   step 4 above reshapes the page, not before.
 - **The worker gets every rule with every request** (also under *Logic*, performance).

@@ -17,11 +17,6 @@
 
 import { KnowledgeBase, unfoldTree, type GroundPredicate, type UnfoldNode } from '../kb/inference'
 import { FreshNames } from '../kb/names'
-import type {
-  GeometryProblem, Constraint,
-  CollinearConstraint, BetweenConstraint, OnCircleConstraint, EqualDistConstraint,
-} from './constraints'
-import { canonicalise } from './canonicalization'
 import { RELATIONS, relationOf } from './relations'
 
 /** Relations the construction model reads as constraints (relations.ts: those with a `read`). */
@@ -29,70 +24,6 @@ export const CONSTRAINT_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.v
 
 /** Relations the figure draws as themselves. `circle` is defined (equal radii) but drawn as a circle. */
 export const DEPICTED_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.values()].filter(r => r.depicted).map(r => r.name))
-
-function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
-  return {
-    points: new Set(problems.flatMap(p => Array.from(p.points))),
-    constraints: problems.flatMap(p => p.constraints),
-    lines: problems.flatMap(p => p.lines),
-    circles: problems.flatMap(p => p.circles),
-  }
-}
-
-function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): GeometryProblem {
-  const points = new Set<string>()
-  const constraints: Constraint[] = []
-  const depth = goal.depth ?? 0
-
-  goal.args.forEach(a => points.add(a))
-
-  switch (goal.name) {
-    case 'collinear':
-      constraints.push({ kind: 'collinear', points: [...goal.args], depth } satisfies CollinearConstraint)
-      break
-
-    case 'between':
-      constraints.push({
-        kind: 'between',
-        middle: goal.args[1],
-        endpoints: [goal.args[0], goal.args[2]],
-        depth,
-      } satisfies BetweenConstraint)
-      // Betweenness implies collinearity; state it so the canonical line structure exists
-      // for the planner and renderer. The order constraint above is kept separately.
-      constraints.push({ kind: 'collinear', points: [...goal.args], depth } satisfies CollinearConstraint)
-      break
-
-    case 'circle':
-      constraints.push({
-        kind: 'on-circle',
-        center: goal.args[0],
-        radiusPoint: goal.args[1],
-        targetPoint: goal.args[2],
-        depth,
-      } satisfies OnCircleConstraint)
-      break
-
-    case 'eq-lines':
-      constraints.push({
-        kind: 'eq-dist',
-        pair1: [goal.args[0], goal.args[1]],
-        pair2: [goal.args[2], goal.args[3]],
-        depth,
-      } satisfies EqualDistConstraint)
-      break
-
-    case 'distinct':
-      break  // no constraint on positions; the construction planner keeps the points apart
-
-    case 'eq-angle': case 'eq-spread': case 'supp':
-      constraints.push({ kind: 'measure', name: goal.name, args: [...goal.args], depth })
-      break
-
-  }
-
-  return { points, constraints, lines: [], circles: [] }
-}
 
 /**
  * A drawable fact, with its depth: how many definitions were unfolded to reach it. A fact written
@@ -134,16 +65,4 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], op
   const fresh = options.fresh ?? new FreshNames()
   for (const fact of facts) walk(unfoldTree(fact, kb, { fresh }), false)
   return { constraints: [...sets.constraints.values()], depicted: [...sets.depicted.values()], unread: [...sets.unread.values()] }
-}
-
-/**
- * Build the canonical problem from drawable facts; facts the renderer cannot draw are skipped,
- * including ones with the wrong number of points (a line still being typed).
- */
-export function geometryProblemFromFacts(facts: readonly GroundPredicate[]): GeometryProblem | null {
-  const problems = facts.filter(f => relationOf(f)?.depicted).map(problemFromPrimitive)
-  if (problems.length === 0) return null
-  const merged = mergeProblems(problems)
-  canonicalise(merged)
-  return merged
 }

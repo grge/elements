@@ -33,8 +33,8 @@ describe('contents thumbnails', () => {
 describe('scene', () => {
   it('marks equal segments with ticks, a different number per class', () => {
     const th = computeThumbnail(kb, 'eq-lines', ['a', 'b', 'c', 'd'])!
-    const t = computeRenderTransform({ coords: th.coords, energy: 0 }, 160, 112, 14, th.problem)!
-    const scene = buildScene(th.problem, th.coords, t, 160, 112)
+    const t = computeRenderTransform({ coords: th.coords, energy: 0 }, 160, 112, 14, th.figure)!
+    const scene = buildScene(th.figure, th.coords, t, 160, 112)
     expect(scene.segments).toHaveLength(2)
     expect(scene.ticks).toHaveLength(2)   // one class, one tick on each segment
   })

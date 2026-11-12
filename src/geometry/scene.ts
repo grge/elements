@@ -2,7 +2,8 @@
  * A figure in screen coordinates: what both the interactive diagram and the contents thumbnails draw.
  */
 
-import type { GeometryProblem } from './constraints'
+import type { Figure } from './figure'
+import { UnionFind, segmentKey } from './classes'
 import type { RenderTransform } from './view'
 import type { GroundPredicate } from '../kb/inference'
 
@@ -49,7 +50,7 @@ export type Helper =
   | { point: string; kind: 'circle'; c: Point; r: number }
 
 export function buildScene(
-  problem: GeometryProblem,
+  figure: Figure,
   coords: Map<string, Point>,
   t: RenderTransform,
   width: number,
@@ -63,24 +64,24 @@ export function buildScene(
   const reach = width + height
 
   // Depths: the shallowest element is level 0. A point is as deep as the shallowest element on it.
-  const eqDists = problem.constraints.filter(c => c.kind === 'eq-dist')
+  const eqDists = figure.equal
   const depthOf = (d: number | undefined) => d ?? 0
   const top = Math.min(
-    ...problem.lines.map(l => depthOf(l.depth)), ...problem.circles.map(c => depthOf(c.depth)),
+    ...figure.lines.map(l => depthOf(l.depth)), ...figure.circles.map(c => depthOf(c.depth)),
     ...eqDists.map(c => depthOf(c.depth)), Infinity)
   const base = Number.isFinite(top) ? top : 0
   const level = (d: number | undefined) => Math.max(0, depthOf(d) - base)
   const pointDepth = new Map<string, number>()
   const touch = (p: string, d: number | undefined) => pointDepth.set(p, Math.min(depthOf(d), pointDepth.get(p) ?? Infinity))
-  for (const l of problem.lines) for (const p of l.points) touch(p, l.depth)
-  for (const c of problem.circles) for (const p of [c.center, ...c.points]) touch(p, c.depth)
+  for (const l of figure.lines) for (const p of l.points) touch(p, l.depth)
+  for (const c of figure.circles) for (const p of [c.center, ...c.points]) touch(p, c.depth)
   for (const c of eqDists) for (const p of [...c.pair1, ...c.pair2]) touch(p, c.depth)
 
   const meta: Scene['meta'] = { lines: [], circles: [], segments: [], ticks: [] }
   const lines: number[][] = []
   const lineThrough = (ax: number, ay: number, ux: number, uy: number, lv: number) =>
     lines.push([ax - ux * reach, ay - uy * reach, ax + ux * reach, ay + uy * reach, lv])
-  for (const line of problem.lines) {
+  for (const line of figure.lines) {
     const pts = [...line.points].map(at).filter((p): p is Point => !!p)
     if (pts.length < 2) continue
     const [[ax, ay], [bx, by]] = pts
@@ -91,7 +92,7 @@ export function buildScene(
   }
 
   const circles: number[][] = []
-  for (const circle of problem.circles) {
+  for (const circle of figure.circles) {
     const c = coords.get(circle.center)
     const pts = [...circle.points].map(p => coords.get(p)).filter((p): p is Point => !!p)
     if (!c || !pts.length) continue
@@ -126,20 +127,16 @@ export function buildScene(
   // A circle's radii are equal too, so the figure's own circles (level 0) draw and tick them like any
   // other equal segments, as Byrne would: the equilateral triangle's two circles give its three
   // sides one tick each.
-  const parent = new Map<string, string>()
-  const find = (k: string): string => { while (parent.get(k) !== k) k = parent.get(k)!; return k }
-  const key = ([a, b]: readonly string[]) => a < b ? `${a}\u0001${b}` : `${b}\u0001${a}`
-  const equate = (k1: string, k2: string) => {
-    for (const k of [k1, k2]) if (!parent.has(k)) parent.set(k, k)
-    parent.set(find(k1), find(k2))
-  }
+  const equalSegments = new UnionFind()
+  const key = ([a, b]: readonly string[]) => segmentKey(a, b)
+  const equate = (k1: string, k2: string) => equalSegments.union(k2, k1)
   const segDepth = new Map<string, number>()
   const note = (k: string, d: number | undefined) => segDepth.set(k, Math.min(depthOf(d), segDepth.get(k) ?? Infinity))
   for (const c of eqDists) {
     equate(key(c.pair1), key(c.pair2))
     note(key(c.pair1), c.depth); note(key(c.pair2), c.depth)
   }
-  for (const circle of problem.circles) {
+  for (const circle of figure.circles) {
     const radii = [...circle.points].filter(p => p !== circle.center).map(p => key([circle.center, p]))
     // One radius equals nothing; and only the figure's own circles mark their radii, so the
     // scaffolding of nested constructions stays scaffolding.
@@ -149,12 +146,12 @@ export function buildScene(
   const classOf = new Map<string, number>()
   const segments: number[][] = []
   const ticks: number[][] = []
-  for (const k of parent.keys()) {
+  for (const k of equalSegments.keys()) {
     const [p, q] = k.split('\u0001').map(at)
     if (!p || !q) continue
     const len = Math.hypot(q[0] - p[0], q[1] - p[1])
     if (len < 1e-6) continue
-    const root = find(k)
+    const root = equalSegments.find(k)
     if (!classOf.has(root)) classOf.set(root, classOf.size)
     const n = classOf.get(root)! + 1
     const lv = level(segDepth.get(k))
@@ -174,24 +171,19 @@ export function buildScene(
   const drawnSegments = new Set(meta.segments.map(seg => key(seg)))
   // Equal angles: classes of angles (vertex, unordered arms), one more arc for each class.
   const arcs: Scene['arcs'] = []
-  const angleParent = new Map<string, string>()
-  const aFind = (k: string): string => { while (angleParent.get(k) !== k) k = angleParent.get(k)!; return k }
+  const equalAngles = new UnionFind()
   const angleKey = (a: string, b: string, c: string) => [b, ...[a, c].sort()].join('\u0001')
   const angleDepth = new Map<string, number>()
-  for (const c of problem.constraints) {
-    if (c.kind !== 'measure' || c.name !== 'eq-angle') continue
+  for (const c of figure.angles) {
     const k1 = angleKey(c.args[0], c.args[1], c.args[2]), k2 = angleKey(c.args[3], c.args[4], c.args[5])
-    for (const k of [k1, k2]) {
-      if (!angleParent.has(k)) angleParent.set(k, k)
-      angleDepth.set(k, Math.min(depthOf(c.depth), angleDepth.get(k) ?? Infinity))
-    }
-    angleParent.set(aFind(k1), aFind(k2))
+    for (const k of [k1, k2]) angleDepth.set(k, Math.min(depthOf(c.depth), angleDepth.get(k) ?? Infinity))
+    equalAngles.union(k2, k1)
   }
   const angleClass = new Map<string, number>()
-  for (const k of angleParent.keys()) {
+  for (const k of equalAngles.keys()) {
     const [b, a, c] = k.split('\u0001').map(at)
     if (!a || !b || !c) continue
-    const root = aFind(k)
+    const root = equalAngles.find(k)
     if (!angleClass.has(root)) angleClass.set(root, angleClass.size)
     const n = angleClass.get(root)! + 1
     const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
