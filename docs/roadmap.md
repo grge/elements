@@ -67,6 +67,29 @@ each model can be looked at in more than one way:
   over any field. JavaScript has no mature Gröbner library; small systems can be done by hand, larger
   ones through a WebAssembly build of a computer algebra system (giac has one).
 
+  The correspondence is close: a conjunction of atoms is a polynomial system and its solutions, a
+  lemma `? H: B` is ideal membership (does H vanish wherever B does?), and unfolding a definition's
+  auxiliary points is elimination. Where it stops: order (`between`, sides) is not algebraic, so the
+  lens covers the equality fragment (common notion 2 is false without order); and algebra proves
+  *generic* truth over the complex numbers, with non-degeneracy conditions, where the Horn clauses
+  reason exactly. What it would add, in order of value:
+  - **An oracle while writing chapters**: when a Horn check gives ✗, "true provided a ≠ b; a step or
+    an axiom is missing" versus "false". Beyond numeric evidence, it adds certainty and the
+    conditions.
+  - **A cross-check of `distinct` hypotheses** against the conditions algebra demands: which are
+    needed, which are missing.
+  - **Loci as curves**: eliminate all but one point's coordinates as another slides, and draw the curve
+    it traces (conics included), which the planner cannot.
+  - **Why a figure has no construction**: in Wu's triangular form, every step of degree at most 2 is
+    a ruler-and-compass step; a cubic says why (angle trisection) instead of a silent fall back to the
+    solver.
+  - **Discovery**: coincidences found by sampling (equal segments, collinear or concyclic points),
+    certified algebraically, offered as candidate lemmas.
+
+  First step, before building anything: translate chapter 1's lemmas without `between` into
+  polynomials, run Wu's method and Gröbner bases offline (sympy), and measure how many prove, how
+  fast, and how their non-degeneracy conditions compare with the book's `distinct` hypotheses.
+
 The engine stays free of geometry: a model is a plug-in that interprets the drawable relations three
 ways (as loci, as residuals, as polynomials). Building that boundary (*Construction and drawing*,
 below) is the first step for every item here.
