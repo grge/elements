@@ -1,11 +1,11 @@
 import { ref, computed, shallowRef, watch } from 'vue'
-import { ParseError, parseSource, type TopLevel } from '../language/parser'
+import { ParseError, parseSource, type Lemma, type TopLevel } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { extract } from '../geometry/extraction'
-import { figureOf } from '../geometry/figure'
+import { drawFigure } from '../geometry/figure'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
-import { useKB, type Namespace } from './useKB'
+import { useKB, bookLemmas, type Namespace } from './useKB'
 
 /** The current construction of the figure: the planned program and its parameters. */
 export interface ConstructionState {
@@ -140,17 +140,33 @@ export function useWorkspace() {
 
   /** The page's facts unfolded: what the planner builds from, what is drawn, what cannot be read. */
   const extraction = computed(() => {
-    if (!runtime.value) return { constraints: [], depicted: [], unread: [] }
+    if (!runtime.value) return { constraints: [], depicted: [], unread: [], outline: [] }
     try { return extract(runtime.value.kb, runtime.value.configuration.allFacts()) }
-    catch (e) { console.warn('Geometry extraction error:', e); return { constraints: [], depicted: [], unread: [] } }
+    catch (e) { console.warn('Geometry extraction error:', e); return { constraints: [], depicted: [], unread: [], outline: [] } }
   })
   /** The constraints the planner builds the figure from. */
   const facts = computed(() => extraction.value.constraints)
 
+  /** Lines (0-based) of the page's `?` lines that check (✓), set by the page as verdicts arrive. */
+  const verifiedLines = shallowRef<ReadonlySet<number>>(new Set())
+  function setVerified(lines: Iterable<number>) {
+    const next = new Set(lines)
+    const same = next.size === verifiedLines.value.size && [...next].every(l => verifiedLines.value.has(l))
+    if (!same) verifiedLines.value = next
+  }
+  /** Lemmas whose marks the figure takes: the book's, and the page's own that check. */
+  const provenLemmas = computed<Lemma[]>(() => {
+    const own = 'items' in parsed.value
+      ? parsed.value.items.flatMap(i => i.kind === 'lemma' && verifiedLines.value.has((i.sourceRef?.startLine ?? 1) - 1) ? [i.lemma] : [])
+      : []
+    return [...bookLemmas, ...own]
+  })
+
   // What the figure draws. Never throw from here: the page renders from this, and a render error
   // tears down the whole page in production, editor included, which loses focus mid-typing.
   const figure = computed(() => {
-    try { return figureOf(extraction.value.depicted) }
+    if (!runtime.value) return null
+    try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value) }
     catch (e) { console.warn('Figure error:', e); return null }
   })
 
@@ -188,7 +204,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    parseError, runtime, extraction, facts, figure, construction, drawing, setConstruction,
+    parseError, runtime, extraction, facts, figure, construction, drawing, setConstruction, setVerified,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

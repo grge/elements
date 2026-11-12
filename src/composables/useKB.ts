@@ -65,6 +65,8 @@ const loaded = Object.entries(chapterSources)
 validateConsistentArities(loaded.map(c => ({ sourceName: c.file, items: c.items })))
 
 export const chapters: Chapter[] = loaded.map(({ id, title }) => ({ id, title }))
+/** The book's lemmas. All are ✓ (the tests require it), so the figure takes their marks as proven. */
+export const bookLemmas: Lemma[] = loaded.flatMap(c => c.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []))
 const bookRules: Rule[] = loaded.flatMap(c => parseRules(c.source))
 
 // Where each predicate is first defined in the book (chapter, then position), for ordering.

@@ -204,6 +204,8 @@ onBeforeUnmount(() => {
 
 const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value)
 const marks = computed(() => verificationMarks.value)
+// A lemma that checks lends its marks to the figure.
+watch(verificationMarks, ms => ws.setVerified(ms.filter(m => m.type === 'verified').map(m => m.line)), { immediate: true })
 // Completion offers each predicate once, with its arguments and the start of its doc comment.
 const completions = computed(() => {
   const seen = new Map<string, { name: string; args: string[]; doc?: string }>()

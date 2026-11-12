@@ -182,13 +182,18 @@ Tick marks and angle arcs mark equalities, and an equality is marked only if it 
   renaming of the lemma's variables (a little matching for lemmas with several hypotheses), no search.
 
 The drawing infers no equality of its own. On `eq-triangle`'s page the three sides are ticked because
-its two lemmas are ✓; on the scratchpad `eq-triangle a b c` alone draws its two circles, and the ticks
-appear when `? eq-lines a b b c: eq-triangle a b c` is written and checks. Proof becomes a mark, as in
-Byrne.
+its two lemmas are ✓, and wherever `eq-triangle` is used, on the scratchpad or inside I.2, the book's
+lemmas travel with it and tick its sides there too. A user's own construction draws only its circles
+until a lemma about it is written on its page and checks. Proof becomes a mark, as in Byrne.
 
-Only proven lemmas travel. Book lemmas are all ✓ (the tests require it); a user's lemma has its verdict
-cached per knowledge base, computed in idle time as thumbnails are, before its marks can travel. A ✗ or
-? lemma never marks anything. A nested construction's marks appear at its depth, as faint as its
+What a lemma can match is the figure's *outline*: the written facts and the definitions they use,
+down to what is drawn and no further. A lemma about circles matches drawn circles, never the radii a
+circle unfolds to, so a circle does not tick its own radii through a lemma that merely restates them.
+
+Only proven lemmas travel. Book lemmas are all ✓ (the tests require it), and a page's own lemmas lend
+their marks to its figure once they check. Still to build: a user's lemma travelling to other pages,
+which needs its verdict cached per knowledge base, computed in idle time as thumbnails are. A ✗ or ?
+lemma never marks anything. A nested construction's marks appear at its depth, as faint as its
 circles; a limit on how deep marks are taken from is the dial if deep figures get busy.
 
 ### Equality chains
@@ -202,6 +207,11 @@ not marked: a tick must have something to be equal to on screen.
 
 The union-find keeps the edges it merged, so a mark can explain itself as a chain:
 *p = x (line 7) = y (proven on transfer's page, hidden) = q (line 8)*.
+
+Built (November 2026) in `src/geometry/marks.ts`: the figure's marks are classes of blocks, one
+union-find per recognised equivalence, each edge kept with its source (the stated fact, or the lemma
+and the facts it matched); `chain` gives the path between two members. Blocks of two points are drawn
+as ticks and blocks of three as arcs, which is the only place the drawing looks at a block's size.
 
 Union-find captures symmetry and transitivity only. An equality that needs any other inference
 (substitution of equal points, common notion 2, anything through `between`) is not marked; that needs

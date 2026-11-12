@@ -11,7 +11,9 @@ import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
 import { extract } from '../geometry/extraction'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
-import { figureOf, type Figure } from '../geometry/figure'
+import { drawFigure, type Figure } from '../geometry/figure'
+import type { Lemma } from '../language/parser'
+import { bookLemmas } from './useKB'
 
 export interface Thumbnail {
   figure: Figure
@@ -19,9 +21,10 @@ export interface Thumbnail {
 }
 
 /** The figure of `name args`, or null if there is nothing to draw. */
-export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[]): Thumbnail | null {
-  const { constraints: facts, depicted } = extract(kb, [{ name, args }])
-  const figure = figureOf(depicted)
+export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[], lemmas: readonly Lemma[] = []): Thumbnail | null {
+  const x = extract(kb, [{ name, args }])
+  const facts = x.constraints
+  const figure = drawFigure(kb, x, lemmas)
   if (!figure) return null
   const { drawing } = realise(plan(buildModel(facts)))
   return drawing.coords.size ? { figure, coords: drawing.coords } : null
@@ -50,7 +53,7 @@ export function useThumbnails() {
       let known = cache.get(kb)
       if (!known) cache.set(kb, known = new Map())
       if (!known.has(name)) {
-        try { known.set(name, computeThumbnail(kb, name, args)) }
+        try { known.set(name, computeThumbnail(kb, name, args, bookLemmas)) }
         catch { known.set(name, null) }
       }
       thumbnails.value.set(name, known.get(name)!)

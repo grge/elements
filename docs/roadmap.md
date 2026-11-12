@@ -159,9 +159,10 @@ would sit naturally beside the algebraic lens.
   evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`), each relation's drawing
   (`scene.ts`), and the solver's energies. Then the table is a plug-in, a *model* of the theory (see
   *Beyond*: three lenses, sibling books).
-- **Annotations from proven facts**: segments a figure *states* equal get tick marks already; extend
-  this to what the page's lemmas prove: equal segments, equal angles' arcs, and the lines a lemma is
-  about (`bisect-angle`'s page proves b-d is the bisector but does not draw b-d).
+- **Annotations from proven facts**: ticks and arcs come from stated and proven equalities (built
+  November 2026, design.md *Marks*). Still to do: a user's lemmas travelling to other pages, and the
+  lines a lemma is about (`bisect-angle`'s page proves b-d is the bisector, and now marks the two
+  angles, but b-d is drawn only as their arms).
 - Step-by-step playback of a construction; undo for dragging.
 - Figures above 18 points use a greedy order; a bounded search would do better.
 

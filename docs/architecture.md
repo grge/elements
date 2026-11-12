@@ -31,7 +31,8 @@ see [design.md](design.md).
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
 | `src/geometry/relations.ts` | The relation table: what each relation the figure knows is to the model, the checks and the evidence |
 | `src/geometry/extraction.ts` | From facts to constraints, what is drawn and what is unread |
-| `src/geometry/figure.ts` | What the figure draws through the points: lines, circles, equal segments and angles |
+| `src/geometry/figure.ts` | What the figure draws through the points: lines, circles, and its marks |
+| `src/geometry/marks.ts` | Ticks and arcs: equalities stated or proven by ✓ lemmas, in classes with their chains |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
 | `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
 | `src/geometry/classes.ts` | Equal segments (union-find) and merged lines, shared by the model and the figure |
@@ -145,7 +146,13 @@ Two things are built from the extraction, one from each list:
   model, with an energy per class of equal segments, per line, per order fact and per measure;
 - from the depicted facts, the **`Figure`** (`figure.ts`): what to draw through the points, whoever
   placed them. Lines are collinear groups merged where they share two points; a circle is a centre and
-  a radius, so circles with one centre and radii stated equal are one.
+  a radius, so circles with one centre and radii stated equal are one. Its **marks** (`marks.ts`) are
+  equalities the depicted facts state or ✓ lemmas prove about the outline (the written facts and the
+  definitions they use, down to what is drawn), put into classes per recognised equivalence; see
+  design.md, *Marks* and *Equality chains*.
+
+The planner's own loci are not part of the figure: the diagram draws a point's route (its loci) only
+while the point is touched.
 
 **Planning** (`construction.ts`) turns the model into a straight-line program in which each point is
 

@@ -3,7 +3,7 @@
  */
 
 import type { Figure } from './figure'
-import { UnionFind, segmentKey } from './classes'
+import { segmentKey } from './classes'
 import type { RenderTransform } from './view'
 import type { GroundPredicate } from '../kb/inference'
 
@@ -18,16 +18,16 @@ export interface Scene {
   lines: number[][]
   /** Circles: [cx, cy, r, level]. */
   circles: number[][]
-  /** Segments known to be equal, from eq-lines facts and from circles' radii: [x1, y1, x2, y2, level]. */
+  /** Segments marked equal, and the arms of angles marked equal: [x1, y1, x2, y2, level]. */
   segments: number[][]
   /** Tick marks across those segments, one per stroke; equal segments share a number of ticks. */
   ticks: number[][]
   points: { name: string; x: number; y: number }[]
   /**
-   * Arcs marking equal angles at their vertices, as Byrne marks them: angles stated equal share a
-   * number of concentric arcs. SVG path data, with the level.
+   * Arcs marking equal angles at their vertices, as Byrne marks them: equal angles share a number of
+   * concentric arcs. SVG path data, with the level, and the mark class and member (figure.marks).
    */
-  arcs: { d: string; level: number }[]
+  arcs: { d: string; level: number; mark: number; member: number }[]
   /** The loci that placed the touched point, if any (see Helper), in screen coordinates. */
   route: ({ kind: 'line'; x1: number; y1: number; x2: number; y2: number } | { kind: 'circle'; cx: number; cy: number; r: number })[]
   /** Which points each element is drawn through, parallel to the arrays above (for emphasis). */
@@ -39,6 +39,8 @@ export interface Scene {
     segments: [string, string][]
     /** The segment each tick is on. */
     ticks: number[]
+    /** For each segment, the mark class and member it is (figure.marks), or null for an angle's arm. */
+    segmentMarks: ({ mark: number; member: number } | null)[]
   }
 }
 
@@ -64,21 +66,15 @@ export function buildScene(
   const at = (p: string): Point | null => { const c = coords.get(p); return c ? [tx(c[0]), ty(c[1])] : null }
   const reach = width + height
 
-  // Depths: the shallowest element is level 0. A point is as deep as the shallowest element on it.
-  const eqDists = figure.equal
+  // Depths: the shallowest element is level 0.
   const depthOf = (d: number | undefined) => d ?? 0
   const top = Math.min(
     ...figure.lines.map(l => depthOf(l.depth)), ...figure.circles.map(c => depthOf(c.depth)),
-    ...eqDists.map(c => depthOf(c.depth)), Infinity)
+    ...figure.marks.flatMap(m => m.members.map(x => x.depth)), Infinity)
   const base = Number.isFinite(top) ? top : 0
   const level = (d: number | undefined) => Math.max(0, depthOf(d) - base)
-  const pointDepth = new Map<string, number>()
-  const touch = (p: string, d: number | undefined) => pointDepth.set(p, Math.min(depthOf(d), pointDepth.get(p) ?? Infinity))
-  for (const l of figure.lines) for (const p of l.points) touch(p, l.depth)
-  for (const c of figure.circles) for (const p of [c.center, ...c.points]) touch(p, c.depth)
-  for (const c of eqDists) for (const p of [...c.pair1, ...c.pair2]) touch(p, c.depth)
 
-  const meta: Scene['meta'] = { lines: [], circles: [], segments: [], ticks: [] }
+  const meta: Scene['meta'] = { lines: [], circles: [], segments: [], ticks: [], segmentMarks: [] }
   const lines: number[][] = []
   const lineThrough = (ax: number, ay: number, ux: number, uy: number, lv: number) =>
     lines.push([ax - ux * reach, ay - uy * reach, ax + ux * reach, ay + uy * reach, lv])
@@ -118,91 +114,70 @@ export function buildScene(
     route.push({ kind: 'line', x1: h.ray ? ax : ax - ux * reach, y1: h.ray ? ay : ay - uy * reach, x2: ax + ux * reach, y2: ay + uy * reach })
   }
 
-  // Equal segments: group them into classes, the first class gets one tick, the next two, and so on.
-  // A circle's radii are equal too, so the figure's own circles (level 0) draw and tick them like any
-  // other equal segments, as Byrne would: the equilateral triangle's two circles give its three
-  // sides one tick each.
-  const equalSegments = new UnionFind()
-  const key = ([a, b]: readonly string[]) => segmentKey(a, b)
-  const equate = (k1: string, k2: string) => equalSegments.union(k2, k1)
-  const segDepth = new Map<string, number>()
-  const note = (k: string, d: number | undefined) => segDepth.set(k, Math.min(depthOf(d), segDepth.get(k) ?? Infinity))
-  for (const c of eqDists) {
-    equate(key(c.pair1), key(c.pair2))
-    note(key(c.pair1), c.depth); note(key(c.pair2), c.depth)
-  }
-  for (const circle of figure.circles) {
-    const radii = [...circle.points].filter(p => p !== circle.center).map(p => key([circle.center, p]))
-    // One radius equals nothing; and only the figure's own circles mark their radii, so the
-    // scaffolding of nested constructions stays scaffolding.
-    if (radii.length < 2 || level(circle.depth) > 0) continue
-    for (const r of radii) { equate(radii[0], r); note(r, circle.depth) }
-  }
-  const classOf = new Map<string, number>()
+  // Marks (marks.ts): each class of equal blocks with at least two members on screen (a mark must have
+  // something to be equal to). Classes of segments get ticks, one more stroke for each class, and
+  // classes of angles get concentric arcs, one more for each class, with their arms drawn as Byrne
+  // draws them. Each is as deep as the fact that made it known.
   const segments: number[][] = []
   const ticks: number[][] = []
-  for (const k of equalSegments.keys()) {
-    const [p, q] = k.split('\u0001').map(at)
-    if (!p || !q) continue
-    const len = Math.hypot(q[0] - p[0], q[1] - p[1])
-    if (len < 1e-6) continue
-    const root = equalSegments.find(k)
-    if (!classOf.has(root)) classOf.set(root, classOf.size)
-    const n = classOf.get(root)! + 1
-    const lv = level(segDepth.get(k))
-    const [a, b] = k.split('\u0001')
-    meta.segments.push([a, b])
-    segments.push([p[0], p[1], q[0], q[1], lv])
-    const [ux, uy] = [(q[0] - p[0]) / len, (q[1] - p[1]) / len]
-    const [mx, my] = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
-    for (let i = 0; i < n; i++) {
-      const off = (i - (n - 1) / 2) * tick * 0.6
-      const [cx, cy] = [mx + ux * off, my + uy * off]
-      ticks.push([cx - uy * tick / 2, cy + ux * tick / 2, cx + uy * tick / 2, cy - ux * tick / 2, lv])
-      meta.ticks.push(segments.length - 1)
-    }
-  }
-
-  const drawnSegments = new Set(meta.segments.map(seg => key(seg)))
-  // Equal angles: classes of angles (vertex, unordered arms), one more arc for each class.
   const arcs: Scene['arcs'] = []
-  const equalAngles = new UnionFind()
-  const angleKey = (a: string, b: string, c: string) => [b, ...[a, c].sort()].join('\u0001')
-  const angleDepth = new Map<string, number>()
-  for (const c of figure.angles) {
-    const k1 = angleKey(c.args[0], c.args[1], c.args[2]), k2 = angleKey(c.args[3], c.args[4], c.args[5])
-    for (const k of [k1, k2]) angleDepth.set(k, Math.min(depthOf(c.depth), angleDepth.get(k) ?? Infinity))
-    equalAngles.union(k2, k1)
+  const segmentAt = new Map<string, number>()
+  const addSegment = (a: string, b: string, lv: number): number | null => {
+    const k = segmentKey(a, b)
+    if (segmentAt.has(k)) return segmentAt.get(k)!
+    const [p, q] = [at(a), at(b)]
+    if (!p || !q || Math.hypot(q[0] - p[0], q[1] - p[1]) < 1e-6) return null
+    segments.push([p[0], p[1], q[0], q[1], lv])
+    meta.segments.push([a, b])
+    meta.segmentMarks.push(null)
+    segmentAt.set(k, segments.length - 1)
+    return segments.length - 1
   }
-  const angleClass = new Map<string, number>()
-  for (const k of equalAngles.keys()) {
-    const [b, a, c] = k.split('\u0001').map(at)
-    if (!a || !b || !c) continue
-    const root = equalAngles.find(k)
-    if (!angleClass.has(root)) angleClass.set(root, angleClass.size)
-    const n = angleClass.get(root)! + 1
-    const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
-    let sweep = uc - ua
-    while (sweep <= -Math.PI) sweep += 2 * Math.PI
-    while (sweep > Math.PI) sweep -= 2 * Math.PI
-    const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
-    // An angle is drawn with its arms, as Byrne draws it: the two segments from the vertex, if the
-    // figure does not draw them already.
-    const [nb, na, nc] = k.split('\u0001')
-    for (const [p, q, P, Q] of [[nb, na, b, a], [nb, nc, b, c]] as const) {
-      if (drawnSegments.has(key([p, q]))) continue
-      drawnSegments.add(key([p, q]))
-      segments.push([P[0], P[1], Q[0], Q[1], level(angleDepth.get(k))])
-      meta.segments.push([p, q])
+  const visible = (m: { points: string[] }) => m.points.every(p => coords.has(p))
+  let segmentClasses = 0, angleClasses = 0
+  figure.marks.forEach((cls, ci) => {
+    const shown = cls.members.map((_, i) => i).filter(i => visible(cls.members[i]))
+    if (shown.length < 2 || (cls.k !== 2 && cls.k !== 3)) return
+    const n = cls.k === 2 ? ++segmentClasses : ++angleClasses
+    for (const mi of shown) {
+      const member = cls.members[mi]
+      const lv = level(member.depth)
+      if (cls.k === 2) {
+        const [a, b] = member.points
+        const si = addSegment(a, b, lv)
+        if (si === null) continue
+        meta.segmentMarks[si] = { mark: ci, member: mi }
+        const [x1, y1, x2, y2] = segments[si]
+        const len = Math.hypot(x2 - x1, y2 - y1)
+        const [ux, uy] = [(x2 - x1) / len, (y2 - y1) / len]
+        const [mx, my] = [(x1 + x2) / 2, (y1 + y2) / 2]
+        for (let i = 0; i < n; i++) {
+          const off = (i - (n - 1) / 2) * tick * 0.6
+          const [cx, cy] = [mx + ux * off, my + uy * off]
+          ticks.push([cx - uy * tick / 2, cy + ux * tick / 2, cx + uy * tick / 2, cy - ux * tick / 2, lv])
+          meta.ticks.push(si)
+        }
+        continue
+      }
+      // An angle: arms from the vertex, and n arcs.
+      const [na, nb, nc] = member.points
+      const [a, b, c] = [at(na), at(nb), at(nc)]
+      if (!a || !b || !c) continue
+      addSegment(nb, na, lv); addSegment(nb, nc, lv)
+      const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
+      let sweep = uc - ua
+      while (sweep <= -Math.PI) sweep += 2 * Math.PI
+      while (sweep > Math.PI) sweep -= 2 * Math.PI
+      const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
+      for (let i = 0; i < n; i++) {
+        const r = Math.min(tick * 2.2 + i * tick * 0.75, 0.45 * Math.min(reachA, reachC))
+        if (r < 2) continue
+        const p0 = [b[0] + r * Math.cos(ua), b[1] + r * Math.sin(ua)]
+        const p1 = [b[0] + r * Math.cos(ua + sweep), b[1] + r * Math.sin(ua + sweep)]
+        arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 0 ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: lv, mark: ci, member: mi })
+      }
     }
-    for (let i = 0; i < n; i++) {
-      const r = Math.min(tick * 2.2 + i * tick * 0.75, 0.45 * Math.min(reachA, reachC))
-      if (r < 2) continue
-      const p0 = [b[0] + r * Math.cos(ua), b[1] + r * Math.sin(ua)]
-      const p1 = [b[0] + r * Math.cos(ua + sweep), b[1] + r * Math.sin(ua + sweep)]
-      arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 0 ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: level(angleDepth.get(k)) })
-    }
-  }
+  })
 
   const points = [...coords].map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
   return { lines, circles, segments, ticks, points, arcs, route, meta }

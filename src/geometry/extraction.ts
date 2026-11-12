@@ -26,11 +26,12 @@ export const CONSTRAINT_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.v
 export const DEPICTED_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.values()].filter(r => r.depicted).map(r => r.name))
 
 /**
- * A drawable fact, with its depth: how many definitions were unfolded to reach it. A fact written
- * on the page is 0; the circles of an `eq-triangle` written there are 1; those of an `eq-triangle`
- * inside another construction are 2. The figure draws deeper facts fainter.
+ * A fact of the unfolding, with its depth: how many definitions were unfolded to reach it. A fact
+ * written on the page is 0; the circles of an `eq-triangle` written there are 1; those of an
+ * `eq-triangle` inside another construction are 2. The figure draws deeper facts fainter. `origin` is
+ * the index of the written fact it was unfolded from (where it came from, for the page to say).
  */
-export type DrawableFact = GroundPredicate & { depth: number }
+export type DrawableFact = GroundPredicate & { depth: number; origin?: number }
 
 export interface Extraction {
   /** What the planner builds from: the leaves the geometric model reads. */
@@ -39,6 +40,11 @@ export interface Extraction {
   depicted: DrawableFact[]
   /** Leaves with no geometric reading. */
   unread: DrawableFact[]
+  /**
+   * The outline: every node from a written fact down to what is drawn, inclusive (the written facts,
+   * the definitions they use, and the drawn facts). What a lemma about a construction can match.
+   */
+  outline: DrawableFact[]
 }
 
 export interface ExtractOptions {
@@ -48,14 +54,20 @@ export interface ExtractOptions {
 
 /** Unfold facts and read off their constraints, what to draw, and what the drawing cannot read. */
 export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], options: ExtractOptions = {}): Extraction {
-  const sets = { constraints: new Map<string, DrawableFact>(), depicted: new Map<string, DrawableFact>(), unread: new Map<string, DrawableFact>() }
+  const sets = {
+    constraints: new Map<string, DrawableFact>(), depicted: new Map<string, DrawableFact>(),
+    unread: new Map<string, DrawableFact>(), outline: new Map<string, DrawableFact>(),
+  }
+  let origin = 0
   const add = (into: Map<string, DrawableFact>, n: UnfoldNode) => {
     const key = `${n.fact.name}(${n.fact.args.join(',')})`
-    // A fact reached twice keeps its shallowest depth.
-    into.set(key, { ...n.fact, depth: Math.min(n.depth, into.get(key)?.depth ?? Infinity) })
+    // A fact reached twice keeps its shallowest depth, and where it came from there.
+    const seen = into.get(key)
+    if (!seen || n.depth < seen.depth) into.set(key, { ...n.fact, depth: n.depth, origin })
   }
   const walk = (n: UnfoldNode, drawn: boolean) => {
     const relation = relationOf(n.fact)
+    if (!drawn) add(sets.outline, n)
     if (!drawn && relation?.depicted) { add(sets.depicted, n); drawn = true }
     if (n.children) { n.children.forEach(c => walk(c, drawn)); return }
     if (relation?.read) add(sets.constraints, n)
@@ -63,6 +75,7 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], op
   }
   // Shared across facts: two constructions in one drawing must not share auxiliary points.
   const fresh = options.fresh ?? new FreshNames()
-  for (const fact of facts) walk(unfoldTree(fact, kb, { fresh }), false)
-  return { constraints: [...sets.constraints.values()], depicted: [...sets.depicted.values()], unread: [...sets.unread.values()] }
+  facts.forEach((fact, i) => { origin = i; walk(unfoldTree(fact, kb, { fresh }), false) })
+  const list = (m: Map<string, DrawableFact>) => [...m.values()]
+  return { constraints: list(sets.constraints), depicted: list(sets.depicted), unread: list(sets.unread), outline: list(sets.outline) }
 }
