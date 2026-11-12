@@ -6,10 +6,12 @@ import { FreshNames } from './names'
 
 /**
  * verified: the goal follows. vacuous: the hypotheses (or the configuration) are contradictory, i.e.
- * they derive the reserved 0-ary predicate `false`. A contradiction takes precedence over the goal:
+ * they derive the reserved 0-ary predicate `false`. not-provable: the closure is complete and the goal
+ * is not in it. out-of-budget: the search stopped at its budget of derivations without the goal, so it
+ * may still follow. A contradiction takes precedence over the goal:
  * anything follows from it, so a ✓ would hide what the author needs to know.
  */
-export type CheckResult = 'verified' | 'vacuous' | 'not-provable' | 'invalid-query'
+export type CheckResult = 'verified' | 'vacuous' | 'not-provable' | 'out-of-budget' | 'invalid-query'
 
 const FALSE: GroundPredicate = { name: 'false', args: [] }
 
@@ -65,7 +67,7 @@ function runCheckPipeline(
     ? mayDerive(kb, frontier, FALSE.name) && saturate(kb, frontier, { goal: FALSE, ...budget }).holds(FALSE)
     : sat.holds(FALSE)
   return {
-    result: contradictory ? 'vacuous' : sat.holds(goal) ? 'verified' : 'not-provable',
+    result: contradictory ? 'vacuous' : sat.holds(goal) ? 'verified' : sat.exhausted ? 'out-of-budget' : 'not-provable',
     facts: sat.allFacts(),
   }
 }

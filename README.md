@@ -34,8 +34,9 @@ Pushing to `main` deploys to GitHub Pages (`.github/workflows/pages.yml`).
 
 - **The scratchpad** is the page you start on. Write facts (`eq-triangle a b c`), rules
   (`midpoint m a b: between a m b, eq-lines a m m b`) and questions (`? eq-lines a b b c: eq-triangle a b c`).
-  The figure redraws as you type; each `?` line gets ✓, ✗, or ⊥ if its hypotheses contradict each
-  other.
+  The figure redraws as you type; each `?` line gets ✓ (proven), ✗ (false: a figure breaks it), ?
+  (not proven, with whether it held in every sampled figure) or ⊥ (its hypotheses contradict each
+  other).
 - **Drag points.** Solid points are free, ringed ones slide along a line or circle, open ones are
   determined by the construction (dragging one reverses the construction around it).
 - **The steps** under the source describe the construction in words. If the figure cannot be built in

@@ -1,11 +1,17 @@
 /**
  * Checks a page's `?` lines off the main thread, posting a mark for each as it is decided.
+ *
+ * A lemma's verdict combines the proof search with numeric evidence (geometry/evidence.ts): a lemma
+ * that is not derived but fails in a sampled figure is false; one that holds in every sample is
+ * probably true; one that is derived yet fails in a sample raises an alarm (a false axiom or a bug).
  */
 
 import { parseSource, type Rule } from '../language/parser'
 import { buildRuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { checkGroundQuery, checkLemma, type CheckResult } from '../kb/checker'
+import { checkGroundQuery, checkLemma } from '../kb/checker'
+import { numericEvidence, type Evidence } from '../geometry/evidence'
+import { verdict, type Verdict } from '../kb/verdict'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 interface VerifyRequest {
@@ -18,20 +24,6 @@ type VerifyResponse =
   | { requestId: number; kind: 'mark'; mark: EditorMark }
   | { requestId: number; kind: 'done' }
   | { requestId: number; kind: 'error'; message: string }
-
-const TYPE: Record<CheckResult, EditorMark['type']> = {
-  'verified': 'verified',
-  'vacuous': 'vacuous',
-  'not-provable': 'failed',
-  'invalid-query': 'failed',
-}
-
-const REASON: Record<CheckResult, string> = {
-  'verified': 'follows',
-  'vacuous': 'holds only vacuously: the hypotheses contradict each other',
-  'not-provable': 'not derived (which does not make it false)',
-  'invalid-query': 'not a question about this page',
-}
 
 self.onmessage = (event: MessageEvent<VerifyRequest>) => {
   const { requestId, text, rules } = event.data
@@ -46,12 +38,18 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
       const line = (item.sourceRef?.startLine ?? 1) - 1
       const endLine = (item.sourceRef?.endLine ?? line + 1) - 1
       try {
-        const r = item.kind === 'lemma'
-          ? checkLemma(item.lemma, runtime.kb)
-          : checkGroundQuery(item.pred, runtime.kb, runtime.configuration)
-        post({ requestId, kind: 'mark', mark: { line, endLine, type: TYPE[r.result], message: r.message ?? REASON[r.result] } })
+        let v: Verdict
+        if (item.kind === 'lemma') {
+          const check = checkLemma(item.lemma, runtime.kb)
+          let ev: Evidence | null = null
+          try { ev = numericEvidence(item.lemma, runtime.kb) } catch { ev = null }
+          v = verdict(check, ev)
+        } else {
+          v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)
+        }
+        post({ requestId, kind: 'mark', mark: { line, endLine, ...v } })
       } catch (error) {
-        post({ requestId, kind: 'mark', mark: { line, endLine, type: 'failed', message: `could not be checked: ${error}` } })
+        post({ requestId, kind: 'mark', mark: { line, endLine, type: 'unproven', message: `could not be checked: ${error}` } })
       }
     }
     post({ requestId, kind: 'done' })
@@ -59,5 +57,3 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
     post({ requestId, kind: 'error', message: `${error}` })
   }
 }
-
-export {}

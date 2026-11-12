@@ -539,11 +539,10 @@ export interface Realisation {
  * figure), otherwise sample (seeded by the plan, so the result is stable) and keep the best-spread
  * sample that satisfies every fact.
  */
-export function realise(cp: ConstructionPlan, options: { previous?: Map<string, Point>; attempts?: number } = {}): Realisation {
-  const counts = cp.steps.map(paramCount)
-  const total = counts.reduce((a, b) => a + b, 0)
-  const random = rng(hash(JSON.stringify(cp.steps)))
-  const sample = (): number[] => {
+/** Random parameters for a plan, from a seeded generator (so a figure is stable). */
+function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
+  const random = rng(hash(JSON.stringify(cp.steps)) + seed)
+  return () => {
     const out: number[] = []
     for (const step of cp.steps) {
       if (step.kind === 'free') {
@@ -556,7 +555,28 @@ export function realise(cp: ConstructionPlan, options: { previous?: Map<string, 
     }
     return out
   }
-  const good = (d: Drawing) => !d.failure && d.violations.length === 0
+}
+
+const good = (d: Drawing) => !d.failure && d.violations.length === 0
+
+/**
+ * Up to `n` different configurations of a plan that satisfy every fact and are well spread (no two
+ * points nearly coincide): the figures on which a claim is tested numerically.
+ */
+export function configurations(cp: ConstructionPlan, n: number, attempts = 40 * n): Map<string, Point>[] {
+  const sample = sampler(cp, 1)
+  const out: Map<string, Point>[] = []
+  for (let i = 0; i < attempts && out.length < n; i++) {
+    const d = execute(cp, sample())
+    if (good(d) && spread(d.coords) >= MIN_SPREAD) out.push(d.coords)
+  }
+  return out
+}
+
+export function realise(cp: ConstructionPlan, options: { previous?: Map<string, Point>; attempts?: number } = {}): Realisation {
+  const counts = cp.steps.map(paramCount)
+  const total = counts.reduce((a, b) => a + b, 0)
+  const sample = sampler(cp)
 
   if (options.previous && options.previous.size > 0) {
     let params: number[] = []

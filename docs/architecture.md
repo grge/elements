@@ -85,15 +85,26 @@ checked) and fires every other rule normally, so it computes the same closure as
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
 
-Three verdicts: ✓ the goal follows; ✗ it could not be derived; ⊥ the hypotheses are contradictory
-(they derive the reserved `false`), which takes precedence over ✓. Because the search stops as soon as
+The search ends with the goal derived, with the hypotheses contradictory (they derive the reserved
+`false`, which takes precedence), with the closure complete and no goal, or out of its budget of
+derivations. Because the search stops as soon as
 the goal is found, a successful check is carried on to the end to rule out a contradiction, but only
 when `false` is derivable at all from the kinds of facts involved (a cheap test at the level of
 predicate names).
 
 What it cannot do: case splits. Facts that need one can be stated with a `distinct` hypothesis instead
-(the order of marched points holds once the first step is non-zero). A check that runs out of its
-derivation budget is currently reported as ✗. Both are on the [roadmap](roadmap.md).
+(the order of marched points holds once the first step is non-zero), and are on the
+[roadmap](roadmap.md).
+
+**Numeric evidence** (`geometry/evidence.ts`) weighs every lemma against figures. Its hypotheses are
+unfolded to drawable facts and planned like any figure; about two dozen well-spread configurations are
+sampled, and the head, unfolded too, is measured on each. The verdict (`kb/verdict.ts`) combines the
+two: ✓ derived; ⊥ vacuous; ✗ not derived and refuted by a sampled figure (false); ? not derived, with the
+reason saying whether it held in every sample (probably true), whether the search ran out of budget,
+or why there were no figures to test (a hypothesis that cannot be drawn, such as `eq-point`); ! derived
+yet refuted by a sample, an alarm for a false axiom or a bug. The drawing takes distinct names for
+distinct points, so a lemma false only when two points coincide holds in every sample: probably true,
+as it should be. The whole book samples, at about 6 ms a lemma.
 
 The page checks its `?` lines in a web worker (`useVerification` → `lemmaCheckWorker`), so typing never
 blocks.

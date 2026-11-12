@@ -47,8 +47,9 @@ becomes free), and small quiet points cannot be moved. Auxiliary points (`d₁`)
 variables in the accent colour; comments are prose, in Libre Caslon (Byrne's edition was set in Caslon), its x-height matched to
 the monospace, with the `#` shown only on the line
 being edited. Names never break across lines, and wrapped lines hang: a comment under its first word,
-a clause line one indent deeper than it starts. `?` lines get `✓`, `✗` or `⊥` (contradictory
-hypotheses) in a gutter beside them, and a `✗` or `⊥` its reason in small type underneath. A line
+a clause line one indent deeper than it starts. `?` lines get `✓`, `✗` (false), `?` (not
+proven), `⊥` (contradictory hypotheses) or `!` (an alarm) in a gutter beside them, and anything but a
+`✓` its reason in small type underneath. A line
 that does not parse is underlined, with the reason underneath, and the figure stays as it was until
 the text parses again; a predicate name nothing defines or uses gets a dotted underline. Completion
 offers each predicate with its arguments as fields to fill in (Tab moves between them) and the start

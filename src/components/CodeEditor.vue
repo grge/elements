@@ -29,7 +29,12 @@ export interface EditorMark {
   line: number
   /** 0-based last line of the lemma, if it spans several. */
   endLine?: number
-  type: 'verified' | 'vacuous' | 'failed' | 'unknown'
+  /**
+   * verified ✓ proven; vacuous ⊥ the hypotheses contradict each other; false ✗ a sampled figure
+   * refutes it; unproven ? not derived (the reason says whether it held in every sampled figure);
+   * alarm ! proven, yet a sampled figure refutes it; unknown … being checked.
+   */
+  type: 'verified' | 'vacuous' | 'false' | 'unproven' | 'alarm' | 'unknown'
   message: string
 }
 
@@ -113,7 +118,7 @@ class MarkMarker extends GutterMarker {
     const el = document.createElement('span')
     el.className = `mark ${this.mark.type}`
     el.title = this.mark.message
-    el.textContent = { verified: '✓', vacuous: '⊥', failed: '✗', unknown: '…' }[this.mark.type]
+    el.textContent = { verified: '✓', vacuous: '⊥', false: '✗', unproven: '?', alarm: '!', unknown: '…' }[this.mark.type]
     return el
   }
 }
@@ -150,7 +155,7 @@ function reasons(state: EditorState): DecorationSet {
   const lineOf = (i: number) => doc.line(Math.min(doc.lines, Math.max(1, i)))
   const indentOf = (text: string) => /^\s*/.exec(text)![0].length
   for (const m of state.field(marksField)) {
-    if (m.type !== 'failed' && m.type !== 'vacuous') continue
+    if (m.type === 'verified' || m.type === 'unknown') continue
     if (m.line + 1 > doc.lines) continue
     const start = lineOf(m.line + 1), end = lineOf((m.endLine ?? m.line) + 1)
     out.push(Decoration.widget({ widget: new ReasonWidget(m.message, m.type, indentOf(start.text) + 2), block: true, side: 1 }).range(end.to))
@@ -469,7 +474,8 @@ const theme = EditorView.theme({
   '.mark': { textShadow: 'var(--ed-halo, none)', fontWeight: '700', fontSize: 'var(--ed-mark-size, 0.9em)', cursor: 'default' },
   '.mark.verified': { color: 'var(--ed-ok, #8ec88e)' },
   '.mark.vacuous': { color: 'var(--ed-pending, #888)' },
-  '.mark.failed': { color: 'var(--ed-bad, #e88e8e)', fontWeight: '700' },
+  '.mark.false, .mark.alarm': { color: 'var(--ed-bad, #e88e8e)', fontWeight: '700' },
+  '.mark.unproven': { color: 'var(--ed-pending, #888)' },
   '.mark.unknown': { color: 'var(--ed-pending, #888)', animation: 'cm-pulse 1s infinite ease-in-out' },
   '.tok-nowrap': { whiteSpace: 'nowrap' },
   '.cm-prose-line': { lineHeight: 'var(--ed-prose-leading, 1.45)' },
@@ -496,7 +502,7 @@ const theme = EditorView.theme({
     fontSize: '0.72em', lineHeight: '1.5', padding: '0 0 0.35rem', textShadow: 'var(--ed-halo, none)',
     color: 'var(--ed-pending, #888)',
   },
-  '.cm-reason.failed, .cm-reason.error': { color: 'var(--ed-bad, #e88e8e)' },
+  '.cm-reason.false, .cm-reason.alarm, .cm-reason.error': { color: 'var(--ed-bad, #e88e8e)' },
   '.cm-placeholder': { color: 'var(--ed-punct, #888)' },
   '.cm-tooltip': {
     backgroundColor: 'var(--ed-ink, #fff)', color: 'var(--ed-paper, #000)', border: 'none',

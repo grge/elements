@@ -27,8 +27,8 @@ export function useVerification(text: () => string, kb: () => KnowledgeBase | nu
 
     if (data.kind === 'error') {
       verificationMarksState.value = verificationMarksState.value.length > 0
-        ? verificationMarksState.value.map((mark, i) => i === 0 ? { ...mark, type: 'failed', message: data.message } : mark)
-        : [{ line: 0, type: 'failed', message: data.message }]
+        ? verificationMarksState.value.map((mark, i) => i === 0 ? { ...mark, type: 'unproven', message: data.message } : mark)
+        : [{ line: 0, type: 'unproven', message: data.message }]
     }
   }
 

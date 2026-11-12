@@ -107,13 +107,18 @@ where `B`'s variables are new constants (a body-only variable is some object, a 
 arbitrary one). A ground query is about the page's configuration: one that mentions a point no fact
 introduces is rejected rather than read as introducing it.
 
-The checker is sound but incomplete, and reports one of three verdicts:
+The checker is sound but incomplete. Beside the proof search, each lemma is tested numerically on
+sampled figures that satisfy its hypotheses (see [architecture.md](architecture.md#checking-lemmas-and-queries)),
+and the verdict weighs the two:
 
 - ✓ the head follows;
 - ⊥ the hypotheses are contradictory (they derive `false`), so the lemma holds only vacuously. This
   takes precedence over ✓: anything follows from a contradiction, and a ✓ would hide the mistake;
-- ✗ the head could not be derived. That does not make it false: the proof may need a case split, or the
-  check may have run out of its budget of derivations.
+- ✗ false: not derived, and a sampled figure satisfying the hypotheses breaks the head;
+- ? not proven: not derived, with the reason why it is open. It may hold in every sampled figure
+  (probably true: the proof may need a case split or an axiom the book lacks), the search may have run
+  out of its budget, or the hypotheses may not be drawable;
+- ! an alarm: derived, yet a sampled figure breaks it, so an axiom is false or the engine is wrong.
 
 ### How it is checked
 

@@ -28,8 +28,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
    reasons for ✗ and ⊥ and syntax errors shown under their lines, unknown names marked, completion
    with argument fields, Enter and Tab that know the layout (see design.md, *Source*).
    The tether between source and figure followed (see design.md, *As built*).
-4. **Honest verdicts** (under *Logic*): *unknown* when a check runs out of budget, and numeric
-   evidence. Harder proofs make a ✗ that means "gave up" misleading.
+4. **Honest verdicts.** Done in November 2026: numeric evidence on sampled figures, and five verdicts
+   (✓ proven, ✗ false, ? not proven with the reason, ⊥ vacuous, ! alarm; see architecture.md). Next
+   under *Logic*: show a ✗'s counterexample figure.
 5. **Chapter 2, angle.** One chapter is a thin demo, and this one tests the engine: a six-place
    equivalence on angle triples (structure recognition has not met blocks of three; matching over
    every tuple class may be slow), angle facts as checks in the drawing, Byrne's coloured angle marks.
@@ -104,15 +105,11 @@ would sit naturally beside the algebraic lens.
 
 ## Logic
 
-- **Honest verdicts.** (Contradictory hypotheses are already reported as vacuous, `⊥`.) Report a check
-  that ran out of budget as *unknown*, not ✗. Then add numeric
-  evidence: evaluate a lemma on sampled configurations of its hypotheses' construction, giving
-  *proven* ✓, *false* with a counterexample figure, *probably true* (holds in every sample, not proven),
-  and an alarm when something proven fails numerically (a bug or a false axiom). Where a sample has
-  rational coordinates, check it exactly, without tolerances: in quadrances (squared distances) every
-  drawable relation is polynomial. Points the compass places generally leave the rationals (two
-  circles meet at a square root), so this covers the free points and the straight-edge steps, not
-  everything.
+- **Show a ✗'s counterexample**: clicking the mark draws the figure that breaks the lemma, with the
+  failing fact marked. Exact checks where a sample is rational: in quadrances (squared distances)
+  every drawable relation is polynomial, though points the compass places generally leave the
+  rationals (two circles meet at a square root). Lemmas whose head introduces points of its own (some
+  point exists such that…) get no evidence yet: they need a witness search.
 - **Proof traces**: why a ✓ holds, as a derivation tree.
 - **Use definitions in both directions during forward chaining** where no new objects are needed
   (`eq-triangle a b c` ⇒ `circle a b c`), not only when unfolding hypotheses.
