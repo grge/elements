@@ -138,16 +138,22 @@ would sit naturally beside the algebraic lens.
 
 ## Construction and drawing
 
-- **The figure's rule** (design.md, *The figure: what it draws and why*): a drawing vocabulary per
-  relation (`between` as a segment, `supp` arcs, right-angle squares); the planner's unstated loci shown
-  only on touch; marks from statements and proven lemmas, lemmas travelling with their constructions;
-  equality chains through hidden members by union-find over recognised equivalences, each mark able to
-  explain its chain; hover an element for the fact it came from.
-- **Use inferred facts when drawing**: feed the forward closure (not only the unfolded facts) to the
-  planner, so derived facts become loci or checks.
-- ~~Draw the construction actually used~~ (November 2026): the planner's loci the figure lacks are
-  drawn one level below the point they place, and every element is drawn thinner and fainter the
-  more deeply nested the definition it comes from. Next, from the March 2026 progressive rendering
+- **Next: say when the figure is solved, not constructed.** Today a figure the planner cannot build is
+  drawn by the numerical solver with only a status line to say so, and it looks just as constructed.
+  Design how the page shows which it is (and, once figures are hybrid, which points): see design.md.
+- ~~The figure's rule~~ (built November 2026; design.md, *The figure: what it draws and why*).
+- **Plan from what the book proves** (tentative, after the above): before planning, ask the forward
+  closure (the worker that merges marks) which facts in the planner's vocabulary the page implies,
+  equal segments between its points, right angles, collinear points, and add them to the model as
+  constraints; every fact is still checked. A figure drawn by the solver becomes a construction when
+  the answer arrives (remembered across visits). Its reach grows with the book: the equiangular
+  triangle is constructible today if `triangle a b c` is written (the closure derives `eq-triangle`);
+  four equal angles in a quadrilateral make a rectangle only with the parallel postulate (in hyperbolic
+  geometry they are less than right), so that figure becomes constructible when the parallels chapter
+  proves I.32 and its consequences, and is a test that it does.
+- ~~Draw the construction actually used~~ (November 2026): every element is drawn thinner and fainter
+  the more deeply nested the definition it comes from; the planner's own loci are shown on touch.
+  Next, from the March 2026 progressive rendering
   proposal: let the reader choose how many levels to show, and weight elements by role as well as
   depth (a construction's key properties, such as its equal sides, in front of its guide circles).
 - **Continuity near tangencies**: nearest-branch tracking can jump; consider complex tracing.
