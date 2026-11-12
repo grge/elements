@@ -4,6 +4,7 @@
 
 import type { GeometryProblem } from './constraints'
 import type { RenderTransform } from './view'
+import type { GroundPredicate } from '../kb/inference'
 
 type Point = [number, number]
 
@@ -21,6 +22,16 @@ export interface Scene {
   /** Tick marks across those segments, one per stroke; equal segments share a number of ticks. */
   ticks: number[][]
   points: { name: string; x: number; y: number }[]
+  /** Which points each element is drawn through, parallel to the arrays above (for emphasis). */
+  meta: {
+    /** The named points on each line (none for a construction's helper line). */
+    lines: string[][]
+    /** Each circle's centre and the points on it (none for a helper circle). */
+    circles: { center: string; points: string[] }[]
+    segments: [string, string][]
+    /** The segment each tick is on. */
+    ticks: number[]
+  }
 }
 
 /**
@@ -60,6 +71,7 @@ export function buildScene(
   for (const c of problem.circles) for (const p of [c.center, ...c.points]) touch(p, c.depth)
   for (const c of eqDists) for (const p of [...c.pair1, ...c.pair2]) touch(p, c.depth)
 
+  const meta: Scene['meta'] = { lines: [], circles: [], segments: [], ticks: [] }
   const lines: number[][] = []
   const lineThrough = (ax: number, ay: number, ux: number, uy: number, lv: number) =>
     lines.push([ax - ux * reach, ay - uy * reach, ax + ux * reach, ay + uy * reach, lv])
@@ -70,6 +82,7 @@ export function buildScene(
     const len = Math.hypot(bx - ax, by - ay)
     if (len < 1e-9) continue
     lineThrough(ax, ay, (bx - ax) / len, (by - ay) / len, level(line.depth))
+    meta.lines.push([...line.points])
   }
 
   const circles: number[][] = []
@@ -79,6 +92,7 @@ export function buildScene(
     if (!c || !pts.length) continue
     const r = pts.reduce((s, p) => s + Math.hypot(p[0] - c[0], p[1] - c[1]), 0) / pts.length
     circles.push([tx(c[0]), ty(c[1]), r * t.scale, level(circle.depth)])
+    meta.circles.push({ center: circle.center, points: [...circle.points] })
   }
 
   // The construction actually used: loci the figure does not already show, one level below the
@@ -89,6 +103,7 @@ export function buildScene(
       const [cx, cy, r] = [tx(h.c[0]), ty(h.c[1]), h.r * t.scale]
       if (r < 1 || circles.some(o => Math.hypot(o[0] - cx, o[1] - cy) < 1 && Math.abs(o[2] - r) < 1)) continue
       circles.push([cx, cy, r, lv])
+      meta.circles.push({ center: '', points: [] })
     } else {
       const [ax, ay] = [tx(h.p[0]), ty(h.p[1])]
       const len = Math.hypot(h.d[0], h.d[1])
@@ -98,7 +113,7 @@ export function buildScene(
         const [ox, oy] = [o[2] - o[0], o[3] - o[1]], ol = Math.hypot(ox, oy)
         return Math.abs(ux * oy - uy * ox) / ol < 1e-3 && Math.abs((ax - o[0]) * oy - (ay - o[1]) * ox) / ol < 1
       })
-      if (!shown) lineThrough(ax, ay, ux, uy, lv)
+      if (!shown) { lineThrough(ax, ay, ux, uy, lv); meta.lines.push([]) }
     }
   }
 
@@ -138,6 +153,8 @@ export function buildScene(
     if (!classOf.has(root)) classOf.set(root, classOf.size)
     const n = classOf.get(root)! + 1
     const lv = level(segDepth.get(k))
+    const [a, b] = k.split('\u0001')
+    meta.segments.push([a, b])
     segments.push([p[0], p[1], q[0], q[1], lv])
     const [ux, uy] = [(q[0] - p[0]) / len, (q[1] - p[1]) / len]
     const [mx, my] = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2]
@@ -145,9 +162,35 @@ export function buildScene(
       const off = (i - (n - 1) / 2) * tick * 0.6
       const [cx, cy] = [mx + ux * off, my + uy * off]
       ticks.push([cx - uy * tick / 2, cy + ux * tick / 2, cx + uy * tick / 2, cy - ux * tick / 2, lv])
+      meta.ticks.push(segments.length - 1)
     }
   }
 
   const points = [...coords].map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
-  return { lines, circles, segments, ticks, points }
+  return { lines, circles, segments, ticks, points, meta }
+}
+
+/** Which elements of a scene to bring forward: those that the given drawable facts draw. */
+export interface Emphasis { lines: Set<number>; circles: Set<number>; segments: Set<number>; points: Set<string> }
+
+export function emphasise(scene: Scene, facts: readonly GroundPredicate[], points: Iterable<string>): Emphasis {
+  const out: Emphasis = { lines: new Set(), circles: new Set(), segments: new Set(), points: new Set(points) }
+  const same = (s: [string, string], a: string, b: string) => (s[0] === a && s[1] === b) || (s[0] === b && s[1] === a)
+  for (const f of facts) {
+    const [a, b, c, d] = f.args
+    switch (f.name) {
+      case 'circle':
+        scene.meta.circles.forEach((m, i) => { if (m.center === a && (m.points.includes(b) || m.points.includes(c))) out.circles.add(i) })
+        scene.meta.segments.forEach((s, i) => { if (same(s, a, b) || same(s, a, c)) out.segments.add(i) })
+        break
+      case 'collinear': case 'between':
+        scene.meta.lines.forEach((pts, i) => { if (f.args.filter(p => pts.includes(p)).length >= 2) out.lines.add(i) })
+        break
+      case 'eq-lines':
+        scene.meta.segments.forEach((s, i) => { if (same(s, a, b) || same(s, c, d)) out.segments.add(i) })
+        break
+    }
+    if (f.name !== 'distinct') f.args.forEach(p => out.points.add(p))
+  }
+  return out
 }

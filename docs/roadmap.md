@@ -79,12 +79,13 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 
 ## Interface
 
-See [design.md](design.md#designed-not-yet-built) for the designed-but-not-built pieces: the tether
-between code and figure, reading and editing modes, text that makes room for the figure, a better index,
+The tether between source and figure is built (November 2026; see design.md, *As built*). See
+[design.md](design.md#designed-not-yet-built) for the designed-but-not-built pieces: reading and editing modes, text that makes room for the figure, a better index,
 predicate views with lemma layers, the boffin panel and an entry page. Smaller items:
 
 - Save the scratchpad to the library in one step.
-- Hover a predicate name for its arity, provenance and status.
+- Hovering a predicate name shows its arguments and doc comment; add its provenance and status
+  (defined by which clause, or open; recognised structure).
 - Inline proof marks in reading mode.
 
 ## Code structure

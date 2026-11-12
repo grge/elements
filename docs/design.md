@@ -91,13 +91,19 @@ too, one layer below the point it places: the circle that carries a length, the 
 **Narrow screens.** With no room beside the text, the source sits above a solid figure. Phones show
 the source and the figure only (no construction steps), with one theme dot that steps through the themes.
 
+**The tether between source and figure.** Hovering a name in the source rings its point (a
+construction's own variable, such as `d` in `transfer`, rings the auxiliary point it became, `d₁`);
+hovering a predicate brings forward what that atom draws and lets the rest of the figure recede;
+hovering a point sets its names in the source in reverse, in the accent colour. Hovering a predicate
+name a moment shows its arguments and the start of its doc comment; Cmd- or Ctrl-click opens its
+page. The matching is geometric: the hovered atom is unfolded and the figure's elements drawn through
+its points are brought forward, so the drawing pipeline does not have to carry where each element
+came from.
+
 ## Designed, not yet built
 
 From the original brief, in rough order of importance:
 
-- **Tether between code and figure**: hovering a name in the code highlights the point, hovering a point
-  highlights its names, hovering a relation highlights its part of the figure; predicate names in the
-  code navigate to that predicate.
 - **Reading and editing as two modes**: in reading mode the code is set as typography rather than editor
   content, with proof marks styled for the page; editing brings the editor. Transitions between them,
   and towards a margin layout when the text is long, should be continuous recompositions.

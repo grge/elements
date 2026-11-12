@@ -27,17 +27,18 @@
       </defs>
 
       <g class="ghost" :mask="`url(#${uid}-ghost)`">
-        <line v-for="(l, i) in scene.lines" :key="`gl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
-        <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="weight(c[3])" />
-        <line v-for="(l, i) in [...scene.segments, ...scene.ticks]" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
+        <line v-for="(l, i) in scene.lines" :key="`gl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'lines', i)" />
+        <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
+        <line v-for="(l, i) in scene.segments" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
+        <line v-for="(l, i) in scene.ticks" :key="`gk${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
-        <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
-        <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="weight(c[3])" />
-        <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
-        <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="weight(l[4])" />
-        <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
+        <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'lines', i)" />
+        <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
+        <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
+        <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
+        <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
       </g>
 
       <!-- Points stay crisp and grabbable everywhere, even under the text. -->
@@ -45,9 +46,11 @@
         v-for="p in scene.points"
         :key="p.name"
         class="pt"
-        :class="[p.kind, { aux: p.aux, active: dragging === p.name }]"
+        :class="[p.kind, { aux: p.aux, active: dragging === p.name, lit: lit(p.name), dim: dimPoint(p.name) }]"
         :data-point="p.name"
         :transform="`translate(${p.x} ${p.y})`"
+        @pointerenter="hoverPoint(p.name)"
+        @pointerleave="hoverPoint(null)"
       >
         <title>{{ p.title }}</title>
         <circle class="hit" r="22" />
@@ -66,7 +69,8 @@ import { ref, shallowRef, computed, watch, onMounted, onUnmounted } from 'vue'
 import { solve } from '../geometry/solver'
 import type { GeometryProblem, WitnessModel } from '../geometry/constraints'
 import { computeRenderTransform, screenToWorld, type RenderTransform } from '../geometry/view'
-import { buildScene, type Helper } from '../geometry/scene'
+import { buildScene, emphasise, type Emphasis, type Helper } from '../geometry/scene'
+import type { GroundPredicate } from '../kb/inference'
 import {
   execute, drag as dragConstruction, draggable, plan as planConstruction, realise,
   type ConstructionPlan, type Point,
@@ -83,9 +87,15 @@ const props = defineProps<{
   /** Width in px of the strip on the left where text lies over the figure. */
   veil?: number
   padding?: number
+  /** Bring forward what these facts draw and these points (what is hovered in the source). */
+  focus?: { facts: GroundPredicate[]; points: string[] } | null
 }>()
 
-const emit = defineEmits<{ 'update:construction': [state: ConstructionState] }>()
+const emit = defineEmits<{
+  'update:construction': [state: ConstructionState]
+  /** The point under the pointer, or null when it leaves. */
+  'hover-point': [name: string | null]
+}>()
 
 const VEIL_FADE = 48
 /** Length of a tick mark across an equal segment, in px: bold, as Byrne draws them. */
@@ -174,6 +184,26 @@ function weight(level: number | undefined) {
   const n = level ?? 0
   if (n === 0) return undefined
   return { strokeWidth: `calc(var(--dg-stroke, 3) * ${Math.max(0.3, 0.68 ** n).toFixed(3)})`, opacity: Math.max(0.22, 0.62 ** n).toFixed(3) }
+}
+
+/** What the focus brings forward; everything else recedes. */
+const emphasis = computed<Emphasis | null>(() =>
+  props.focus && scene.value ? emphasise(scene.value, props.focus.facts, props.focus.points) : null)
+
+/** How an element is drawn: its level, and whether the focus brings it forward or lets it recede. */
+function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments', i: number) {
+  const base = weight(level)
+  const em = emphasis.value
+  if (!em || !props.focus?.facts.length) return base   // a name alone lights its point, nothing else
+  if (em[kind].has(i)) return { strokeWidth: `calc(var(--dg-stroke, 3) * 1.25)`, opacity: '1' }
+  return { ...(base ?? {}), opacity: '0.18' }
+}
+const lit = (name: string) => !!emphasis.value?.points.has(name)
+const dimPoint = (name: string) => !!emphasis.value && !!props.focus?.facts.length && !emphasis.value.points.has(name)
+
+function hoverPoint(name: string | null) {
+  if (dragging.value) return
+  emit('hover-point', name)
 }
 
 /** The loci the construction used, at the current positions: drawn where the figure lacks them. */
@@ -401,4 +431,11 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
   pointer-events: none;
 }
 .label.aux { font-size: calc(var(--dg-label-size, 24px) * 0.75); }
+
+/* ── the focus: what is hovered in the source comes forward, the rest recedes ── */
+.crisp line, .crisp > circle, .ghost line, .ghost circle { transition: opacity 0.15s, stroke-width 0.15s; }
+.label, .pt { transition: opacity 0.15s; }
+.label.dim, .pt.dim { opacity: 0.3; }
+.pt.lit .ring { opacity: 1; transform: scale(1); }
+.pt.lit .dot { transform: scale(1.3); }
 </style>

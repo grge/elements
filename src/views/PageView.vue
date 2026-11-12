@@ -46,7 +46,9 @@
         :use-planner="usingConstruction"
         :veil="veil"
         :padding="48"
+        :focus="figureFocus"
         @update:construction="ws.setConstruction"
+        @hover-point="p => (pointHover = p)"
       >
         <template #empty><span class="empty">nothing to draw yet</span></template>
       </GeometryDiagram>
@@ -60,7 +62,10 @@
             :predicates="completions"
             :known="knownNames"
             :error="ws.parseError.value"
+            :highlight="codeHighlight"
             placeholder="circle a b c"
+            @hover="h => (editorHover = h)"
+            @open="openByName"
           />
         </div>
         <ol v-if="planSteps.length" class="steps">
@@ -106,7 +111,8 @@
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
-import CodeEditor from '../components/CodeEditor.vue'
+import CodeEditor, { type EditorHover } from '../components/CodeEditor.vue'
+import { drawableFacts } from '../geometry/extraction'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import { useThumbnails } from '../composables/useThumbnails'
@@ -235,6 +241,49 @@ function go(fn: () => void) {
 function addUser() {
   const name = window.prompt('Name of the new predicate')
   if (name && ws.newUserPredicate(name)) contentsOpen.value = false
+}
+
+// ── the tether between source and figure ──
+
+const editorHover = ref<EditorHover>(null)
+const pointHover = ref<string | null>(null)
+
+/**
+ * A name in the source as a point of the figure: the point itself, or, for a variable of the page's
+ * construction that only its body mentions (`d` in `transfer`), the auxiliary point it became (`d₁`).
+ */
+function pointOf(name: string): string | null {
+  const coords = ws.drawing.value?.coords
+  if (!coords) return null
+  return coords.has(name) ? name : coords.has(`${name}#1`) ? `${name}#1` : null
+}
+
+/** What the figure brings forward: the hovered name's point, or everything the hovered atom draws. */
+const figureFocus = computed(() => {
+  const h = editorHover.value
+  if (!h) return null
+  if (h.kind === 'name') {
+    const p = pointOf(h.name)
+    return p ? { facts: [], points: [p] } : null
+  }
+  // The page's own predicate with its signature is the whole figure: nothing to single out.
+  if (ws.mode.value === 'predicate' && h.name === ws.selectedPred.value) return null
+  const rt = ws.runtime.value
+  if (!rt) return null
+  try {
+    const args = h.args.map(a => pointOf(a) ?? a)
+    const facts = drawableFacts(rt.kb, [{ name: h.name, args }])
+    return facts.length ? { facts, points: args.filter(a => pointOf(a) !== null) } : null
+  } catch { return null }
+})
+
+/** The point hovered in the figure, as the name the source uses for it. */
+const codeHighlight = computed(() => pointHover.value ? [pointHover.value.split('#')[0]] : [])
+
+function openByName(name: string) {
+  const entry = ws.predicates.value.find(p => p.name === name && p.namespace !== 'user')
+    ?? ws.predicates.value.find(p => p.name === name)
+  if (entry) go(() => ws.openPredicate(entry.name, entry.namespace))
 }
 
 // ── the construction, in words ──

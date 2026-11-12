@@ -17,7 +17,7 @@
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { EditorState, EditorSelection, StateEffect, StateField, type Range, type Transaction } from '@codemirror/state'
 import {
-  EditorView, ViewPlugin, Decoration, WidgetType, gutter, GutterMarker, keymap, placeholder as cmPlaceholder,
+  EditorView, ViewPlugin, Decoration, WidgetType, gutter, GutterMarker, keymap, placeholder as cmPlaceholder, hoverTooltip,
   type DecorationSet, type ViewUpdate,
 } from '@codemirror/view'
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
@@ -50,9 +50,19 @@ const props = defineProps<{
   known?: ReadonlySet<string>
   /** Where the text fails to parse (1-based line), and why. */
   error?: { line: number; message: string } | null
+  /** Names to light up (the point hovered in the figure). */
+  highlight?: string[]
 }>()
 
-const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
+/** What the pointer is over: a name, or a whole atom (when over its predicate). */
+export type EditorHover = { kind: 'name'; name: string } | { kind: 'atom'; name: string; args: string[] } | null
+
+const emit = defineEmits<{
+  'update:modelValue': [value: string]
+  hover: [target: EditorHover]
+  /** A predicate name was Cmd- or Ctrl-clicked. */
+  open: [name: string]
+}>()
 
 const host = ref<HTMLDivElement | null>(null)
 let view: EditorView | null = null
@@ -74,6 +84,14 @@ const knownField = StateField.define<ReadonlySet<string> | null>({
   create: () => null,
   update(value, tr) {
     for (const e of tr.effects) if (e.is(setKnown)) return e.value
+    return value
+  },
+})
+const setHighlight = StateEffect.define<ReadonlySet<string>>()
+const highlightField = StateField.define<ReadonlySet<string>>({
+  create: () => new Set(),
+  update(value, tr) {
+    for (const e of tr.effects) if (e.is(setHighlight)) return e.value
     return value
   },
 })
@@ -165,6 +183,7 @@ const deco = {
   prose: Decoration.mark({ class: 'tok-prose' }),
   hash: Decoration.mark({ class: 'tok-hash' }),
   word: Decoration.mark({ class: 'tok-nowrap' }),
+  lit: Decoration.mark({ class: 'tok-lit' }),
   hidden: Decoration.replace({}),
 }
 const unknownMark = (name: string) =>
@@ -198,6 +217,7 @@ function typography(view: EditorView): DecorationSet {
   const { state } = view
   const doc = state.doc
   const known = state.field(knownField)
+  const highlight = state.field(highlightField)
   // The `#` shows on the cursor's line, and only while the editor has focus.
   const cursorLines = new Set(view.hasFocus ? state.selection.ranges.map(r => doc.lineAt(r.head).number) : [])
 
@@ -243,6 +263,7 @@ function typography(view: EditorView): DecorationSet {
         ? (t.pred ? (isUnknown(t.text) && !typing ? unknownMark(t.text) : deco.pred) : deco.arg)
         : deco.punct
       out.push(d.range(from + t.from, from + t.to))
+      if (highlight.has(t.text) && !t.pred) out.push(deco.lit.range(from + t.from, from + t.to))
     }
 
     if (hash >= 0) {
@@ -267,9 +288,79 @@ const typesetter = ViewPlugin.fromClass(class {
   constructor(v: EditorView) { this.decorations = typography(v) }
   update(u: ViewUpdate) {
     const knownChanged = u.startState.field(knownField) !== u.state.field(knownField)
+      || u.startState.field(highlightField) !== u.state.field(highlightField)
     if (u.docChanged || u.selectionSet || u.focusChanged || knownChanged) this.decorations = typography(u.view)
   }
 }, { decorations: v => v.decorations })
+
+// ── the tether: what is under the pointer, Cmd/Ctrl-click to open, a predicate's signature on hover ──
+
+/** The token at a document position, with the atom it belongs to. */
+function tokenAt(state: EditorState, pos: number): { token: Token; atom: { name: string; args: string[] } | null; lineFrom: number } | null {
+  const line = state.doc.lineAt(pos)
+  const hash = line.text.indexOf('#')
+  const code = hash >= 0 ? line.text.slice(0, hash) : line.text
+  const toks = tokens(code)
+  const at = pos - line.from
+  const isName = (t: Token) => /^[A-Za-z0-9_]/.test(t.text)
+  const i = toks.findIndex(t => isName(t) && t.from <= at && at <= t.to)
+  if (i < 0) return null
+  let start = i
+  while (start > 0 && !toks[start].pred) start--
+  let atom: { name: string; args: string[] } | null = null
+  if (toks[start].pred) {
+    const args: string[] = []
+    for (let k = start + 1; k < toks.length && isName(toks[k]) && !toks[k].pred; k++) args.push(toks[k].text)
+    atom = { name: toks[start].text, args }
+  }
+  return { token: toks[i], atom, lineFrom: line.from }
+}
+
+let lastHover = ''
+function hoverAt(view: EditorView, x: number, y: number) {
+  const pos = view.posAtCoords({ x, y }, false)
+  const hit = pos === null ? null : tokenAt(view.state, pos)
+  const target: EditorHover = !hit ? null
+    : hit.token.pred && hit.atom ? { kind: 'atom', name: hit.atom.name, args: hit.atom.args }
+    : { kind: 'name', name: hit.token.text }
+  const key = JSON.stringify(target)
+  if (key !== lastHover) { lastHover = key; emit('hover', target) }
+}
+
+const pointer = EditorView.domEventHandlers({
+  mousemove: (e, view) => { hoverAt(view, e.clientX, e.clientY); return false },
+  mouseleave: () => { if (lastHover !== 'null') { lastHover = 'null'; emit('hover', null) } return false },
+  mousedown: (e, view) => {
+    if (!(e.metaKey || e.ctrlKey)) return false
+    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY }, false)
+    const hit = pos === null ? null : tokenAt(view.state, pos)
+    if (!hit?.token.pred || !(props.predicates ?? []).some(p => p.name === hit.token.text)) return false
+    e.preventDefault()
+    emit('open', hit.token.text)
+    return true
+  },
+})
+
+const signatureTooltip = hoverTooltip((view, pos) => {
+  const hit = tokenAt(view.state, pos)
+  if (!hit?.token.pred) return null
+  const p = (props.predicates ?? []).find(q => q.name === hit.token.text)
+  if (!p) return null
+  return {
+    pos: hit.lineFrom + hit.token.from,
+    end: hit.lineFrom + hit.token.to,
+    above: true,
+    create: () => {
+      const dom = document.createElement('div')
+      dom.className = 'cm-signature'
+      const part = (cls: string, text: string) => { const el = document.createElement('div'); el.className = cls; el.textContent = text; dom.append(el) }
+      part('cm-signature-head', [p.name, ...p.args].join(' '))
+      if (p.doc) part('cm-signature-doc', p.doc)
+      part('cm-signature-hint', `${/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl'}-click to open`)
+      return { dom }
+    },
+  }
+}, { hoverTime: 450 })
 
 // ── keys: Enter continues a body or a comment, Tab indents ──
 
@@ -421,6 +512,18 @@ const theme = EditorView.theme({
     fontFamily: 'var(--ed-prose-font, serif)', fontSize: 'calc(var(--ed-size, 13px) * 0.8)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
     maxWidth: '24rem', padding: '0.5rem 0.7rem', lineHeight: '1.4',
   },
+  // A name whose point is hovered in the figure: set in reverse, as Byrne would colour it.
+  '.tok-lit': {
+    backgroundColor: 'var(--ed-arg, #f40)', color: 'var(--ed-paper, #000)', textShadow: 'none', borderRadius: '2px',
+    boxShadow: '0 0 0 2px var(--ed-arg, #f40)',
+  },
+  '.cm-tooltip.cm-tooltip-hover': { padding: '0.5rem 0.7rem', maxWidth: '26rem' },
+  '.cm-signature-head': { fontFamily: 'var(--ed-font, monospace)', fontWeight: '600', fontSize: 'calc(var(--ed-size, 13px) * 0.8)' },
+  '.cm-signature-doc': {
+    fontFamily: 'var(--ed-prose-font, serif)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
+    fontSize: 'calc(var(--ed-size, 13px) * 0.8)', lineHeight: '1.4', marginTop: '0.3rem',
+  },
+  '.cm-signature-hint': { fontSize: 'calc(var(--ed-size, 13px) * 0.62)', opacity: '0.65', marginTop: '0.35rem' },
   '.cm-snippetField': { backgroundColor: 'var(--ed-selection, rgba(255,255,255,0.25))' },
 })
 
@@ -436,7 +539,7 @@ onMounted(() => {
         history(),
         keys,
         keymap.of([...defaultKeymap, ...historyKeymap]),
-        marksField, knownField, errorField, reasonsField,
+        marksField, knownField, errorField, highlightField, reasonsField, pointer, signatureTooltip,
         markGutter, typesetter, theme,
         EditorView.lineWrapping,
         autocompletion({ override: [complete], icons: false }),
@@ -461,6 +564,7 @@ watch(() => props.modelValue, v => {
 watch(() => props.marks, m => view?.dispatch({ effects: setMarks.of(m ?? []) }), { deep: true })
 watch(() => props.known, k => view?.dispatch({ effects: setKnown.of(k ?? null) }))
 watch(() => props.error, e => view?.dispatch({ effects: setError.of(e ?? null) }))
+watch(() => props.highlight, h => view?.dispatch({ effects: setHighlight.of(new Set(h ?? [])) }))
 watch(() => props.readonly, ro => view?.dispatch({
   effects: editable.reconfigure([EditorView.editable.of(!ro), EditorState.readOnly.of(!!ro)]),
 }))
