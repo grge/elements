@@ -6,16 +6,19 @@
 
 import type { Rule } from '../language/parser'
 import { KnowledgeBase, type GroundPredicate } from '../kb/inference'
-import { saturate } from '../kb/saturate'
+import { closureAnswers } from '../geometry/closure'
 
-export interface ClosureRequest { requestId: number; rules: Rule[]; facts: GroundPredicate[]; queries: GroundPredicate[] }
+export interface ClosureRequest {
+  requestId: number; rules: Rule[]; facts: GroundPredicate[]; queries: GroundPredicate[]
+  /** Facts the figure assumes by convention (distinct names, distinct points): dropped if they contradict. */
+  assume?: GroundPredicate[]
+}
 export type ClosureResponse = { requestId: number; holds: boolean[] } | { requestId: number; error: string }
 
 self.onmessage = (event: MessageEvent<ClosureRequest>) => {
-  const { requestId, rules, facts, queries } = event.data
+  const { requestId, rules, facts, queries, assume = [] } = event.data
   try {
-    const sat = saturate(new KnowledgeBase(rules), facts)
-    self.postMessage({ requestId, holds: queries.map(q => sat.holds(q)) } satisfies ClosureResponse)
+    self.postMessage({ requestId, holds: closureAnswers(new KnowledgeBase(rules), facts, queries, assume) } satisfies ClosureResponse)
   } catch (error) {
     self.postMessage({ requestId, error: `${error}` } satisfies ClosureResponse)
   }

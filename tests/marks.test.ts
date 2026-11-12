@@ -12,6 +12,7 @@ import { extract } from '../src/geometry/extraction'
 import { drawFigure } from '../src/geometry/figure'
 import { markClasses, chain, closureQueries, mergeByClosure, equalities, settledClasses, type Equality } from '../src/geometry/marks'
 import { saturate } from '../src/kb/saturate'
+import { closureAnswers, assumedOf } from '../src/geometry/closure'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { computeRenderTransform } from '../src/geometry/view'
 import { buildScene } from '../src/geometry/scene'
@@ -119,6 +120,23 @@ describe('while the closure is pending', () => {
   it('draws only the classes that cannot change: the hexagon keeps its sides, its angles wait', () => {
     const x = extract(kb, [{ name: 'hexagon', args: 'o a b c d e f'.split(' ') }])
     const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
-    expect(settledClasses(classes).map(c => c.name)).toEqual(['eq-lines'])
+    expect(settledClasses(classes, closureQueries(classes)).map(c => c.name)).toEqual(['eq-lines'])
   })
 })
+
+describe('right angles', () => {
+  it('a right angle a lemma proves is drawn as a square: perpendicular', () => {
+    const { figure } = figureFor('perpendicular a c d')
+    expect(figure.angles.map(a => `${a.points.join('')} ${a.as}`)).toEqual(['acd square'])
+    expect(figure.provenBy.get('right(a,c,d)')?.map(f => f.name)).toEqual(['perpendicular'])   // distinct a c: met by two names
+  })
+
+  it('a class of equal angles the closure knows to be right is drawn as squares: drop-perpendicular', () => {
+    const x = extract(kb, [{ name: 'drop-perpendicular', args: 'p e f m'.split(' ') }])
+    const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
+    const queries = closureQueries(classes, [{ name: 'right', arity: 3 }])
+    const holds = closureAnswers(kb, [...x.constraints, ...x.outline], queries.map(q => q.fact), assumedOf([...new Set(x.constraints.flatMap(f => f.args))]))
+    const merged = mergeByClosure(classes, queries, holds)
+    expect(merged.filter(c => c.as === 'right').map(c => c.members.map(m => m.points.join('')).sort())).toEqual([['emp', 'fmp']])
+  })
+}, 60000)

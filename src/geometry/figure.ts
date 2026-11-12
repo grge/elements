@@ -13,9 +13,9 @@ import type { GroundPredicate, KnowledgeBase } from '../kb/inference'
 import type { Lemma } from '../language/parser'
 import { analyseStructure } from '../kb/structure'
 import { factKey, type DrawableFact, type Extraction } from './extraction'
-import { relationOf, type Pen } from './relations'
+import { relationOf, RELATIONS, type Pen } from './relations'
 import { UnionFind, mergeLines, segmentKey } from './classes'
-import { equalities, markClasses, type MarkClass } from './marks'
+import { equalities, markClasses, provenMarks, type MarkClass } from './marks'
 
 /** Every element says which facts made it, by key (extraction.ts `factKey`). */
 interface Made { depth: number; facts: string[] }
@@ -32,12 +32,19 @@ export interface Figure {
   strokes: ({ ends: [string, string] } & Made)[]
   /** Circles about a centre through their points; circles with the same centre and radius are one. */
   circles: ({ center: string; points: string[] } & Made)[]
-  /** Angles drawn as themselves (not as marks of equality): an arc, or a right angle's square. */
-  angles: ({ points: [string, string, string]; as: 'arc' | 'square' } & Made)[]
+  /**
+   * Angles drawn as themselves (not as marks of equality): a right angle's square; two supplements
+   * sharing a vertex and an arm as one arc across both, from the outer arm through the shared one to
+   * the other outer arm (`through`), a straight angle; other supplements as open (dotted) arcs, which
+   * never mean equal.
+   */
+  angles: ({ points: [string, string, string]; as: 'square' | 'straight' | 'open'; through?: string } & Made)[]
   /** Classes of equal segments, equal angles (any recognised equivalence): what ticks and arcs mark. */
   marks: MarkClass[]
   /** The facts elements were made from, by key. */
   sources: Map<string, DrawableFact>
+  /** Facts drawn because a lemma proves them (a mark relation's), by key: the facts its match used. */
+  provenBy: Map<string, DrawableFact[]>
 }
 
 /**
@@ -46,7 +53,12 @@ export interface Figure {
  */
 export function drawFigure(kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[]): Figure | null {
   const { equivalences } = analyseStructure(kb.allRules())
-  const figure = figureOf(x.depicted, markClasses(equalities(x.outline, x.depicted, lemmas, equivalences), equivalences))
+  // Facts whose drawing is a mark are drawn wherever a lemma proves them, unless already written.
+  const written = new Set(x.depicted.map(factKey))
+  const proven = provenMarks(x.outline, lemmas, name => !!RELATIONS.get(name)?.mark && !equivalences.has(name))
+    .filter(p => !written.has(factKey(p.fact)))
+  const figure = figureOf([...x.depicted, ...proven.map(p => p.fact)], markClasses(equalities(x.outline, x.depicted, lemmas, equivalences), equivalences))
+  for (const p of proven) figure?.provenBy.set(factKey(p.fact), p.facts)
   // A proven mark is made by the constructions its lemma matched: they are sources too.
   for (const f of x.outline) if (!figure?.sources.has(factKey(f))) figure?.sources.set(factKey(f), f)
   return figure
@@ -77,6 +89,14 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
       },
       circle: (center, through) => onCircles.push({ center, through, depth, key }),
       angle: (a, b, c, as) => angles.push({ points: [a, b, c], as, depth, facts: [key] }),
+      supplement: ([a, b, c], [d, e, f]) => {
+        const shared = b === e ? [a, c].find(x => x === d || x === f) : undefined
+        if (shared !== undefined) {
+          const x = shared === a ? c : a, y = shared === d ? f : d
+          if (x !== y) { angles.push({ points: [x, b, y], as: 'straight', through: shared, depth, facts: [key] }); return }
+        }
+        angles.push({ points: [a, b, c], as: 'open', depth, facts: [key] }, { points: [d, e, f], as: 'open', depth, facts: [key] })
+      },
       sameLength: (a, b, c, d) => radii.union(segmentKey(a, b), segmentKey(c, d)),
     }
     relationOf(f)!.draw?.(f.args, pen)
@@ -99,5 +119,5 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
     byKey.set(key, circle)
   }
 
-  return { points, lines, strokes, circles: [...byKey.values()], angles, marks, sources }
+  return { points, lines, strokes, circles: [...byKey.values()], angles, marks, sources, provenBy: new Map() }
 }

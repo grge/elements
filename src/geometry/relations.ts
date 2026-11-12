@@ -14,6 +14,10 @@
  *             can be depicted and defined (`right`: Byrne's square, its definition read by the planner).
  *   draw      how it is drawn (design.md, "What each relation draws"), through a pen (figure.ts).
  *             Equalities draw nothing of their own: their marks come from the classes in marks.ts.
+ *   byNames   holds in any figure by its convention that distinct names are distinct points
+ *             (`distinct`): a lemma's hypothesis of it is met by two different names.
+ *   mark      its drawing is a mark (a right angle's square, a supplement's arcs): like an equality's
+ *             ticks it is drawn wherever it is proven, not only where it is written.
  *   holds     whether it holds at given positions; `tol` is a length on the figure's scale. A
  *             degenerate case (an angle with an arm of no length) counts as holding: nothing to measure.
  *   residual  for the numeric solver: how far an equation is from holding, 0 when it does.
@@ -44,8 +48,10 @@ export interface Pen {
   segment(a: string, c: string, through: readonly string[]): void
   /** The circle about `center` through the points. */
   circle(center: string, through: readonly string[]): void
-  /** The angle a-b-c with its arms: an arc, or Byrne's square for a right angle. */
-  angle(a: string, b: string, c: string, as: 'arc' | 'square'): void
+  /** The angle a-b-c with its arms: Byrne's square for a right angle. */
+  angle(a: string, b: string, c: string, as: 'square'): void
+  /** Two angles that together make a straight angle (figure.ts decides how: see Figure.angles). */
+  supplement(first: readonly [string, string, string], second: readonly [string, string, string]): void
   /** Two lengths stated equal: circles about one centre with these radii are one circle. */
   sameLength(a: string, b: string, c: string, d: string): void
 }
@@ -57,6 +63,8 @@ export interface Relation {
   read?(args: readonly string[], m: ModelReader): void
   depicted: boolean
   draw?(args: readonly string[], pen: Pen): void
+  mark?: boolean
+  byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
 }
@@ -117,6 +125,7 @@ const TABLE: Relation[] = [
   {
     name: 'distinct', arity: 2, depicted: true,
     read: ([a, b], m) => m.distinct(a, b),
+    byNames: ([a, b]) => a !== b,
     holds: ([a, b], tol) => d(a, b) > tol,
   },
   {
@@ -133,8 +142,8 @@ const TABLE: Relation[] = [
     // Angles a-b-c and d-e-f together make a straight angle.
     name: 'supp', arity: 6, depicted: true,
     read: (args, m) => m.measure('supp', args),
-    // The two angles' arcs: where they share a vertex and an arm, together a straight angle.
-    draw: ([a, b, c, d, e, f], pen) => { pen.angle(a, b, c, 'arc'); pen.angle(d, e, f, 'arc') },
+    draw: ([a, b, c, d, e, f], pen) => pen.supplement([a, b, c], [d, e, f]),
+    mark: true,
     ...measured(P => {
       if (same(P[0], P[1]) || same(P[2], P[1]) || same(P[3], P[4]) || same(P[5], P[4])) return NaN
       return Math.abs(angle(P[0], P[1], P[2]) + angle(P[3], P[4], P[5]) - Math.PI)
@@ -151,6 +160,7 @@ const TABLE: Relation[] = [
     // drawn as Byrne draws it, a small square at the vertex.
     name: 'right', arity: 3, depicted: true,
     draw: ([a, b, c], pen) => pen.angle(a, b, c, 'square'),
+    mark: true,
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
   },
   {

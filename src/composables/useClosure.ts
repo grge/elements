@@ -15,6 +15,11 @@ import { fingerprint } from '../kb/rules'
 import type { Extraction } from '../geometry/extraction'
 import type { Figure } from '../geometry/figure'
 import { closureQueries, mergeByClosure, settledClasses } from '../geometry/marks'
+import { RELATIONS } from '../geometry/relations'
+import { assumedOf } from '../geometry/closure'
+
+/** Mark relations on one block (`right`, of an angle): asked of each class of marks. */
+const PROPERTIES = [...RELATIONS.values()].flatMap(r => r.mark && typeof r.arity === 'number' ? [{ name: r.name, arity: r.arity }] : [])
 import type { ClosureRequest, ClosureResponse } from '../workers/closureWorker'
 
 export type Lane = 'page' | 'background'
@@ -24,8 +29,8 @@ const pending = new Map<number, (r: ClosureResponse) => void>()
 const asked = new Map<string, Promise<boolean[] | null>>()
 const answered = new Map<string, boolean[]>()
 
-const STORE = 'elements.closure.'
-const STORE_INDEX = 'elements.closure-index'
+const STORE = 'elements.closure2.'
+const STORE_INDEX = 'elements.closure2-index'
 const STORE_MAX = 300
 
 const fingerprints = new WeakMap<KnowledgeBase, string>()
@@ -64,7 +69,7 @@ function remember(key: string, value: boolean[]) {
   } catch { /* storage full or unavailable: the session cache still holds it */ }
 }
 
-function ask(key: string, kb: KnowledgeBase, facts: GroundPredicate[], queries: GroundPredicate[], lane: Lane): Promise<boolean[] | null> {
+function ask(key: string, kb: KnowledgeBase, facts: GroundPredicate[], queries: GroundPredicate[], assume: GroundPredicate[], lane: Lane): Promise<boolean[] | null> {
   const known = recall(key)
   if (known) return Promise.resolve(known)
   const inFlight = asked.get(key)
@@ -83,31 +88,33 @@ function ask(key: string, kb: KnowledgeBase, facts: GroundPredicate[], queries: 
     })
   })
   const plain = (f: GroundPredicate) => ({ name: f.name, args: [...f.args] })
-  worker.postMessage({ requestId, rules: kb.allRules() as Rule[], facts: facts.map(plain), queries: queries.map(plain) } satisfies ClosureRequest)
+  worker.postMessage({ requestId, rules: kb.allRules() as Rule[], facts: facts.map(plain), queries: queries.map(plain), assume } satisfies ClosureRequest)
   asked.set(key, answer)
   return answer
 }
 
 /** The facts saturated: the leaves and the outline (forward rules fire from definitions' bodies). */
 const closureFacts = (x: Extraction) => [...x.constraints, ...x.outline]
+/** Distinct names are distinct points (closure.ts): of every point the model places. */
+const assumed = (x: Extraction) => assumedOf([...new Set(x.constraints.flatMap(f => f.args))])
 
 /**
  * A figure's marks as far as they are known now: merged, if the closure's answer is remembered;
  * otherwise only the classes that cannot change, with `settled: false` saying the rest are pending.
  */
 export function marksNow(kb: KnowledgeBase, x: Extraction, figure: Figure): { figure: Figure; settled: boolean } {
-  const queries = closureQueries(figure.marks)
+  const queries = closureQueries(figure.marks, PROPERTIES)
   if (!queries.length) return { figure, settled: true }
   const holds = recall(keyOf(kb, closureFacts(x), queries.map(q => q.fact)))
   if (holds) return { figure: { ...figure, marks: mergeByClosure(figure.marks, queries, holds) }, settled: true }
-  return { figure: { ...figure, marks: settledClasses(figure.marks) }, settled: false }
+  return { figure: { ...figure, marks: settledClasses(figure.marks, queries) }, settled: false }
 }
 
 /** The figure with its marks merged by the closure, when it answers; the figure unmerged if it fails. */
 export async function mergedMarks(kb: KnowledgeBase, x: Extraction, figure: Figure, lane: Lane = 'page'): Promise<Figure> {
-  const queries = closureQueries(figure.marks)
+  const queries = closureQueries(figure.marks, PROPERTIES)
   if (!queries.length) return figure
   const facts = closureFacts(x)
-  const holds = await ask(keyOf(kb, facts, queries.map(q => q.fact)), kb, facts, queries.map(q => q.fact), lane)
+  const holds = await ask(keyOf(kb, facts, queries.map(q => q.fact)), kb, facts, queries.map(q => q.fact), assumed(x), lane)
   return holds ? { ...figure, marks: mergeByClosure(figure.marks, queries, holds) } : figure
 }

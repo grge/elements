@@ -7,6 +7,7 @@
 import type { Figure } from './figure'
 import { segmentKey } from './classes'
 import { factKey } from './extraction'
+import { RELATIONS } from './relations'
 import type { MarkSource } from './marks'
 import type { RenderTransform } from './view'
 import type { GroundPredicate } from '../kb/inference'
@@ -32,7 +33,7 @@ export interface Scene {
    * share a number of concentric arcs), arcs of angles drawn as themselves (`supp`), and Byrne's
    * square for a right angle. SVG path data, with the level.
    */
-  arcs: { d: string; level: number; kind: 'arc' | 'square' }[]
+  arcs: { d: string; level: number; kind: 'arc' | 'square' | 'straight' | 'open' }[]
   /** The loci that placed the touched point, if any (see Helper), in screen coordinates. */
   route: ({ kind: 'line'; x1: number; y1: number; x2: number; y2: number } | { kind: 'circle'; cx: number; cy: number; r: number })[]
   /** Parallel to the arrays above: what made each element, as fact keys (extraction.ts `factKey`). */
@@ -141,10 +142,31 @@ export function buildScene(
 
   const arcs: Scene['arcs'] = []
   /** Arcs at b in angle a-b-c, n concentric ones; or a right angle's square. */
-  const angleAt = (na: string, nb: string, nc: string, n: number, kind: 'arc' | 'square', lv: number, facts: string[], mark: { mark: number; member: number } | null) => {
+  const angleAt = (na: string, nb: string, nc: string, n: number, kind: Scene['arcs'][number]['kind'], lv: number, facts: string[], mark: { mark: number; member: number } | null, through?: string) => {
     const [a, b, c] = [at(na), at(nb), at(nc)]
     if (!a || !b || !c) return
     addSegment(nb, na, lv, facts); addSegment(nb, nc, lv, facts)
+    if (kind === 'straight' && through !== undefined) {
+      // From one outer arm through the shared arm to the other: the two angles as one straight angle.
+      const m = at(through)
+      if (!m) return
+      addSegment(nb, through, lv, facts)
+      const turn = (from: Point, to: Point) => {
+        let d = Math.atan2(to[1] - b[1], to[0] - b[0]) - Math.atan2(from[1] - b[1], from[0] - b[0])
+        while (d <= -Math.PI) d += 2 * Math.PI
+        while (d > Math.PI) d -= 2 * Math.PI
+        return d
+      }
+      const sweep = turn(a, m) + turn(m, c)
+      const reach = Math.min(...[a, m, c].map(p => Math.hypot(p[0] - b[0], p[1] - b[1])))
+      const r = Math.min(tick * 2.2, 0.45 * reach)
+      if (r < 2) return
+      const u0 = Math.atan2(a[1] - b[1], a[0] - b[0])
+      const p0 = [b[0] + r * Math.cos(u0), b[1] + r * Math.sin(u0)], p1 = [b[0] + r * Math.cos(u0 + sweep), b[1] + r * Math.sin(u0 + sweep)]
+      arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${Math.abs(sweep) > Math.PI ? 1 : 0} ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: lv, kind })
+      meta.arcs.push({ facts, mark })
+      return
+    }
     const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
     const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
     if (kind === 'square') {
@@ -167,9 +189,8 @@ export function buildScene(
       meta.arcs.push({ facts, mark })
     }
   }
-  // Angles drawn as themselves: one arc each (two arcs sharing a vertex and an arm meet in a straight
-  // angle), or a square.
-  for (const a of figure.angles) angleAt(...a.points, 1, a.as, level(a.depth), a.facts, null)
+  // Angles drawn as themselves: a right angle's square, supplements as one straight angle or open arcs.
+  for (const a of figure.angles) angleAt(...a.points, 1, a.as, level(a.depth), a.facts, null, a.through)
 
   // Marks (marks.ts): each class of equal blocks with at least two members on screen (a mark must have
   // something to be equal to). Classes of segments get ticks, one more stroke for each class, and
@@ -180,6 +201,20 @@ export function buildScene(
   let segmentClasses = 0, angleClasses = 0
   figure.marks.forEach((cls, ci) => {
     const shown = cls.members.map((_, i) => i).filter(i => visible(cls.members[i]))
+    // A class the closure knows to be right angles is drawn as squares (its relation's drawing), and
+    // then even one member on screen is worth marking.
+    const as = cls.as ? RELATIONS.get(cls.as) : undefined
+    if (as?.draw) {
+      for (const mi of shown) {
+        const member = cls.members[mi]
+        const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
+        as.draw(member.points, {
+          angle: (a, b, c, kind) => angleAt(a, b, c, 1, kind, level(member.depth), facts, { mark: ci, member: mi }),
+          line: () => {}, segment: () => {}, circle: () => {}, supplement: () => {}, sameLength: () => {},
+        })
+      }
+      return
+    }
     if (shown.length < 2 || (cls.k !== 2 && cls.k !== 3)) return
     const n = cls.k === 2 ? ++segmentClasses : ++angleClasses
     for (const mi of shown) {

@@ -52,7 +52,11 @@ export function provenance(
     const cls = figure.marks[el.mark.mark]
     if (cls) return { text: explainChain(cls, el.mark.member, s => reason(s, where)), origins: [...origins] }
   }
-  return { text: facts(el.facts).map(where).join('; '), origins: [...origins] }
+  const said = (f: DrawableFact) => {
+    const by = figure.provenBy.get(`${f.name}(${f.args.join(',')})`)
+    return by ? `${show(f)} (proven, of ${by.map(where).join(' and ')})` : where(f)
+  }
+  return { text: facts(el.facts).map(said).join('; '), origins: [...origins] }
 }
 
 function reason(s: MarkSource, where: (f: DrawableFact) => string): string {

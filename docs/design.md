@@ -155,8 +155,8 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `circle a b c` | the circle about a through b and c |
 | `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
-| `supp a b c d e f` | the two angles' arcs, meeting in a straight angle |
-| right angles | Byrne's small square at the vertex |
+| `supp a b c d e f` | side by side (one vertex, one shared arm): one arc across both, a straight angle; otherwise a dotted arc at each, which never means equal |
+| `right a b c` | Byrne's small square at the vertex |
 | `distinct`, `triangle` | nothing: they rule configurations out |
 
 The word chosen is the drawing you get: `circle a b c` and `eq-lines a b a c` mean the same, and draw
@@ -198,6 +198,17 @@ What a lemma can match is the figure's *outline*: the written facts and the defi
 down to what is drawn and no further. A lemma about circles matches drawn circles, never the radii a
 circle unfolds to, so a circle does not tick its own radii through a lemma that merely restates them.
 
+Some relations are marks too, not equalities: a right angle's square, a supplement's arcs (`mark`
+in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:
+perpendicular a c d, distinct a c` puts a square at c on every figure that uses `perpendicular`. And a
+class of equal angles the closure derives to be right is drawn as squares instead of arcs (see
+*Equality chains*).
+
+The figure takes distinct names for distinct points, and marks use the same convention: a lemma's
+`distinct` hypothesis is met by two different names (relations.ts `byNames`), and the closure assumes
+`distinct` of every two points of the figure, saturating again without it should that contradict the
+facts (`src/geometry/closure.ts`).
+
 Only proven lemmas travel. Book lemmas are all ✓ (the tests require it), and a page's own lemmas lend
 their marks to its figure once they check. Still to build: a user's lemma travelling to other pages,
 which needs its verdict cached per knowledge base, computed in idle time as thumbnails are. A ✗ or ?
@@ -231,9 +242,11 @@ closure is pending the figure draws only the classes that cannot change (a relat
 never shows a mark it will take back; the rest appear when the answer arrives, a second or few. Answers
 are remembered across visits (localStorage, keyed by the rules, the facts and the questions), so the
 book's figures and thumbnails wait only on the first visit. A join is
-explained as *follows from the figure's facts*, until proof traces can say how. Equalities the book
-cannot derive stay apart: the circumcentre's equilateral triangles on two different sides keep two
-classes of arcs, since showing both are 60° needs similarity.
+explained as *follows from the figure's facts*, until proof traces can say how. The closure is also asked, of each class, whether
+its members have a mark relation on one block (`right` of an angle); a class that does is drawn with
+that relation's drawing. Equalities the book cannot derive stay apart: the circumcentre's equilateral
+triangles on two different sides keep two classes of arcs, since showing both are 60° needs I.32 (a
+triangle's angles make two right angles), which needs parallels.
 
 ### Where each element came from
 
