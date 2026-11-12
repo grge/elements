@@ -27,12 +27,57 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 3. **The editor.** Done in November 2026: prose comments, hanging indents, no breaks inside names,
    reasons for ✗ and ⊥ and syntax errors shown under their lines, unknown names marked, completion
    with argument fields, Enter and Tab that know the layout (see design.md, *Source*).
-4. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
+   The tether between source and figure followed (see design.md, *As built*).
+4. **Honest verdicts** (under *Logic*): *unknown* when a check runs out of budget, and numeric
+   evidence. Harder proofs make a ✗ that means "gave up" misleading.
+5. **Chapter 2, angle.** One chapter is a thin demo, and this one tests the engine: a six-place
+   equivalence on angle triples (structure recognition has not met blocks of three; matching over
+   every tuple class may be slow), angle facts as checks in the drawing, Byrne's coloured angle marks.
+   Decide first between `eq-angle` and spreads, or both (see book.md, *Open questions*).
+6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
-   help. Sketched before built; [the Plates concept](plates-concept/REDESIGN_CONCEPT.md) is a starting
-   point, and design.md's entry page is the earlier idea.
-5. **Chapters 2 onwards**, as [book.md](book.md) plans them. Writing them is also the test of all the
-   above.
+   help. Sketched before built, once two chapters show what it lays out; [the Plates
+   concept](plates-concept/REDESIGN_CONCEPT.md) is a starting point, and design.md's entry page is the
+   earlier idea.
+
+## Beyond
+
+**The rest of the book.** Each chapter after 2 waits on a decision or a piece of drawing:
+
+| Chapter | Needs first |
+|---------|-------------|
+| 3, direction | the parallel through a point as a locus in the planner |
+| 4, area | how to add quantities (book.md, *Open questions*) |
+| 5, circle | mostly content, on chapters 1–4 |
+| 6, ratio | equal ratios as an equivalence on pairs of segments |
+| 7, regular figures | content, on all the above |
+
+**Three lenses on one theory.** The Horn clauses are the theory. A geometry gives it *models*, and
+each model can be looked at in more than one way:
+
+- **constructive**: loci, intersections, ruler and compass (the planner and the figure);
+- **numeric**: residuals on sampled configurations (the solver, the checks, and numeric evidence for
+  honest verdicts);
+- **algebraic**: the same facts as polynomial equations, decided by Gröbner bases or Wu's method
+  (Chou proved hundreds of Euclidean theorems this way). It proves what forward chaining cannot
+  (facts that need case splits), and its non-degeneracy conditions ("provided a ≠ b") are exactly the
+  `distinct` hypotheses the book already writes, so the two lenses can check each other.
+  Wildberger's rational trigonometry gives this lens its natural vocabulary: quadrance (squared
+  distance) and spread (squared sine of the angle between lines) make every relation polynomial,
+  over any field. JavaScript has no mature Gröbner library; small systems can be done by hand, larger
+  ones through a WebAssembly build of a computer algebra system (giac has one).
+
+The engine stays free of geometry: a model is a plug-in that interprets the drawable relations three
+ways (as loci, as residuals, as polynomials). Building that boundary (*Construction and drawing*,
+below) is the first step for every item here.
+
+**Sibling books.** Chapters 1 and 2 use no parallel postulate, so a **hyperbolic** book, drawn in the
+Poincaré disk, can share them unchanged and fork at chapter 3: the same propositions, the same ✓, in
+both worlds. Its lines are arcs meeting the boundary at right angles and its circles are Euclidean
+circles with a shifted centre, so every intersection is one the planner already makes. A **spherical**
+book is harder (antipodal points share many lines, and `between` changes), so it needs its own axioms
+from chapter 1. A **rational trigonometry** book, quadrance and spread instead of length and angle,
+would sit naturally beside the algebraic lens.
 
 ## Logic
 
@@ -40,7 +85,11 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
   that ran out of budget as *unknown*, not ✗. Then add numeric
   evidence: evaluate a lemma on sampled configurations of its hypotheses' construction, giving
   *proven* ✓, *false* with a counterexample figure, *probably true* (holds in every sample, not proven),
-  and an alarm when something proven fails numerically (a bug or a false axiom).
+  and an alarm when something proven fails numerically (a bug or a false axiom). Where a sample has
+  rational coordinates, check it exactly, without tolerances: in quadrances (squared distances) every
+  drawable relation is polynomial. Points the compass places generally leave the rationals (two
+  circles meet at a square root), so this covers the free points and the straight-edge steps, not
+  everything.
 - **Proof traces**: why a ✓ holds, as a derivation tree.
 - **Use definitions in both directions during forward chaining** where no new objects are needed
   (`eq-triangle a b c` ⇒ `circle a b c`), not only when unfolding hypotheses.
@@ -70,8 +119,8 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 - **Order facts on circles** restrict sliders to arcs (today they are only checked).
 - **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,
   instead of falling back to the solver for the whole figure.
-- **A drawing-layer boundary** for other geometries: the drawable relations, their loci, intersections
-  and numeric residuals as a plug-in.
+- **A drawing-layer boundary**: the drawable relations, their loci, intersections and numeric residuals
+  as a plug-in, a *model* of the theory (see *Beyond*: three lenses, sibling books).
 - **Annotations from proven facts**: segments a figure *states* equal get tick marks already; extend
   this to segments *proven* equal.
 - Step-by-step playback of a construction; undo for dragging.

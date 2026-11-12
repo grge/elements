@@ -148,3 +148,10 @@ circle.
 - **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
   object would read better and suit projective or other geometries. Not needed yet.
 - **Comparisons of size**, for the triangle inequality and Euclid I.16–25.
+- **Angles or spreads, for chapter 2.** Wildberger's *spread* between two lines (in effect the squared
+  sine of the angle) does not tell an angle from its supplement. That sounds like a loss, but rays,
+  sides and orientation are exactly what Horn clauses handle worst: which side of a line a point is
+  on, supplementary angles, the case splits the engine cannot do. An `eq-spread` relation on pairs of
+  lines (four points) avoids most of that, and many of Euclid's results restate cleanly with it.
+  Options: `eq-angle` alone (Euclid's own, with sides to manage), `eq-spread` alone, or spreads first
+  and angles where orientation matters. Decide before writing chapter 2.

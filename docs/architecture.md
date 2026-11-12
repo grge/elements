@@ -191,10 +191,11 @@ tangencies. The principled answer is Cinderella's complex tracing, and exact tra
 general ([Denner-Broser](https://www.mi.fu-berlin.de/inf/groups/ag-ti/theses/phd_finished/denner-broser_britta/index.html)).
 
 **Considered and not adopted for now:** backward search with tabling (goal-directed, gives proof trees;
-not needed at the current size), SMT solvers (powerful but heavy and opaque), algebraic provers such as
-Wu's method or Gröbner bases (decide many metric theorems, but specific to Euclidean geometry), and
+not needed at the current size), SMT solvers (powerful but heavy and opaque), and
 Avigad, Dean and Mumma's system E (a formal account of Euclid that reads order facts from the diagram; a
-good reference for how `between` and distinctness should eventually work).
+good reference for how `between` and distinctness should eventually work). Algebraic provers (Wu's
+method, Gröbner bases) are planned not as the engine but as a third lens on a geometry's model,
+beside the construction and the numbers; see the [roadmap](roadmap.md#beyond).
 
 ## Tests
 
