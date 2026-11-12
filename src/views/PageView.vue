@@ -112,7 +112,7 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor, { type EditorHover } from '../components/CodeEditor.vue'
-import { drawableFacts } from '../geometry/extraction'
+import { extract } from '../geometry/extraction'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import { useThumbnails } from '../composables/useThumbnails'
@@ -272,7 +272,7 @@ const figureFocus = computed(() => {
   if (!rt) return null
   try {
     const args = h.args.map(a => pointOf(a) ?? a)
-    const facts = drawableFacts(rt.kb, [{ name: h.name, args }])
+    const facts = extract(rt.kb, [{ name: h.name, args }]).depicted
     return facts.length ? { facts, points: args.filter(a => pointOf(a) !== null) } : null
   } catch { return null }
 })
@@ -301,15 +301,20 @@ const planSteps = computed(() =>
 // Ruler and compass when a valid construction exists; otherwise the numerical solver.
 const usingConstruction = computed(() => !!ws.construction.value?.valid)
 const failure = computed(() => usingConstruction.value ? ws.drawing.value?.failure : undefined)
+// Facts the figure has no reading for (eq-point, triangle, a user's open predicate) are said, not dropped.
+const unreadNote = computed(() => {
+  const names = [...new Set(ws.extraction.value.unread.map(f => f.name))]
+  return names.length ? `Not drawn: ${names.join(', ')} (the figure has no reading for ${names.length > 1 ? 'them' : 'it'}).` : ''
+})
 const status = computed(() => {
   if (ws.construction.value && !ws.construction.value.valid) {
     return 'No configuration satisfies every fact with this construction; drawn numerically instead.'
   }
   const d = ws.drawing.value
-  if (!usingConstruction.value || !d) return ''
+  if (!usingConstruction.value || !d) return unreadNote.value
   if (d.failure) return `${displayName(d.failure.point)}: ${d.failure.reason}`
   if (d.violations.length) return `Does not hold here: ${d.violations.map(v => v.what).join('; ')}`
-  return ''
+  return unreadNote.value
 })
 </script>
 

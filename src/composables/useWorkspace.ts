@@ -2,7 +2,7 @@ import { ref, computed, shallowRef, watch } from 'vue'
 import { ParseError, parseSource, type TopLevel } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { drawableFacts, geometryProblemFromFacts } from '../geometry/extraction'
+import { extract, geometryProblemFromFacts } from '../geometry/extraction'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
 import { useKB, type Namespace } from './useKB'
 
@@ -137,17 +137,19 @@ export function useWorkspace() {
     }
   }
 
-  /** Drawable facts of the figure, after unfolding definitions. */
-  const facts = computed(() => {
-    if (!runtime.value) return []
-    try { return drawableFacts(runtime.value.kb, runtime.value.configuration.allFacts()) }
-    catch (e) { console.warn('Geometry extraction error:', e); return [] }
+  /** The page's facts unfolded: what the planner builds from, what is drawn, what cannot be read. */
+  const extraction = computed(() => {
+    if (!runtime.value) return { constraints: [], depicted: [], unread: [] }
+    try { return extract(runtime.value.kb, runtime.value.configuration.allFacts()) }
+    catch (e) { console.warn('Geometry extraction error:', e); return { constraints: [], depicted: [], unread: [] } }
   })
+  /** The constraints the planner builds the figure from. */
+  const facts = computed(() => extraction.value.constraints)
 
   // Never throw from here: the page renders from this, and a render error tears down the whole
   // page in production, editor included, which loses focus mid-typing.
   const problem = computed(() => {
-    try { return geometryProblemFromFacts(facts.value) }
+    try { return geometryProblemFromFacts(extraction.value.depicted) }
     catch (e) { console.warn('Geometry problem error:', e); return null }
   })
 
@@ -185,7 +187,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    parseError, runtime, facts, problem, construction, drawing, setConstruction,
+    parseError, runtime, extraction, facts, problem, construction, drawing, setConstruction,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

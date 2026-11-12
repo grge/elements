@@ -9,7 +9,7 @@
 
 import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
-import { drawableFacts, geometryProblemFromFacts } from '../geometry/extraction'
+import { extract, geometryProblemFromFacts } from '../geometry/extraction'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import type { GeometryProblem } from '../geometry/constraints'
 
@@ -20,8 +20,8 @@ export interface Thumbnail {
 
 /** The figure of `name args`, or null if there is nothing to draw. */
 export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[]): Thumbnail | null {
-  const facts = drawableFacts(kb, [{ name, args }])
-  const problem = geometryProblemFromFacts(facts)
+  const { constraints: facts, depicted } = extract(kb, [{ name, args }])
+  const problem = geometryProblemFromFacts(depicted)
   if (!problem) return null
   const { drawing } = realise(plan(buildModel(facts)))
   return drawing.coords.size ? { problem, coords: drawing.coords } : null

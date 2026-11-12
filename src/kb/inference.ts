@@ -177,22 +177,32 @@ export interface UnfoldOptions {
 }
 
 /**
- * Replace a goal by the body of its predicate's definition, recursively, reading definitions as
- * if-and-only-if. Which clause (if any) defines a predicate is decided by the knowledge base
- * (definitions.ts); everything without a definition is left in the frontier.
- *
- * Body-only variables are existentials: each unfolding gives them fresh names.
- * Optionally also stops early when `stopPred(goal)` is true.
+ * One node of an unfolding: a fact, how many definitions deep it is, and (if it was unfolded) the
+ * body of its definition, unfolded in turn. A node without children is where unfolding stopped: an
+ * open predicate, a repeated goal, or a stopPred.
  */
-export function unfold(
+export interface UnfoldNode {
+  fact: GroundPredicate
+  depth: number
+  children: UnfoldNode[] | null
+}
+
+/**
+ * Replace a goal by the body of its predicate's definition, recursively, reading definitions as
+ * if-and-only-if, and keep the tree. Which clause (if any) defines a predicate is decided by the
+ * knowledge base (definitions.ts). Body-only variables are existentials: each unfolding gives them
+ * fresh names. Optionally stops early when `stopPred(goal)` is true.
+ */
+export function unfoldTree(
   goal: GroundPredicate,
   kb: KnowledgeBase,
-  visiting: Set<string> = new Set(),
   options: UnfoldOptions = {},
-): UnfoldResult {
+  visiting: Set<string> = new Set(),
+  depth = 0,
+): UnfoldNode {
   const { stopPred } = options
   const fresh = options.fresh ?? new FreshNames()
-  const leaf: UnfoldResult = { frontier: [goal], depths: [0], expanded: false }
+  const leaf: UnfoldNode = { fact: goal, depth, children: null }
   if (stopPred?.(goal)) return leaf
 
   const key = groundKey(goal)
@@ -209,16 +219,25 @@ export function unfold(
 
   const nextVisiting = new Set(visiting)
   nextVisiting.add(key)
+  const children = rule.body.map(b => unfoldTree(applySubst(s, b), kb, { ...options, fresh }, nextVisiting, depth + 1))
+  return { fact: goal, depth, children }
+}
 
-  const frontier: GroundPredicate[] = []
-  const depths: number[] = []
-  for (const bodyPred of rule.body) {
-    const sub = unfold(applySubst(s, bodyPred), kb, nextVisiting, { ...options, fresh })
-    frontier.push(...sub.frontier)
-    depths.push(...sub.depths.map(d => d + 1))
-  }
+/** The leaves of an unfolding tree, in order. */
+export function leavesOf(node: UnfoldNode): UnfoldNode[] {
+  return node.children ? node.children.flatMap(leavesOf) : [node]
+}
 
-  return { frontier, depths, expanded: true }
+/** `unfoldTree`, read as its leaves: the facts a goal means, with their depths. */
+export function unfold(
+  goal: GroundPredicate,
+  kb: KnowledgeBase,
+  visiting: Set<string> = new Set(),
+  options: UnfoldOptions = {},
+): UnfoldResult {
+  const tree = unfoldTree(goal, kb, options, visiting)
+  const leaves = leavesOf(tree)
+  return { frontier: leaves.map(l => l.fact), depths: leaves.map(l => l.depth), expanded: tree.children !== null }
 }
 
 // ── Forward Closure ───────────────────────────────────────────────────

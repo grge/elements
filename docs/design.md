@@ -118,6 +118,30 @@ the facts; the planner's loci that no fact states (the circle about c on `eq-lin
 the perpendicular in `right`); and marks the drawing inferred on its own (ticks on the radii of the
 shallowest circles). The second and third are what confused.
 
+### Three vocabularies
+
+Three sets of predicates matter to a figure, and they are kept apart:
+
+1. **Where meaning stops** (the logic): unfolding goes through every definition to the open predicates.
+2. **What the geometric model reads** as constraints (equations, loci, choices): `collinear`,
+   `between`, `eq-lines`, `distinct`, `eq-angle`, `supp`, `eq-spread`. The planner builds from these
+   leaves.
+3. **What the figure draws**: the first drawn node on each path of the unfolding, leaf or definition.
+
+They used to be one list, so the wish to draw circles decided where unfolding stopped: `circle` was
+not unfolded although it is defined. Now unfolding is the logic's (built, November 2026): `circle a b
+c` reaches the planner as `eq-lines a b a c` (it already treated both as equal lengths, so no plan
+changed) and is drawn as a circle. A depiction can attach to any node, so a defined predicate can have
+a drawing of its own without losing its constraints (Byrne's square for `right`), and a user's
+predicate could be given one safely. Leaves with no geometric reading are reported on the page.
+
+A drawable relation, fully, is a bundle of interpretations: equations (residuals, and how many degrees
+of freedom they remove), loci for an unknown point given the others, choices (order facts that prune
+branches and bound sliders), and a drawing. Marks (ticks, arcs) are a different kind of thing: they
+depict *equivalence classes* across the whole figure, so they belong to equivalences, not relations
+(see *Equality chains*). Gathering each relation's interpretations into one registry is the
+drawing-layer boundary on the roadmap; a new geometric primitive (`parallel`) would then be one entry.
+
 ### What each relation draws
 
 | Relation | Drawn as |

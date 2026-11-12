@@ -15,7 +15,7 @@ import { unfold, type GroundPredicate, type KnowledgeBase } from '../kb/inferenc
 import { FreshNames, displayName } from '../kb/names'
 import type { Lemma } from '../language/parser'
 import { buildModel, configurations, plan, type Point } from './construction'
-import { GEOMETRY_FRONTIER } from './extraction'
+import { DEPICTED_RELATIONS as GEOMETRY_FRONTIER } from './extraction'
 import { measureResidual } from './measure'
 
 export type Evidence =

@@ -1,9 +1,19 @@
 /**
- * Extraction: from facts to drawable facts (collinear, between, circle, eq-lines, distinct) by
- * unfolding definitions, and from those to a GeometryProblem.
+ * Extraction: what a page's facts mean for the figure.
+ *
+ * Facts are unfolded as the logic unfolds them, all the way to open predicates, keeping the tree.
+ * Three things are read off it, in one traversal:
+ *
+ *   constraints  the leaves the geometric model can read (CONSTRAINT_RELATIONS): what the planner
+ *                builds from. `circle a b c` arrives as its definition, `eq-lines a b a c`.
+ *   depicted     on each path from a written fact, the first node the figure draws
+ *                (DEPICTED_RELATIONS): a circle node is drawn as a circle, and what it unfolds to is
+ *                not drawn again. Where unfolding stops is the logic's business, not the drawing's.
+ *   unread       leaves with no geometric reading (`eq-point`, `triangle`, a user's open predicate):
+ *                reported, not silently dropped.
  */
 
-import { KnowledgeBase, unfold, type GroundPredicate } from '../kb/inference'
+import { KnowledgeBase, unfoldTree, type GroundPredicate, type UnfoldNode } from '../kb/inference'
 import { FreshNames } from '../kb/names'
 import type {
   GeometryProblem, Constraint,
@@ -11,7 +21,14 @@ import type {
 } from './constraints'
 import { canonicalise } from './canonicalization'
 
-export const GEOMETRY_FRONTIER = new Set(['collinear', 'between', 'circle', 'eq-lines', 'distinct', 'eq-angle', 'eq-spread', 'supp'])
+/** Open predicates the geometric model reads as constraints (equations, loci, choices). */
+export const CONSTRAINT_RELATIONS = new Set(['collinear', 'between', 'eq-lines', 'distinct', 'eq-angle', 'eq-spread', 'supp'])
+
+/** Relations the figure draws. `circle` is defined (equal radii) but drawn as a circle. */
+export const DEPICTED_RELATIONS = new Set([...CONSTRAINT_RELATIONS, 'circle'])
+
+/** Everything the drawing layer understands. */
+export const GEOMETRY_FRONTIER = DEPICTED_RELATIONS
 
 export class UnsupportedPrimitiveError extends Error {}
 
@@ -96,23 +113,33 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
  */
 export type DrawableFact = GroundPredicate & { depth: number }
 
-/** Unfold facts to the drawable facts they mean; anything else they unfold to is dropped. */
-export function drawableFacts(kb: KnowledgeBase, facts: readonly GroundPredicate[]): DrawableFact[] {
-  const frontier = new Map<string, DrawableFact>()
+export interface Extraction {
+  /** What the planner builds from: the leaves the geometric model reads. */
+  constraints: DrawableFact[]
+  /** What the figure draws: the first drawn node on each path from a written fact. */
+  depicted: DrawableFact[]
+  /** Leaves with no geometric reading. */
+  unread: DrawableFact[]
+}
+
+/** Unfold facts and read off their constraints, what to draw, and what the drawing cannot read. */
+export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[]): Extraction {
+  const sets = { constraints: new Map<string, DrawableFact>(), depicted: new Map<string, DrawableFact>(), unread: new Map<string, DrawableFact>() }
+  const add = (into: Map<string, DrawableFact>, n: UnfoldNode) => {
+    const key = `${n.fact.name}(${n.fact.args.join(',')})`
+    // A fact reached twice keeps its shallowest depth.
+    into.set(key, { ...n.fact, depth: Math.min(n.depth, into.get(key)?.depth ?? Infinity) })
+  }
+  const walk = (n: UnfoldNode, drawn: boolean) => {
+    if (!drawn && DEPICTED_RELATIONS.has(n.fact.name)) { add(sets.depicted, n); drawn = true }
+    if (n.children) { n.children.forEach(c => walk(c, drawn)); return }
+    if (CONSTRAINT_RELATIONS.has(n.fact.name)) add(sets.constraints, n)
+    else if (n.fact.name !== 'false') add(sets.unread, n)
+  }
   // Shared across facts: two constructions in one drawing must not share auxiliary points.
   const fresh = new FreshNames()
-
-  for (const fact of facts) {
-    const u = unfold(fact, kb, new Set(), { stopPred: p => GEOMETRY_FRONTIER.has(p.name), fresh })
-    u.frontier.forEach((pred, i) => {
-      if (!GEOMETRY_FRONTIER.has(pred.name)) return
-      const key = `${pred.name}(${pred.args.join(',')})`
-      const depth = Math.min(u.depths[i], frontier.get(key)?.depth ?? Infinity)
-      frontier.set(key, { ...pred, depth })
-    })
-  }
-
-  return [...frontier.values()]
+  for (const fact of facts) walk(unfoldTree(fact, kb, { fresh }), false)
+  return { constraints: [...sets.constraints.values()], depicted: [...sets.depicted.values()], unread: [...sets.unread.values()] }
 }
 
 /**

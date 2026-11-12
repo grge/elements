@@ -3,14 +3,14 @@ import { parseSource } from '../src/language/parser'
 import { bookRules, fixtureRules } from './book'
 import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
-import { drawableFacts } from '../src/geometry/extraction'
+import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise, execute, drag, paramCount, type Point, type ConstructionPlan } from '../src/geometry/construction'
 import { measureResidual } from '../src/geometry/measure'
 
 // The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
 const kb = new KnowledgeBase([...bookRules, ...fixtureRules])
 
-const factsOf = (text: string) => { const rt = buildRuntimeState(kb, parseSource(text)); return drawableFacts(rt.kb, rt.configuration.allFacts()) }
+const factsOf = (text: string) => { const rt = buildRuntimeState(kb, parseSource(text)); return extract(rt.kb, rt.configuration.allFacts()).constraints }
 
 // Independent oracle: does a drawing satisfy every fact of the figure?
 function worstFact(facts: GroundPredicate[], c: Map<string, Point>): { residual: number; fact: string } {

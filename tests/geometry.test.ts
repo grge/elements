@@ -5,7 +5,7 @@ import { parseSource, parseRules } from '../src/language/parser'
 import { KnowledgeBase, unfold } from '../src/kb/inference'
 import { saturate } from '../src/kb/saturate'
 import { buildRuntimeState } from '../src/kb/runtime'
-import { drawableFacts, geometryProblemFromFacts } from '../src/geometry/extraction'
+import { extract, geometryProblemFromFacts } from '../src/geometry/extraction'
 import { solve } from '../src/geometry/solver'
 import { bookRules, fixtureRules } from './book'
 
@@ -40,7 +40,7 @@ describe('inference', () => {
 
 function solveGoal(goalStr: string) {
   const goals = parseSource(goalStr).flatMap(i => i.kind === 'goal' ? [i.pred] : [])
-  const problem = geometryProblemFromFacts(drawableFacts(kb, goals))!
+  const problem = geometryProblemFromFacts(extract(kb, goals).depicted)!
   return { problem, witness: solve(problem) }
 }
 
@@ -128,7 +128,7 @@ describe('runtime to geometry extraction', () => {
   it('constructs a geometry problem from runtime ground facts', () => {
     const kb = new KnowledgeBase(parseRules(`eq-triangle a b c: circle a b c, circle b a c`))
     const runtime = buildRuntimeState(kb, parseSource('eq-triangle a b c'))
-    const problem = geometryProblemFromFacts(drawableFacts(runtime.kb, runtime.configuration.allFacts()))
+    const problem = geometryProblemFromFacts(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
     expect(problem).not.toBeNull()
     expect(problem?.circles.length).toBe(2)
   })
@@ -139,7 +139,7 @@ describe('runtime to geometry extraction', () => {
       parseSource('eq-triangle a b c: circle a b c, circle b a c')
     )
     runtime.configuration.addFact({ name: 'eq-triangle', args: ['a', 'b', 'c'] })
-    const problem = geometryProblemFromFacts(drawableFacts(runtime.kb, runtime.configuration.allFacts()))
+    const problem = geometryProblemFromFacts(extract(runtime.kb, runtime.configuration.allFacts()).depicted)
     expect(problem).not.toBeNull()
     expect(problem?.circles.length).toBe(2)
   })

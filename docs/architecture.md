@@ -22,7 +22,7 @@ see [design.md](design.md).
 | Path | What it is |
 |------|------------|
 | `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file |
-| `src/kb/inference.ts` | `KnowledgeBase`, `unfold`, and `forwardClosure` (the plain reference engine) |
+| `src/kb/inference.ts` | `KnowledgeBase`, `unfoldTree` and `unfold`, and `forwardClosure` (the plain reference engine) |
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, or are symmetric |
 | `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure |
@@ -114,14 +114,18 @@ blocks.
 
 ## From facts to a figure
 
-**Extraction** (`extraction.ts`, `drawableFacts`) unfolds the page's facts down to the relations the
-drawing layer understands: `collinear`, `between`, `circle`, `eq-lines`, `distinct`, and the measures
-`eq-angle` and `eq-spread` (`measure.ts`; checked and solved, not yet constructed). That list
-belongs to the drawing layer, not to the logic. One supply of fresh names is shared by the whole figure,
-so two constructions never share auxiliary points. Facts that cannot be drawn are skipped. Each drawable
-fact keeps its depth, the number of definitions unfolded to reach it (the shallowest if it is reached
-twice); lines and circles merged by canonicalisation keep the shallowest of theirs, and the figure draws
-deeper elements thinner and fainter.
+**Extraction** (`extraction.ts`, `extract`) unfolds the page's facts as the logic does, all the way to
+open predicates, keeping the tree (`unfoldTree` in `inference.ts`), and reads three things off it. The
+*constraints* are the leaves the geometric model can read (`collinear`, `between`, `eq-lines`,
+`distinct`, `eq-angle`, `supp`, `eq-spread`): what the planner builds from. What is *depicted* is the
+first drawn node on each path: `circle a b c` is defined (equal radii) and arrives at the planner as
+`eq-lines a b a c`, but is drawn as a circle, and its radii are not drawn again. Where unfolding stops
+is the logic's business, not the drawing's. Leaves with no geometric reading (`eq-point`, `triangle`, a
+user's open predicate) are *unread* and the page says so. That list belongs to the drawing layer, not to
+the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
+auxiliary points. Each fact keeps its depth, the number of definitions unfolded to reach it (the
+shallowest if it is reached twice); lines and circles merged by canonicalisation keep the shallowest of
+theirs, and the figure draws deeper elements thinner and fainter.
 
 From the drawable facts two representations are built:
 
