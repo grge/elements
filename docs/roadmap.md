@@ -138,6 +138,11 @@ would sit naturally beside the algebraic lens.
 
 ## Construction and drawing
 
+- **The figure's rule** (design.md, *The figure: what it draws and why*): a drawing vocabulary per
+  relation (`between` as a segment, `supp` arcs, right-angle squares); the planner's unstated loci shown
+  only on touch; marks from statements and proven lemmas, lemmas travelling with their constructions;
+  equality chains through hidden members by union-find over recognised equivalences, each mark able to
+  explain its chain; hover an element for the fact it came from.
 - **Use inferred facts when drawing**: feed the forward closure (not only the unfolded facts) to the
   planner, so derived facts become loci or checks.
 - ~~Draw the construction actually used~~ (November 2026): the planner's loci the figure lacks are

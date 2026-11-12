@@ -104,6 +104,88 @@ page. The matching is geometric: the hovered atom is unfolded and the figure's e
 its points are brought forward, so the drawing pipeline does not have to carry where each element
 came from.
 
+## The figure: what it draws and why
+
+*Agreed November 2026; partly built. This section is the rule; the code follows it as it is changed.*
+
+**The rule.** Everything the figure shows by default is something written: a fact on the page, or a
+fact inside a definition the page uses (fainter the deeper), or an equality the page states or a
+proof establishes. How the figure is *built* (the planner's route) is shown when a point is touched,
+and in the steps under the source. Every element and every mark can say where it came from.
+
+Until now the figure mixed three sources in one visual language, with nothing to tell them apart:
+the facts; the planner's loci that no fact states (the circle about c on `eq-lines a b c d`'s page,
+the perpendicular in `right`); and marks the drawing inferred on its own (ticks on the radii of the
+shallowest circles). The second and third are what confused.
+
+### What each relation draws
+
+| Relation | Drawn as |
+|---|---|
+| `collinear a b c` | the line through the points, across the page |
+| `between a b c` | the segment a–c at full strength (Byrne's finite straight line), its line continuing faint beyond the ends |
+| `circle a b c` | the circle about a through b and c |
+| `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
+| `eq-angle a b c d e f` | arcs at both vertices, with the arms |
+| `supp a b c d e f` | the two angles' arcs, meeting in a straight angle |
+| right angles | Byrne's small square at the vertex |
+| `distinct`, `triangle` | nothing: they rule configurations out |
+
+The word chosen is the drawing you get: `circle a b c` and `eq-lines a b a c` mean the same, and draw
+a circle and two ticked segments respectively. That is deliberate.
+
+### The planner's route: shown on touch
+
+A locus the planner uses that no fact states is not drawn by default. Touching a point (hover, or
+grabbing it to drag) shows its locus: the circle a slider runs on, the ray at a copied angle, the
+bisector of a right angle, the two loci an intersection came from. Letting go hides it again. So the
+figure shows what was written, and a point shows where it can go and why it is where it is.
+
+### Marks: from statements and proofs
+
+Tick marks and angle arcs mark equalities, and an equality is marked only if it is
+
+- **stated**: an `eq-lines` or `eq-angle` fact on the page or in a definition it uses; or
+- **proven**: a ✓ lemma on the page, or a ✓ lemma *about a construction the figure uses*. Lemmas
+  travel with their predicates: wherever `eq-triangle a b c` occurs in a figure, at any depth, the
+  proven `? eq-lines a b b c: eq-triangle a b c` contributes ab = bc for those points. Matching is a
+  renaming of the lemma's variables (a little matching for lemmas with several hypotheses), no search.
+
+The drawing infers no equality of its own. On `eq-triangle`'s page the three sides are ticked because
+its two lemmas are ✓; on the scratchpad `eq-triangle a b c` alone draws its two circles, and the ticks
+appear when `? eq-lines a b b c: eq-triangle a b c` is written and checks. Proof becomes a mark, as in
+Byrne.
+
+Only proven lemmas travel. Book lemmas are all ✓ (the tests require it); a user's lemma has its verdict
+cached per knowledge base, computed in idle time as thumbnails are, before its marks can travel. A ✗ or
+? lemma never marks anything. A nested construction's marks appear at its depth, as faint as its
+circles; a limit on how deep marks are taken from is the dial if deep figures get busy.
+
+### Equality chains
+
+Marks are computed in two steps. First every known equality, stated or proven, at every depth, is put
+into classes: one union-find per relation the engine has *recognised* as an equivalence (structure.ts:
+`eq-lines` on pairs, `eq-angle` on triples), so the drawing knows no relation by name. Then the
+visible members of each class are marked. A deep equality x = y, joined at the surface to p = x and
+y = q, gives p and q the same ticks even when x and y are hidden. A class with one visible member is
+not marked: a tick must have something to be equal to on screen.
+
+The union-find keeps the edges it merged, so a mark can explain itself as a chain:
+*p = x (line 7) = y (proven on transfer's page, hidden) = q (line 8)*.
+
+Union-find captures symmetry and transitivity only. An equality that needs any other inference
+(substitution of equal points, common notion 2, anything through `between`) is not marked; that needs
+the forward closure, a possible later "everything known" layer once proof traces can explain its
+marks.
+
+### Where each element came from
+
+Hovering an element of the figure says what made it and highlights its source:
+*circle about a through b, from `eq-triangle a b c` (line 2), one level down*; a tick explains its
+chain as above. This completes the tether (source → figure, built) in the other direction
+(figure → source). It needs each drawable fact to remember the written fact it was unfolded from,
+as it already remembers its depth.
+
 ## Designed, not yet built
 
 From the original brief, in rough order of importance:
