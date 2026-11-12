@@ -221,10 +221,16 @@ union-find per recognised equivalence, each edge kept with its source (the state
 and the facts it matched); `chain` gives the path between two members. Blocks of two points are drawn
 as ticks and blocks of three as arcs, which is the only place the drawing looks at a block's size.
 
-Union-find captures symmetry and transitivity only. An equality that needs any other inference
-(substitution of equal points, common notion 2, anything through `between`) is not marked; that needs
-the forward closure, a possible later "everything known" layer once proof traces can explain its
-marks.
+Union-find alone captures symmetry and transitivity only, and that under-merges: the hexagon's five
+equilateral triangles each prove their own three angles equal, nothing links one triangle's angles to
+another's, and five classes drew 1 to 5 concentric arcs, 45 in all. So classes are then merged by the
+forward closure of the figure's facts (built November 2026: `closureQueries` and `mergeByClosure` in
+marks.ts, answered in a worker, `useClosure.ts`). Two classes are one when the engine derives a member of
+each equal. The members stay those stated or proven: the closure joins classes, it adds no marks. The
+figure is drawn at once and its classes merge when the closure answers (a second or two). A join is
+explained as *follows from the figure's facts*, until proof traces can say how. Equalities the book
+cannot derive stay apart: the circumcentre's equilateral triangles on two different sides keep two
+classes of arcs, since showing both are 60° needs similarity.
 
 ### Where each element came from
 

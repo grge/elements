@@ -9,7 +9,8 @@
 
 import { shallowRef, triggerRef } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
-import { extract } from '../geometry/extraction'
+import { extract, type Extraction } from '../geometry/extraction'
+import { mergedMarks } from './useClosure'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import { drawFigure, type Figure } from '../geometry/figure'
 import type { Lemma } from '../language/parser'
@@ -18,6 +19,8 @@ import { bookLemmas } from './useKB'
 export interface Thumbnail {
   figure: Figure
   coords: Map<string, Point>
+  /** What it was drawn from (for merging its marks by the closure). */
+  extraction: Extraction
 }
 
 /** The figure of `name args`, or null if there is nothing to draw. */
@@ -27,7 +30,7 @@ export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly
   const figure = drawFigure(kb, x, lemmas)
   if (!figure) return null
   const { drawing } = realise(plan(buildModel(facts)))
-  return drawing.coords.size ? { figure, coords: drawing.coords } : null
+  return drawing.coords.size ? { figure, coords: drawing.coords, extraction: x } : null
 }
 
 const cache = new WeakMap<KnowledgeBase, Map<string, Thumbnail | null>>()
@@ -53,7 +56,17 @@ export function useThumbnails() {
       let known = cache.get(kb)
       if (!known) cache.set(kb, known = new Map())
       if (!known.has(name)) {
-        try { known.set(name, computeThumbnail(kb, name, args, bookLemmas)) }
+        try {
+          const th = computeThumbnail(kb, name, args, bookLemmas)
+          known.set(name, th)
+          // Its marks merge when the closure answers.
+          if (th) void mergedMarks(kb, th.extraction, th.figure, 'background').then(figure => {
+            if (!figure || known!.get(name) !== th) return
+            const next = { ...th, figure }
+            known!.set(name, next)
+            if (thumbnails.value.get(name) === th) { thumbnails.value.set(name, next); triggerRef(thumbnails) }
+          }).catch(() => {})
+        }
         catch { known.set(name, null) }
       }
       thumbnails.value.set(name, known.get(name)!)

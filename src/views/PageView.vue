@@ -303,7 +303,7 @@ const figureFocus = computed(() => {
     // A mark brings forward its whole class: what made each equality in its chain.
     const cls = el.mark ? figure.marks[el.mark.mark] : null
     const facts: GroundPredicate[] = cls
-      ? cls.edges.flatMap(e => e.source.kind === 'stated' ? [e.source.fact] : e.source.facts)
+      ? cls.edges.flatMap(e => e.source.kind === 'stated' ? [e.source.fact] : e.source.kind === 'proven' ? e.source.facts : [])
       : el.facts.flatMap(k => { const f = figure.sources.get(k); return f ? [f] : [] })
     return facts.length ? { facts, points: [] } : null
   }

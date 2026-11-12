@@ -57,6 +57,7 @@ export function provenance(
 
 function reason(s: MarkSource, where: (f: DrawableFact) => string): string {
   if (s.kind === 'stated') return `stated: ${where(s.fact)}`
+  if (s.kind === 'derived') return 'follows from the figure\'s facts'
   return `proven, of ${s.facts.map(where).join(' and ')}`
 }
 

@@ -10,7 +10,8 @@ import { parseSource } from '../src/language/parser'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
 import { drawFigure } from '../src/geometry/figure'
-import { markClasses, chain, type Equality } from '../src/geometry/marks'
+import { markClasses, chain, closureQueries, mergeByClosure, equalities, type Equality } from '../src/geometry/marks'
+import { saturate } from '../src/kb/saturate'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { computeRenderTransform } from '../src/geometry/view'
 import { buildScene } from '../src/geometry/scene'
@@ -86,3 +87,30 @@ describe('equality chains', () => {
     expect(buildScene(figure, coords, t, 800, 600).ticks).toHaveLength(0)
   })
 })
+
+describe('classes merged by the closure', () => {
+  // Union-find joins only what a stated or proven equality links: the hexagon's five equilateral
+  // triangles would be five classes of 60° angles. The forward closure joins them.
+  const merged = (name: string, args: string) => {
+    const x = extract(kb, [{ name, args: args.split(' ') }])
+    const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
+    const queries = closureQueries(classes)
+    const sat = saturate(kb, [...x.constraints, ...x.outline])
+    return { before: classes, after: mergeByClosure(classes, queries, queries.map(q => sat.holds(q.fact))) }
+  }
+
+  it('the hexagon\'s angles are one class, and its sides another', () => {
+    const { before, after } = merged('hexagon', 'o a b c d e f')
+    expect(before.filter(c => c.k === 3)).toHaveLength(5)
+    expect(after.map(c => `${c.name} ${c.members.length}`).sort()).toEqual(['eq-angle 15', 'eq-lines 11'])
+    const angles = after.find(c => c.k === 3)!
+    expect(angles.edges.filter(e => e.source.kind === 'derived')).toHaveLength(4)
+    expect(chain(angles, 0, 14).length).toBeGreaterThan(0)
+  })
+
+  it('the circumcentre\'s equilateral triangles on a shared side merge, the others stay apart', () => {
+    const { before, after } = merged('circumcentre', 'a b c o')
+    expect(before.filter(c => c.k === 3)).toHaveLength(4)
+    expect(after.filter(c => c.k === 3)).toHaveLength(2)
+  })
+}, 60000)

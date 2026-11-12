@@ -13,8 +13,13 @@
  * Known equalities are put into classes, one union-find per relation the engine has recognised as an
  * equivalence (kb/structure.ts), so nothing here knows a relation by name: a member is a block of k
  * points, taken up to the block's own symmetries (a segment either way round, an angle with its arms
- * swapped). The union-find keeps the edges it was given, so a mark can explain its chain. Nothing is
- * inferred beyond symmetry and transitivity.
+ * swapped). The union-find keeps the edges it was given, so a mark can explain its chain.
+ *
+ * Union-find alone joins only what an equality links directly: the five equilateral triangles of a
+ * hexagon would be five classes of angles, though all are 60°. So classes are then merged by the
+ * forward closure of the figure's facts (`closureQueries`, answered off the main thread, then
+ * `mergeByClosure`): two classes are one when the engine derives one member of each equal. The
+ * members stay those stated or proven; the closure only joins them.
  */
 
 import type { Lemma } from '../language/parser'
@@ -25,6 +30,8 @@ import { UnionFind } from './classes'
 export type MarkSource =
   | { kind: 'stated'; fact: DrawableFact }
   | { kind: 'proven'; lemma: Lemma; facts: DrawableFact[] }
+  /** Derived by the forward closure of the figure's facts (no trace yet: see `mergeByClosure`). */
+  | { kind: 'derived' }
 
 export interface Equality { name: string; args: string[]; depth: number; source: MarkSource }
 
@@ -158,4 +165,47 @@ export function chain(cls: MarkClass, from: number, to: number): MarkClass['edge
     m = e.from === m ? e.to : e.from
   }
   return path
+}
+
+/**
+ * What to ask the closure: for each two classes of the same relation, is a member of one equal to a
+ * member of the other? `pair` is the classes' indexes.
+ */
+export function closureQueries(classes: readonly MarkClass[]): { fact: { name: string; args: string[] }; pair: [number, number] }[] {
+  const out: { fact: { name: string; args: string[] }; pair: [number, number] }[] = []
+  for (let i = 0; i < classes.length; i++) for (let j = i + 1; j < classes.length; j++) {
+    const [a, b] = [classes[i], classes[j]]
+    if (a.name !== b.name) continue
+    out.push({ fact: { name: a.name, args: [...a.members[0].points, ...b.members[0].points] }, pair: [i, j] })
+  }
+  return out
+}
+
+/** Classes merged where the closure derived the equality between them (`holds[i]` answers query i). */
+export function mergeByClosure(classes: readonly MarkClass[], queries: ReturnType<typeof closureQueries>, holds: readonly boolean[]): MarkClass[] {
+  const uf = new UnionFind()
+  classes.forEach((_, i) => uf.add(String(i)))
+  const joins: [number, number][] = []
+  queries.forEach((q, n) => {
+    if (!holds[n] || uf.find(String(q.pair[0])) === uf.find(String(q.pair[1]))) return
+    uf.union(String(q.pair[0]), String(q.pair[1]))
+    joins.push(q.pair)
+  })
+  if (!joins.length) return [...classes]
+  return uf.classes().map(group => {
+    const parts = group.map(Number)
+    if (parts.length === 1) return classes[parts[0]]
+    // Members renumbered in order; each join is an edge between the classes' first members.
+    const offset = new Map<number, number>()
+    let n = 0
+    for (const p of parts) { offset.set(p, n); n += classes[p].members.length }
+    return {
+      name: classes[parts[0]].name, k: classes[parts[0]].k,
+      members: parts.flatMap(p => classes[p].members),
+      edges: [
+        ...parts.flatMap(p => classes[p].edges.map(e => ({ ...e, from: e.from + offset.get(p)!, to: e.to + offset.get(p)! }))),
+        ...joins.filter(([a]) => offset.has(a)).map(([a, b]) => ({ from: offset.get(a)!, to: offset.get(b)!, source: { kind: 'derived' as const } })),
+      ],
+    }
+  })
 }

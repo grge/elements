@@ -3,7 +3,8 @@ import { ParseError, parseSource, type Lemma, type TopLevel } from '../language/
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { extract } from '../geometry/extraction'
-import { drawFigure } from '../geometry/figure'
+import { drawFigure, type Figure } from '../geometry/figure'
+import { mergedMarks } from './useClosure'
 import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
 import { useKB, bookLemmas, type Namespace } from './useKB'
 
@@ -166,11 +167,22 @@ export function useWorkspace() {
 
   // What the figure draws. Never throw from here: the page renders from this, and a render error
   // tears down the whole page in production, editor included, which loses focus mid-typing.
-  const figure = computed(() => {
+  const drawn = computed(() => {
     if (!runtime.value) return null
     try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value) }
     catch (e) { console.warn('Figure error:', e); return null }
   })
+  // Its marks merged by the forward closure, which arrives from a worker (useClosure.ts); until then
+  // the figure shows the classes its stated and proven equalities give.
+  const merged = shallowRef<{ from: Figure; figure: Figure } | null>(null)
+  watch(drawn, f => {
+    const rt = runtime.value
+    if (!f || !rt) return
+    mergedMarks(rt.kb, extraction.value, f)
+      .then(m => { if (m && drawn.value === f) merged.value = { from: f, figure: m } })
+      .catch(e => console.warn('Closure error:', e))
+  }, { immediate: true })
+  const figure = computed(() => merged.value && merged.value.from === drawn.value ? merged.value.figure : drawn.value)
 
   // Positions from the last drawing: re-planning after an edit keeps points where they were.
   let lastCoords: Map<string, Point> | undefined

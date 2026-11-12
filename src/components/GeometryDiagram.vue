@@ -376,7 +376,8 @@ onUnmounted(() => {
 
 watch(() => props.construction, c => { local.value = c ?? null }, { immediate: true })
 
-watch([() => props.figure, () => props.usePlanner], () => {
+// A new figure (not just its marks merging) starts afresh.
+watch([() => props.figure?.points.join(' '), () => props.usePlanner], () => {
   draggedWitness.value = null
   frozenTransform.value = null
   animatedTransform.value = null

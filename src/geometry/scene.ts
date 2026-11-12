@@ -55,7 +55,7 @@ export type Helper =
   | { point: string; kind: 'circle'; c: Point; r: number }
 
 /** The facts behind a known equality: the stated fact, or the facts a lemma matched. */
-const factsOf = (s: MarkSource): string[] => s.kind === 'stated' ? [factKey(s.fact)] : s.facts.map(factKey)
+const factsOf = (s: MarkSource): string[] => s.kind === 'stated' ? [factKey(s.fact)] : s.kind === 'proven' ? s.facts.map(factKey) : []
 
 export function buildScene(
   figure: Figure,
