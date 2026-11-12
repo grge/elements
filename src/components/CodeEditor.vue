@@ -387,8 +387,10 @@ const theme = EditorView.theme({
   '.tok-punct': { color: 'var(--ed-punct, #888)' },
   '.tok-hash': { color: 'var(--ed-punct, #888)' },
   '.tok-prose': {
-    fontFamily: "var(--ed-prose-font, sans-serif)",
+    fontFamily: "var(--ed-prose-font, serif)",
     fontSize: 'var(--ed-prose-size, 1em)',
+    // Match the monospace's x-height, so the prose does not look shrunk beside the clauses.
+    fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
     color: 'var(--ed-prose, var(--ed-ink, #c8c8e8))',
   },
   '.tok-unknown': {
@@ -416,7 +418,7 @@ const theme = EditorView.theme({
   },
   '.cm-completionDetail': { fontStyle: 'normal', opacity: '0.7', marginLeft: '0.8em' },
   '.cm-completionInfo': {
-    fontFamily: 'var(--ed-prose-font, sans-serif)', fontSize: 'calc(var(--ed-size, 13px) * 0.8)',
+    fontFamily: 'var(--ed-prose-font, serif)', fontSize: 'calc(var(--ed-size, 13px) * 0.8)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
     maxWidth: '24rem', padding: '0.5rem 0.7rem', lineHeight: '1.4',
   },
   '.cm-snippetField': { backgroundColor: 'var(--ed-selection, rgba(255,255,255,0.25))' },

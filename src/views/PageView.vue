@@ -283,7 +283,8 @@ const status = computed(() => {
   --ed-punct: var(--soft);
   --ed-ink-readonly: var(--ink);
   --ed-font: 'JetBrains Mono', 'Courier New', monospace;
-  --ed-prose-font: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  /* Byrne's edition was set in Caslon: the book's running text, beside the clauses' monospace. */
+  --ed-prose-font: 'Libre Caslon Text', Georgia, 'Times New Roman', serif;
   --ed-prose: var(--ink);
   --ed-size: 19px;
   --ed-leading: 1.7;

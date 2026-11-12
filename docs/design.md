@@ -18,7 +18,7 @@ figure share the page and colour carries the structure. It is an influence, not 
 5. **Colour is structural**: a small, bold, material palette; names in the code and points in the
    figure share a colour.
 6. **Typography is structure too**: an assertive uppercase display face for names, a quiet monospace
-   for clauses.
+   for clauses, a book serif for the running text.
 
 The mockups that set the direction (2026), from which the bold palette, thick strokes, uppercase
 voice, top strip and catalogue-of-figures idea were kept, and the heavy pseudo-De Stijl panelling and
@@ -44,7 +44,8 @@ open points are determined by the construction (dragging one re-plans the constr
 becomes free), and small quiet points cannot be moved. Auxiliary points (`d₁`) are smaller.
 
 **Source.** Set as a page rather than as code. Clauses are monospace, predicate names in ink and
-variables in the accent colour; comments are prose, in Archivo, with the `#` shown only on the line
+variables in the accent colour; comments are prose, in Libre Caslon (Byrne's edition was set in Caslon), its x-height matched to
+the monospace, with the `#` shown only on the line
 being edited. Names never break across lines, and wrapped lines hang: a comment under its first word,
 a clause line one indent deeper than it starts. `?` lines get `✓`, `✗` or `⊥` (contradictory
 hypotheses) in a gutter beside them, and a `✗` or `⊥` its reason in small type underneath. A line
