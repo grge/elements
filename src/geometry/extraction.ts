@@ -4,13 +4,15 @@
  * Facts are unfolded as the logic unfolds them, all the way to open predicates, keeping the tree.
  * Three things are read off it, in one traversal:
  *
- *   constraints  the leaves the geometric model can read (CONSTRAINT_RELATIONS): what the planner
+ *   constraints  the leaves the construction model can read (CONSTRAINT_RELATIONS): what the planner
  *                builds from. `circle a b c` arrives as its definition, `eq-lines a b a c`.
  *   depicted     on each path from a written fact, the first node the figure draws
  *                (DEPICTED_RELATIONS): a circle node is drawn as a circle, and what it unfolds to is
  *                not drawn again. Where unfolding stops is the logic's business, not the drawing's.
- *   unread       leaves with no geometric reading (`eq-point`, `triangle`, a user's open predicate):
- *                reported, not silently dropped.
+ *   unread       leaves the model cannot read (`eq-point`, `triangle`, a user's open predicate, a
+ *                fact with the wrong number of points): reported, not silently dropped.
+ *
+ * What each relation is to the figure comes from one table, relations.ts.
  */
 
 import { KnowledgeBase, unfoldTree, type GroundPredicate, type UnfoldNode } from '../kb/inference'
@@ -20,20 +22,13 @@ import type {
   CollinearConstraint, BetweenConstraint, OnCircleConstraint, EqualDistConstraint,
 } from './constraints'
 import { canonicalise } from './canonicalization'
+import { RELATIONS, relationOf } from './relations'
 
-/** Open predicates the geometric model reads as constraints (equations, loci, choices). */
-export const CONSTRAINT_RELATIONS = new Set(['collinear', 'between', 'eq-lines', 'distinct', 'eq-angle', 'eq-spread', 'supp'])
+/** Relations the construction model reads as constraints (relations.ts: those with a `read`). */
+export const CONSTRAINT_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.values()].filter(r => r.read).map(r => r.name))
 
-/** Relations the figure draws. `circle` is defined (equal radii) but drawn as a circle. */
-export const DEPICTED_RELATIONS = new Set([...CONSTRAINT_RELATIONS, 'circle'])
-
-/** Everything the drawing layer understands. */
-export const GEOMETRY_FRONTIER = DEPICTED_RELATIONS
-
-export class UnsupportedPrimitiveError extends Error {}
-
-/** A drawable fact with the wrong number of points, e.g. `circle a b` while it is being typed. */
-export class MalformedFactError extends Error {}
+/** Relations the figure draws as themselves. `circle` is defined (equal radii) but drawn as a circle. */
+export const DEPICTED_RELATIONS: ReadonlySet<string> = new Set([...RELATIONS.values()].filter(r => r.depicted).map(r => r.name))
 
 function mergeProblems(problems: GeometryProblem[]): GeometryProblem {
   return {
@@ -53,12 +48,10 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
 
   switch (goal.name) {
     case 'collinear':
-      if (goal.args.length < 3) throw new MalformedFactError(`collinear needs 3+ points`)
       constraints.push({ kind: 'collinear', points: [...goal.args], depth } satisfies CollinearConstraint)
       break
 
     case 'between':
-      if (goal.args.length !== 3) throw new MalformedFactError(`between needs 3 points`)
       constraints.push({
         kind: 'between',
         middle: goal.args[1],
@@ -71,7 +64,6 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
       break
 
     case 'circle':
-      if (goal.args.length !== 3) throw new MalformedFactError(`circle needs 3 points`)
       constraints.push({
         kind: 'on-circle',
         center: goal.args[0],
@@ -82,7 +74,6 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
       break
 
     case 'eq-lines':
-      if (goal.args.length !== 4) throw new MalformedFactError(`eq-lines needs 4 points`)
       constraints.push({
         kind: 'eq-dist',
         pair1: [goal.args[0], goal.args[1]],
@@ -95,12 +86,9 @@ function problemFromPrimitive(goal: GroundPredicate & { depth?: number }): Geome
       break  // no constraint on positions; the construction planner keeps the points apart
 
     case 'eq-angle': case 'eq-spread': case 'supp':
-      if (goal.args.length !== (goal.name === 'eq-spread' ? 8 : 6)) throw new MalformedFactError(`${goal.name} needs ${goal.name === 'eq-spread' ? 8 : 6} points`)
       constraints.push({ kind: 'measure', name: goal.name, args: [...goal.args], depth })
       break
 
-    default:
-      throw new UnsupportedPrimitiveError(`Unsupported primitive: ${goal.name}`)
   }
 
   return { points, constraints, lines: [], circles: [] }
@@ -122,8 +110,13 @@ export interface Extraction {
   unread: DrawableFact[]
 }
 
+export interface ExtractOptions {
+  /** Auxiliary names, shared with another extraction that must not reuse them (a lemma's head). */
+  fresh?: FreshNames
+}
+
 /** Unfold facts and read off their constraints, what to draw, and what the drawing cannot read. */
-export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[]): Extraction {
+export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], options: ExtractOptions = {}): Extraction {
   const sets = { constraints: new Map<string, DrawableFact>(), depicted: new Map<string, DrawableFact>(), unread: new Map<string, DrawableFact>() }
   const add = (into: Map<string, DrawableFact>, n: UnfoldNode) => {
     const key = `${n.fact.name}(${n.fact.args.join(',')})`
@@ -131,13 +124,14 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[]): E
     into.set(key, { ...n.fact, depth: Math.min(n.depth, into.get(key)?.depth ?? Infinity) })
   }
   const walk = (n: UnfoldNode, drawn: boolean) => {
-    if (!drawn && DEPICTED_RELATIONS.has(n.fact.name)) { add(sets.depicted, n); drawn = true }
+    const relation = relationOf(n.fact)
+    if (!drawn && relation?.depicted) { add(sets.depicted, n); drawn = true }
     if (n.children) { n.children.forEach(c => walk(c, drawn)); return }
-    if (CONSTRAINT_RELATIONS.has(n.fact.name)) add(sets.constraints, n)
+    if (relation?.read) add(sets.constraints, n)
     else if (n.fact.name !== 'false') add(sets.unread, n)
   }
   // Shared across facts: two constructions in one drawing must not share auxiliary points.
-  const fresh = new FreshNames()
+  const fresh = options.fresh ?? new FreshNames()
   for (const fact of facts) walk(unfoldTree(fact, kb, { fresh }), false)
   return { constraints: [...sets.constraints.values()], depicted: [...sets.depicted.values()], unread: [...sets.unread.values()] }
 }
@@ -147,10 +141,7 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[]): E
  * including ones with the wrong number of points (a line still being typed).
  */
 export function geometryProblemFromFacts(facts: readonly GroundPredicate[]): GeometryProblem | null {
-  const problems = facts.filter(f => GEOMETRY_FRONTIER.has(f.name)).flatMap(f => {
-    try { return [problemFromPrimitive(f)] }
-    catch (e) { if (e instanceof MalformedFactError) return []; throw e }
-  })
+  const problems = facts.filter(f => relationOf(f)?.depicted).map(problemFromPrimitive)
   if (problems.length === 0) return null
   const merged = mergeProblems(problems)
   canonicalise(merged)

@@ -139,8 +139,10 @@ A drawable relation, fully, is a bundle of interpretations: equations (residuals
 of freedom they remove), loci for an unknown point given the others, choices (order facts that prune
 branches and bound sliders), and a drawing. Marks (ticks, arcs) are a different kind of thing: they
 depict *equivalence classes* across the whole figure, so they belong to equivalences, not relations
-(see *Equality chains*). Gathering each relation's interpretations into one registry is the
-drawing-layer boundary on the roadmap; a new geometric primitive (`parallel`) would then be one entry.
+(see *Equality chains*). Each relation's interpretations are gathered in one table
+(`src/geometry/relations.ts`): its reading by the model, whether it is drawn, and its residual. Its
+loci and its drawing join the table as the planner and the renderer move onto it; a new geometric
+primitive (`parallel`) would then be one entry.
 
 ### What each relation draws
 

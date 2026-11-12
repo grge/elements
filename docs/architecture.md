@@ -29,7 +29,8 @@ see [design.md](design.md).
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
 | `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
-| `src/geometry/extraction.ts` | From facts to drawable facts, and to a `GeometryProblem` |
+| `src/geometry/relations.ts` | The relation table: what each relation the figure knows is to the model, the checks and the evidence |
+| `src/geometry/extraction.ts` | From facts to constraints, what is drawn and what is unread; and a `GeometryProblem` |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
 | `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
 | `src/geometry/canonicalization.ts`, `constraints.ts` | Lines and circles for rendering and the solver |
@@ -100,8 +101,9 @@ What it cannot do: case splits. Facts that need one can be stated with a `distin
 [roadmap](roadmap.md).
 
 **Numeric evidence** (`geometry/evidence.ts`) weighs every lemma against figures. Its hypotheses are
-unfolded to drawable facts and planned like any figure; about two dozen well-spread configurations are
-sampled, and the head, unfolded too, is measured on each. The verdict (`kb/verdict.ts`) combines the
+extracted and planned like any figure; about two dozen well-spread configurations are sampled, and the
+head, extracted too, is measured on each with the relation table's `holds` (which also measures
+`eq-point`, a relation the figure can evaluate but not impose). The verdict (`kb/verdict.ts`) combines the
 two: ✓ derived; ⊥ vacuous; ✗ not derived and refuted by a sampled figure (false); ? not derived, with the
 reason saying whether it held in every sample (probably true), whether the search ran out of budget,
 or why there were no figures to test (a hypothesis that cannot be drawn, such as `eq-point`); ! derived
@@ -114,15 +116,23 @@ blocks.
 
 ## From facts to a figure
 
+**The relation table** (`relations.ts`) is the boundary between the logic and the figure: one entry
+per relation the drawing layer knows, with its number of points, how the construction model reads it
+(`read`), whether the figure draws it as itself (`depicted`), whether it holds at given positions
+(`holds`), and for the solver how far it is from holding (`residual`). Extraction, the model, the
+checks a drawing is held to and numeric evidence all ask the table instead of switching on names. How
+each relation is drawn is still `scene.ts`'s business, and the solver and canonicalisation still work
+on `GeometryProblem`; both change when the figure is drawn from one model.
+
 **Extraction** (`extraction.ts`, `extract`) unfolds the page's facts as the logic does, all the way to
 open predicates, keeping the tree (`unfoldTree` in `inference.ts`), and reads three things off it. The
-*constraints* are the leaves the geometric model can read (`collinear`, `between`, `eq-lines`,
-`distinct`, `eq-angle`, `supp`, `eq-spread`): what the planner builds from. What is *depicted* is the
+*constraints* are the leaves the model can read (relations with a `read` in the table): what the
+planner builds from. What is *depicted* is the
 first drawn node on each path: `circle a b c` is defined (equal radii) and arrives at the planner as
 `eq-lines a b a c`, but is drawn as a circle, and its radii are not drawn again. Where unfolding stops
-is the logic's business, not the drawing's. Leaves with no geometric reading (`eq-point`, `triangle`, a
-user's open predicate) are *unread* and the page says so. That list belongs to the drawing layer, not to
-the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
+is the logic's business, not the drawing's. Leaves the model cannot read (`eq-point`, `triangle`, a
+user's open predicate, a fact with the wrong number of points) are *unread* and the page says so. That
+list belongs to the drawing layer, not to the logic. One supply of fresh names is shared by the whole figure, so two constructions never share
 auxiliary points. Each fact keeps its depth, the number of definitions unfolded to reach it (the
 shallowest if it is reached twice); lines and circles merged by canonicalisation keep the shallowest of
 theirs, and the figure draws deeper elements thinner and fainter.
@@ -159,9 +169,12 @@ freedom), then prefers named points over auxiliary ones as inputs, then earlier-
 point with two loci available is placed immediately; delaying it can never use more equations.
 Above 18 points the search falls back to the same preferences applied greedily.
 
-Every equation not used to place a point becomes a **check**, evaluated on every frame. **Order facts**
-(`between`) are not equations: they choose which intersection to take, and bound where a point may
-slide (a slider's value is measured inside its allowed interval, so dragging can never break the order).
+Every fact the model read is a **check**, evaluated on every frame at the step that places its last
+point (the table's `holds`); a fact the construction used holds by construction, and one it did not
+use is a theorem when it keeps holding. A failure names the fact. **Order facts** (`between`) are not
+equations: they choose which intersection to take, and bound where a point may slide (a slider's value
+is measured inside its allowed interval, so dragging can never break the order). `distinct` rules out
+"the other intersection".
 
 **Realising** a plan samples its own parameters (seeded, so a figure is stable; reusing previous
 positions across edits unless that would make points coincide) and keeps the best-spread sample that

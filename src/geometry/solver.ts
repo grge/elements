@@ -5,7 +5,7 @@
  */
 
 import type { GeometryProblem, WitnessModel, Line, Circle, Constraint } from './constraints'
-import { measureResidual } from './measure'
+import { RELATIONS } from './relations'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -173,8 +173,10 @@ function measureGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1
   for (const c of cs) {
     if (c.kind !== 'measure') continue
     const ids = c.args.map(p => cidx.get(p)!)
+    const residualOf = RELATIONS.get(c.name)?.residual
+    if (!residualOf) continue
     const residual = () => {
-      const r = measureResidual(c.name, c.args, p => { const i = cidx.get(p)!; return [x[i * 2], x[i * 2 + 1]] })
+      const r = residualOf(c.args.map(p => { const i = cidx.get(p)!; return [x[i * 2], x[i * 2 + 1]] as [number, number] }))
       return Number.isNaN(r) ? 0 : r
     }
     const r0 = residual()

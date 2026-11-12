@@ -1,7 +1,7 @@
 /**
  * Ruler-and-compass construction planning, execution and dragging.
  *
- * A figure is given by drawable facts (collinear, between, circle, eq-lines). The planner turns them
+ * A figure is given by facts the construction model reads (relations.ts). The planner turns them
  * into a straight-line program: each point is either free (2 parameters), on one locus (1 parameter),
  * or where two loci meet (no parameters, a choice of intersection). Loci are built from points
  * already placed:
@@ -11,8 +11,9 @@
  *             (the compass carries a length: Euclid I.2 shows this is no stronger than the collapsing compass)
  *   bisector  perpendicular bisector of two placed points the new point is equidistant from
  *
- * Every equation the figure states is either used to place a point or kept as a CHECK, evaluated on
- * every frame; a check that keeps holding is a dependency (a theorem), one that fails is reported.
+ * Every fact the figure states is a CHECK, evaluated on every frame by the relation table's `holds`. One
+ * used to place a point holds by construction; one not used that keeps holding is a dependency (a
+ * theorem), and one that fails is reported.
  * Order facts (between) are not equations: they choose which intersection to take, and restrict where
  * a point may slide on a line (the parameter is measured within the allowed interval).
  *
@@ -28,7 +29,8 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
-import { angle as angleAt, measureResidual } from './measure'
+import { angle as angleAt } from './measure'
+import { relationOf, type ModelReader } from './relations'
 
 export type Point = [number, number]
 
@@ -44,8 +46,10 @@ export interface ConstructionModel {
   between: [string, string, string][]
   /** Pairs of points that must not coincide. */
   distinct: [string, string][]
-  /** Equal angles and spreads (measure.ts): no locus places a point by them yet, so they are checked. */
+  /** Equal angles, supplements and equal spreads: some place a point by an angle locus; all are checked. */
   measures: { name: string; args: string[] }[]
+  /** The facts read, each held to by the drawing (relations.ts `holds`). */
+  facts: GroundPredicate[]
 }
 
 export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel {
@@ -71,24 +75,21 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
     const r1 = segFind(k1), r2 = segFind(k2)
     if (r1 !== r2) segParent.set(r2, r1)
   }
-  const collinear = (pts: readonly string[]) => {
-    const set = new Set(pts)
-    if (set.size >= 3) groups.push(set)
+  const read: GroundPredicate[] = []
+  const reader: ModelReader = {
+    collinear: pts => { const set = new Set(pts); if (set.size >= 3) groups.push(set) },
+    equal,
+    between: (a, b, c) => { if (new Set([a, b, c]).size === 3) between.push([a, b, c]) },
+    distinct: (a, b) => { if (a !== b) distinct.push([a, b]) },
+    measure: (name, args) => measures.push({ name, args: [...args] }),
   }
 
   for (const f of facts) {
+    const relation = relationOf(f)
+    if (!relation?.read) continue
     f.args.forEach(see)
-    switch (f.name) {
-      case 'collinear': collinear(f.args); break
-      case 'between':
-        collinear(f.args)
-        if (new Set(f.args).size === 3) between.push([f.args[0], f.args[1], f.args[2]])
-        break
-      case 'circle': equal(f.args[0], f.args[1], f.args[0], f.args[2]); break
-      case 'eq-lines': equal(f.args[0], f.args[1], f.args[2], f.args[3]); break
-      case 'distinct': if (f.args[0] !== f.args[1]) distinct.push([f.args[0], f.args[1]]); break
-      case 'eq-angle': case 'eq-spread': case 'supp': measures.push({ name: f.name, args: [...f.args] }); break
-    }
+    relation.read(f.args, reader)
+    read.push({ name: f.name, args: [...f.args] })
   }
 
   // Merge collinear groups sharing two points (assumes distinct names are distinct points).
@@ -124,6 +125,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
     between,
     distinct,
     measures,
+    facts: read,
   }
 }
 
@@ -143,20 +145,17 @@ export type Step =
   | { kind: 'on'; point: string; locus: Locus }
   | { kind: 'meet'; point: string; loci: [Locus, Locus] }
 
-export interface Check { step: number; point: string; locus: Locus }
-export interface OrderFact { step: number; between: [string, string, string] }
-export interface DistinctFact { step: number; points: [string, string] }
+/** A fact the drawing is held to, at the step that places its last point. */
+export interface Check { step: number; fact: GroundPredicate }
 
 export interface ConstructionPlan {
   steps: Step[]
-  /** Equations not used to place a point, checked once their last point is placed. */
+  /**
+   * Every fact the model read, checked at the step that places its last point; one the construction
+   * itself guarantees passes. Two kinds also choose: `between` picks the intersection and bounds a
+   * slider, `distinct` rules out "the other intersection".
+   */
   checks: Check[]
-  /** Order facts, decided at the step that places their last point. */
-  orders: OrderFact[]
-  /** Points that must not coincide, decided at the step that places the later one. */
-  distinct: DistinctFact[]
-  /** Equal angles and spreads, checked at the step that places their last point. */
-  measures: { step: number; name: string; args: string[] }[]
   dof: number
   /** Number of equations the figure states, and how many the plan uses to place points. */
   equations: number
@@ -277,24 +276,20 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
     }
   }
 
-  // Build the steps with concrete loci; surplus loci become checks.
+  // Build the steps with concrete loci. Loci beyond the two that place a point need no checks of
+  // their own: they come from the facts, and every fact is checked.
   const steps: Step[] = []
-  const checks: Check[] = []
   order.forEach((p, k) => {
-    const placed = order.slice(0, k)
-    const loci = lociFor(model, p, placed)
+    const loci = lociFor(model, p, order.slice(0, k))
     if (loci.length === 0) steps.push({ kind: 'free', point: p })
     else if (loci.length === 1) steps.push({ kind: 'on', point: p, locus: loci[0] })
     else steps.push({ kind: 'meet', point: p, loci: [loci[0], loci[1]] })
-    for (const locus of loci.slice(2)) checks.push({ step: k, point: p, locus })
   })
   const stepOf = (p: string) => order.indexOf(p)
-  const orders = model.between.map(b => ({ step: Math.max(...b.map(stepOf)), between: b }))
-  const distinct = model.distinct.map(d => ({ step: Math.max(...d.map(stepOf)), points: d }))
-  const measures = model.measures.map(m => ({ step: Math.max(...m.args.map(stepOf)), ...m }))
+  const checks = model.facts.map(fact => ({ step: Math.max(...fact.args.map(stepOf)), fact }))
   const dof = steps.reduce((s, st) => s + (st.kind === 'free' ? 2 : st.kind === 'on' ? 1 : 0), 0)
   const equations = countEquations(model)
-  return { steps, checks, orders, distinct, measures, dof, equations, used: 2 * n - dof }
+  return { steps, checks, dof, equations, used: 2 * n - dof }
 }
 
 /** Parameters each step takes. */
@@ -403,12 +398,6 @@ function residual(p: Point, curve: Curve): number {
   return Math.abs(cross(sub(p, curve.p), curve.d)) / Math.hypot(...curve.d)
 }
 
-/** Where a locus is closest to holding at p: the least residual over its curves. */
-function locusResidual(p: Point, locus: Locus, at: Map<string, Point>): number {
-  const cs = curvesOf(locus, at)
-  return cs.length ? Math.min(...cs.map(c => residual(p, c))) : Infinity
-}
-
 /** Is c on the curve's half, if it is a ray? */
 function onRay(c: Point, curve: Curve, tol: number): boolean {
   return curve.kind !== 'line' || !curve.ray || dot(sub(c, curve.p), curve.d) >= -tol * Math.hypot(...curve.d)
@@ -426,12 +415,12 @@ function isBetween(a: Point, b: Point, c: Point, tol: number): boolean {
  * Where on a line (as a parameter t, point = p + t d) the order facts allow point `x` to be. Returns the
  * interval and the order facts it accounts for (those whose other two points lie on the line).
  */
-function lineDomain(x: string, curve: Extract<Curve, { kind: 'line' }>, orders: OrderFact[], at: Map<string, Point>, tol: number): { domain: [number, number]; applied: Set<OrderFact> } {
+function lineDomain(x: string, curve: Extract<Curve, { kind: 'line' }>, orders: Check[], at: Map<string, Point>, tol: number): { domain: [number, number]; applied: Set<Check> } {
   let lo = -Infinity, hi = Infinity
-  const applied = new Set<OrderFact>()
+  const applied = new Set<Check>()
   const tOf = (q: Point) => dot(sub(q, curve.p), curve.d) / dot(curve.d, curve.d)
   for (const order of orders) {
-    const [a, b, c] = order.between
+    const [a, b, c] = order.fact.args
     const others = [a, b, c].filter(q => q !== x)
     if (others.length !== 2 || others.some(q => !at.has(q))) continue
     if (others.some(q => residual(at.get(q)!, curve) > tol)) continue  // not on this line: a check instead
@@ -483,6 +472,11 @@ export function describeLocus(l: Locus): string {
   }
 }
 
+/** A fact as it is shown: `eq-lines a d₁ b c`. */
+export function describeFact(f: GroundPredicate): string {
+  return `${f.name} ${f.args.map(displayName).join(' ')}`
+}
+
 export interface ExecuteOptions {
   /** Previous positions: where the order facts leave a choice of intersection, take the nearest. */
   previous?: Map<string, Point>
@@ -503,10 +497,11 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
   for (let k = 0; k < cp.steps.length; k++) {
     const step = cp.steps[k]
     const x = step.point
-    const orders = cp.orders.filter(o => o.step === k)
+    const here = cp.checks.filter(c => c.step === k)
+    const orders = here.filter(c => c.fact.name === 'between' && new Set(c.fact.args).size === 3)
     const target = options.targets?.get(x)
     let pos: Point | null = null
-    let decided = new Set<OrderFact>()   // order facts the construction itself guarantees
+    let decided = new Set<Check>()   // order facts the construction itself guarantees
     const fail = (reason: string): Drawing => {
       options.onParams?.(used)
       return { coords: at, failure: { step: k, point: x, reason }, violations }
@@ -555,15 +550,16 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       if (found.length === 0) return fail(`${step.loci.map(describeLocus).join(' and ')} do not meet`)
       const ok = found.filter(c => {
         at.set(x, c)
-        const good = orders.every(({ between: [a, b, d] }) => isBetween(at.get(a)!, at.get(b)!, at.get(d)!, tol()))
+        const good = orders.every(({ fact: { args: [a, b, d] } }) => isBetween(at.get(a)!, at.get(b)!, at.get(d)!, tol()))
         at.delete(x)
         return good
       })
-      if (ok.length === 0) return fail(`neither meeting point of ${step.loci.map(describeLocus).join(' and ')} satisfies ${orders.map(o => `between ${o.between.map(displayName).join(' ')}`).join(', ')}`)
+      if (ok.length === 0) return fail(`neither meeting point of ${step.loci.map(describeLocus).join(' and ')} satisfies ${orders.map(o => describeFact(o.fact)).join(', ')}`)
       decided = new Set(orders)
       // "The other intersection": a meeting point on a point x must differ from is ruled out.
       const coincides = (c: Point, q: string) => dist(c, at.get(q)!) <= tol()
-      const apart = cp.distinct.filter(d => d.step === k).map(d => d.points[0] === x ? d.points[1] : d.points[0])
+      const apart = here.filter(c => c.fact.name === 'distinct' && c.fact.args.includes(x))
+        .map(({ fact: { args: [p, q] } }) => p === x ? q : p).filter(q => q !== x)
       const allowed = ok.filter(c => apart.every(q => !coincides(c, q)))
       if (allowed.length === 0) return fail(`where ${step.loci.map(describeLocus).join(' and ')} meet is ${apart.map(displayName).join(', ')}, which ${displayName(x)} must differ from`)
       // The drawing takes distinct names for distinct points: prefer a meeting point not already used.
@@ -576,21 +572,10 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     at.set(x, pos)
     scale = Math.max(scale, Math.abs(pos[0]), Math.abs(pos[1]))
 
-    for (const c of cp.checks.filter(c => c.step === k)) {
-      const r = locusResidual(at.get(c.point)!, c.locus, at)
-      if (Number.isFinite(r) && r > tol()) violations.push({ step: k, what: `${displayName(c.point)} on ${describeLocus(c.locus)}` })
-    }
-    for (const { points: [p, q] } of cp.distinct.filter(d => d.step === k)) {
-      if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${displayName(p)} and ${displayName(q)} distinct` })
-    }
-    for (const m of cp.measures.filter(m => m.step === k)) {
-      const r = measureResidual(m.name, m.args, p => at.get(p))
-      if (r > 1e-7) violations.push({ step: k, what: `${m.name} ${m.args.map(displayName).join(' ')}` })
-    }
-    for (const order of orders) {
-      if (decided.has(order)) continue
-      const [a, b, d] = order.between
-      if (!isBetween(at.get(a)!, at.get(b)!, at.get(d)!, tol())) violations.push({ step: k, what: `between ${[a, b, d].map(displayName).join(' ')}` })
+    // Every fact whose last point is now placed, except the orders the construction decided.
+    for (const c of here) {
+      if (decided.has(c)) continue
+      if (!relationOf(c.fact)!.holds(c.fact.args.map(p => at.get(p)!), tol())) violations.push({ step: k, what: describeFact(c.fact) })
     }
   }
   options.onParams?.(used)

@@ -302,7 +302,9 @@ const planSteps = computed(() =>
 const usingConstruction = computed(() => !!ws.construction.value?.valid)
 const failure = computed(() => usingConstruction.value ? ws.drawing.value?.failure : undefined)
 // Facts the figure has no reading for (eq-point, triangle, a user's open predicate) are said, not dropped.
+// While the source has an error the figure is the last good one, and so is its list: not worth saying.
 const unreadNote = computed(() => {
+  if (ws.parseError.value) return ''
   const names = [...new Set(ws.extraction.value.unread.map(f => f.name))]
   return names.length ? `Not drawn: ${names.join(', ')} (the figure has no reading for ${names.length > 1 ? 'them' : 'it'}).` : ''
 })

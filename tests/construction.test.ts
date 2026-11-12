@@ -5,7 +5,7 @@ import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise, execute, drag, paramCount, type Point, type ConstructionPlan } from '../src/geometry/construction'
-import { measureResidual } from '../src/geometry/measure'
+import { RELATIONS } from '../src/geometry/relations'
 
 // The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
 const kb = new KnowledgeBase([...bookRules, ...fixtureRules])
@@ -33,7 +33,7 @@ function worstFact(facts: GroundPredicate[], c: Map<string, Point>): { residual:
       }
     }
     if (f.name === 'eq-angle' || f.name === 'supp' || f.name === 'eq-spread') {
-      const m = measureResidual(f.name, f.args, n => c.get(n))
+      const m = RELATIONS.get(f.name)!.residual!(f.args.map(n => c.get(n)!))
       r = Number.isNaN(m) ? 0 : m * scale    // radians, on the figure's scale like the rest
     }
     if (r / scale > worst.residual) worst = { residual: r / scale, fact: `${f.name} ${f.args.join(' ')}` }

@@ -154,8 +154,11 @@ would sit naturally beside the algebraic lens.
 - **Order facts on circles** restrict sliders to arcs (today they are only checked).
 - **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,
   instead of falling back to the solver for the whole figure.
-- **A drawing-layer boundary**: the drawable relations, their loci, intersections and numeric residuals
-  as a plug-in, a *model* of the theory (see *Beyond*: three lenses, sibling books).
+- **A drawing-layer boundary**: the relation table (`relations.ts`, November 2026) holds each relation's
+  reading by the model, its number of points and its residual; extraction, the checks and numeric
+  evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`), each relation's drawing
+  (`scene.ts`), and the solver's energies. Then the table is a plug-in, a *model* of the theory (see
+  *Beyond*: three lenses, sibling books).
 - **Annotations from proven facts**: segments a figure *states* equal get tick marks already; extend
   this to what the page's lemmas prove: equal segments, equal angles' arcs, and the lines a lemma is
   about (`bisect-angle`'s page proves b-d is the bisector but does not draw b-d).
