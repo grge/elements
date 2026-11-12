@@ -89,7 +89,7 @@ stepping the radius around a circle, each vertex "the other intersection". That 
 sixth side is a radius too) shows in the figure but needs angles to prove: a first task for chapters 2
 and 3.
 
-### 2. Angle  *(in progress: `book/02-angle.geo`)*
+### 2. Angle  *(in progress: `book/02-angle.geo`, sections 1–4 written)*
 
 Euclid Book I's results that need no parallel postulate, for an engine with equalities but no sums or
 inequalities. Angles are the main thread; spreads close the chapter.
@@ -109,8 +109,10 @@ inequalities. Angles are the main thread; spreads close the chapter.
    (I.10), the perpendicular at a point (I.11) and from a point (I.12), copying an angle (I.23; with a
    compass that carries lengths, equal radii on both arms and a triangle of three equal sides).
 4. **Chapter 1's debts.** The midpoint's construction proven (the rhombus's second diagonal halves its
-   first); every point of a segment's perpendicular bisector is as far from one end as the other, so
-   the circumcentre is equidistant from a and b; reflection keeps a figure the same (side-side-side).
+   first); reflection keeps a figure the same (side-side-side); every point of a segment's
+   perpendicular bisector is as far from one end as the other, proven case by case (between the
+   rhombus's apexes, beyond one). Joining the cases needs case splits, so the circumcentre is still
+   drawn rather than proved.
 5. **Spreads.** Wildberger's spread between two lines, the angle up to its supplement, with the bridge
    from equal angles to equal spreads. Vertical and supplementary angles have equal spreads at once,
    perpendicularity needs no choice of side, and the algebraic lens (roadmap, *Beyond*) will speak in

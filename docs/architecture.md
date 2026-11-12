@@ -45,7 +45,8 @@ The knowledge base is the book (one chapter per file in `src/language/book/`, ea
 constructions and propositions; see [book.md](book.md)) plus the user's own clauses, kept in the
 browser. Chapters are only for browsing: logically it is one flat set of clauses. On a predicate's page
 the app shows its clauses and the propositions about it: a lemma belongs to the predicate it mentions
-that is defined latest in the book (`useKB.ts`).
+that is defined latest in the book, and a predicate to the chapter that first defines it, so its page
+gathers what later chapters say about it (`useKB.ts`).
 
 Two analyses of the rules run lazily and are cached by the rules' content:
 

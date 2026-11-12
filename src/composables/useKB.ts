@@ -78,7 +78,15 @@ function owner(lemma: Lemma): string {
   return mentioned.reduce((best, n) => definedAt.get(n)! > definedAt.get(best)! ? n : best, mentioned[0] ?? lemma.head.name)
 }
 
-const builtinClauses: ClauseItem[] = loaded.flatMap(c => c.items.flatMap(item => toClauseItem(item, c.id)))
+// The chapter that first defines each predicate: its home. Clauses and lemmas about a predicate in later
+// chapters (side-angle-side concludes eq-lines) show on its page, not as a card of their own there.
+const homeOf = new Map<string, Namespace>()
+loaded.forEach(c => c.items.forEach(item => {
+  if (item.kind === 'rule' && !homeOf.has(item.rule.head.name)) homeOf.set(item.rule.head.name, c.id)
+}))
+
+const builtinClauses: ClauseItem[] = loaded.flatMap(c => c.items.flatMap(item =>
+  toClauseItem(item, c.id).map(ci => ({ ...ci, namespace: homeOf.get(ci.predName) ?? ci.namespace }))))
 
 /** A clause with its doc comment above it, each paragraph of the comment on one line (the editor wraps it). */
 function withDocComment(source: string, item: TopLevel): string {

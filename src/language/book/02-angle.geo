@@ -80,8 +80,18 @@ right a b c:
     distinct b d
     eq-angle a b c c b d
 
-# All right angles are equal (Euclid's fourth postulate).
-eq-angle a b c d e f: right a b c, right d e f
+# All right angles are equal (Euclid's fourth postulate), said of angles each equal to its own
+# supplement, so that right stays a definition (a clause for eq-angle that mentioned right would make
+# right depend on itself).
+eq-angle a b c d e f:
+    between a b g
+    distinct a b
+    distinct b g
+    eq-angle a b c c b g
+    between d e h
+    distinct d e
+    distinct e h
+    eq-angle d e f f e h
 
 # ══ Triangles ════════════════════════════════════════════════════════════════════════════════════
 
@@ -105,3 +115,68 @@ eq-angle a b c d e f: right a b c, right d e f
     distinct e b
     distinct c e
     distinct e d
+
+# ══ Constructions ════════════════════════════════════════════════════════════════════════════════
+#
+# Each is drawn with circles alone; each is proved by the triangle criteria above.
+
+# Bisecting the angle a-b-c (Euclid I.9), with a nearer b than c is: e on b-c as far from b as a is,
+# then the equilateral triangle on a-e; its apex d is on the bisector.
+bisect-angle a b c d:
+    circle b a e
+    between b e c
+    eq-triangle a e d
+
+# Triangles a-b-d and e-b-d have three equal sides, and e is on the arm b-c.
+? eq-angle a b d d b c: bisect-angle a b c d, distinct a b
+
+# Bisecting the segment a-b (I.10): the second diagonal of the rhombus on a-b cuts it at m.
+bisect a b m:
+    vesica a b c d
+    between c m d
+    between a m b
+    distinct c m
+
+# This is chapter 1's midpoint, now constructed: the rhombus's halves have equal angles at c (three
+# equal sides), so the triangles a-c-m and b-c-m have two sides and the angle between them equal.
+? midpoint m a b: bisect a b m
+
+# The perpendicular at c to the line a-c (I.11): double a-c to e, then the equilateral triangle on a-e.
+perpendicular a c d:
+    double a c e
+    eq-triangle a e d
+
+? right a c d: perpendicular a c d, distinct a c
+
+# The perpendicular from p to a line (I.12): a circle about p cuts the line at e and f; bisect e-f at m.
+# Then p-m makes equal angles with the line on either side.
+drop-perpendicular p e f m:
+    circle p e f
+    distinct e f
+    bisect e f m
+
+? eq-angle e m p p m f: drop-perpendicular p e f m
+
+# Copying the angle a-b-c to the point e (I.23): g as far from e as c is from b, d as far from e as a is
+# from b and from g as a is from c. A triangle from three lengths (I.22), and so the same angle.
+copy-angle a b c e g d:
+    eq-lines e g b c
+    eq-lines e d b a
+    eq-lines g d c a
+
+? eq-angle a b c d e g: copy-angle a b c e g d
+
+# ══ Chapter 1's debts ════════════════════════════════════════════════════════════════════════════
+
+# Reflection keeps a figure the same: the reflection q of p in the line a-b makes the same angles there.
+? eq-angle p a b q a b: reflect a b p q
+? eq-angle a p b a q b: reflect a b p q
+
+# Every point of the second diagonal c-d of the rhombus on a-b, the perpendicular bisector of a-b, is as
+# far from a as from b. Between c and d:
+? eq-lines x a x b: vesica a b c d, between c x d, distinct c x
+# and beyond d (beyond c is the same, with c and d exchanged):
+? eq-lines x a x b: vesica a b c d, between c d x, distinct c d
+#
+# Together they cover the whole line, but joining cases is a step the engine cannot take yet; so the
+# circumcentre of chapter 1, where two such lines meet, is still drawn rather than proved.

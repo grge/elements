@@ -37,8 +37,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
    angles (`tests/fixtures/angles.geo`: the isosceles triangle in both, all lemmas well under a
    second). Content decided: angles as the thread, spreads to close (book.md, *Chapter 2*). Written so
    far: the axioms (with `triangle`, three points not on a line, which angle-side-angle needs: on a
-   line it derived false equal lengths) and the triangle theorems. Next: the constructions, chapter
-   1's debts, spreads; the copied angle as a locus.
+   line it derived false equal lengths), the triangle theorems, the five constructions (I.9–12,
+   I.23) and chapter 1's debts (the midpoint proven; reflection; the perpendicular bisector case by
+   case). Next: spreads; the copied angle as a locus; case splits, which the circumcentre waits on.
 6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
    help. Sketched before built, once two chapters show what it lays out; [the Plates
@@ -149,7 +150,8 @@ would sit naturally beside the algebraic lens.
 - **A drawing-layer boundary**: the drawable relations, their loci, intersections and numeric residuals
   as a plug-in, a *model* of the theory (see *Beyond*: three lenses, sibling books).
 - **Annotations from proven facts**: segments a figure *states* equal get tick marks already; extend
-  this to segments *proven* equal.
+  this to what the page's lemmas prove: equal segments, equal angles' arcs, and the lines a lemma is
+  about (`bisect-angle`'s page proves b-d is the bisector but does not draw b-d).
 - Step-by-step playback of a construction; undo for dragging.
 - Figures above 18 points use a greedy order; a bounded search would do better.
 
