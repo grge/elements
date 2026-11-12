@@ -12,9 +12,11 @@ see [design.md](design.md).
                          │          structure.ts     equivalences, substitution, symmetries (proven)
           ┌──────────────┴───────────────┐
           ▼  checking (web worker)       ▼  drawing (main thread)
-   unfold hypotheses                  unfold the page's facts to drawable facts
-   saturate (forward closure)         construction.ts: plan → realise → execute
-   ✓ / ✗ beside each `?` line         GeometryDiagram: render, drag, re-plan
+   unfold hypotheses                  extract: unfold the page's facts, read through relations.ts
+   saturate (forward closure)           constraints → construction.ts: plan → realise → execute
+   ✓ / ✗ beside each `?` line           depicted    → figure.ts; marks from stated and ✓ facts
+                                       marks merged by the forward closure (second web worker)
+                                       GeometryDiagram: render, drag, re-plan, the route on touch
 ```
 
 ## Source map
@@ -35,13 +37,15 @@ see [design.md](design.md).
 | `src/geometry/marks.ts` | Ticks and arcs: equalities stated or proven by ✓ lemmas, in classes with their chains |
 | `src/geometry/provenance.ts` | Where an element of the figure came from, in words; a mark's chain |
 | `src/geometry/construction.ts` | The ruler-and-compass planner, executor and dragging |
-| `src/geometry/solver.ts` | Numerical fallback for figures with no construction |
+| `src/geometry/solver.ts` | Numerical fallback for figures with no construction, on the planner's model |
+| `src/geometry/closure.ts` | Answers against a figure's forward closure (merging marks), assuming distinct names are distinct points |
 | `src/geometry/classes.ts` | Equal segments (union-find) and merged lines, shared by the model and the figure |
 | `src/geometry/view.ts`, `scene.ts` | Fitting a figure to the screen; the figure in screen coordinates (shared by the diagram and the thumbnails) |
-| `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the worker), `useThumbnails` (contents miniatures) |
+| `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the checking worker), `useClosure` (the closure worker, its answers remembered across visits), `useThumbnails` (contents miniatures) |
 | `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure), `FigureThumb` (a miniature) |
 | `src/views/PageView.vue` | The page: masthead, source, figure, contents, themes |
 | `src/workers/lemmaCheckWorker.ts` | Checks `?` lines off the main thread |
+| `src/workers/closureWorker.ts` | Saturates a figure's facts off the main thread, for merging its marks |
 
 ## The knowledge base
 
@@ -268,6 +272,11 @@ beside the construction and the numbers; see the [roadmap](roadmap.md#beyond).
 | `structure.test.ts`, `saturate.test.ts`, `forward-closure.test.ts` | recognised structure; the fast and reference engines agreeing |
 | `checker.test.ts`, `runtime.test.ts`, `configuration.test.ts` | checking pipeline and page state |
 | `lemmas.test.ts` | every proposition in the book, and the engine's regression lemmas (`fixtures/regression.geo`, expected failures listed) |
-| `construction.test.ts` | 13 figures (including Euclid I.2 and I.3, kept as fixtures in `fixtures/constructions.geo`): degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact |
-| `geometry.test.ts` | extraction and the numerical solver |
+| `construction.test.ts` | 27 figures (including Euclid I.2 and I.3, kept as fixtures in `fixtures/constructions.geo`, and chains of equal angles): degrees of freedom, solver-free starting positions, 300 random drags each checked against every fact by an independent oracle; no point collapsing onto another |
+| `angles.test.ts` | angles and spreads: recognised structure, the chapter's lemmas, the measures |
+| `evidence.test.ts` | numeric evidence: every sampled book lemma holds in every sample; verdicts |
+| `extraction.test.ts`, `relations.test.ts` | the three readings of an unfolding; the relation table; the plan checking every fact it read |
+| `geometry.test.ts` | the figure (each relation's drawing) and the numerical solver |
+| `marks.test.ts`, `provenance.test.ts` | marks from statements and proofs, equality chains, merging by the closure, right angles; where an element came from |
+| `emphasis.test.ts`, `thumbnails.test.ts` | bringing forward what a hovered fact draws; the contents' miniatures |
 | `useKB.test.ts` | source references for bundled clauses |

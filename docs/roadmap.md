@@ -140,7 +140,8 @@ would sit naturally beside the algebraic lens.
 
 - **Next: say when the figure is solved, not constructed.** Today a figure the planner cannot build is
   drawn by the numerical solver with only a status line to say so, and it looks just as constructed.
-  Design how the page shows which it is (and, once figures are hybrid, which points): see design.md.
+  Design how the page shows which it is (and, once figures are hybrid, which points): see design.md,
+  *Constructed or solved*.
 - ~~The figure's rule~~ (built November 2026; design.md, *The figure: what it draws and why*).
 - **Plan from what the book proves** (tentative, after the above): before planning, ask the forward
   closure (the worker that merges marks) which facts in the planner's vocabulary the page implies,

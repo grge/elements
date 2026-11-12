@@ -262,6 +262,28 @@ status line (`src/geometry/provenance.ts`), lights the source lines it came from
 what the same facts draw; hovering a mark brings forward its whole class and reads its chain, e.g.
 *pq = bc (stated: eq-lines b c p q (line 2)) = al (proven, of transfer a b c l (line 1))*.
 
+## Constructed or solved: not yet designed
+
+*Next on the roadmap; discussed November 2026, nothing decided.* A figure the planner cannot construct
+is drawn by the numerical solver, and only the status line says so: its lines, its points and its
+steps look like a construction's. The page should be honest about which it is, and, once figures are
+part constructed and part solved, about which points. Options so far, which combine:
+
+1. **Points marked by how they were placed**: constructed points keep their markers (free, sliding,
+   determined); a solved point gets one of its own (say a small hollow diamond, "found by solving").
+   The unit that will last into hybrid figures.
+2. **Steps that tell the truth**: the steps that work, then where the construction stops, naming the
+   facts it does not construct and how closely the solved figure meets them; hovering one lights it
+   in the source and the figure. The status sentence moves here.
+3. **A different hand for a solved figure**: pencilled rather than inked, so Byrne's crisp line always
+   means constructed. Visible, but whole-figure, so too coarse for hybrid figures.
+4. **The other branches**: where a point took one of several branches (which ray, which intersection),
+   touching it shows the others faintly. Unsigned angles let four equal angles make a crossed
+   quadrilateral as well as a rectangle, and the planner may draw either.
+
+The leaning is 1 and 2 first, prototyped on a solved figure beside a constructed one before anything
+is committed.
+
 ## Designed, not yet built
 
 From the original brief, in rough order of importance:
