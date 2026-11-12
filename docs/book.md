@@ -121,9 +121,9 @@ inequalities. Angles are the main thread; spreads close the chapter.
 Left for later: I.13–14 as sums (their supplement form is in 1), I.16–25 (inequalities), the hexagon
 closing (the angle sum, chapter 3), the compass-only midpoint (similar triangles, chapter 6).
 
-*Needs:* angle and spread facts as checks in the drawing layer, and Byrne's arcs (done); the copied
-angle as a locus (a ray from a point at a given angle, with a choice of side), so that figures *stated*
-with equal angles construct rather than fall back to the solver; a right angle's square mark;
+*Needs:* angle and spread facts as checks in the drawing layer, Byrne's arcs, and the copied angle and
+the angle bisector as loci, so that figures stated with equal angles construct (all done); a right
+angle's square mark;
 symmetry recognition for six-place relations such as `supp` (it stops at five today).
 
 ### 3. Direction

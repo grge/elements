@@ -76,7 +76,7 @@ import type { GroundPredicate } from '../kb/inference'
 import {
   execute, drag as dragConstruction, draggable, plan as planConstruction, realise,
   type ConstructionPlan, type Point,
-  curveOf,
+  curveNear,
 } from '../geometry/construction'
 import { displayName, isAuxiliary } from '../kb/names'
 import type { ConstructionState } from '../composables/useWorkspace'
@@ -215,7 +215,7 @@ function helpersFor(coords: Map<string, Point>): Helper[] {
   for (const step of local.value!.plan.steps) {
     const loci = step.kind === 'on' ? [step.locus] : step.kind === 'meet' ? step.loci : []
     for (const locus of loci) {
-      const curve = curveOf(locus, coords)
+      const curve = curveNear(locus, coords, coords.get(step.point)!)
       if (!curve) continue
       out.push(curve.kind === 'line'
         ? { point: step.point, kind: 'line', p: curve.p, d: curve.d }
@@ -294,7 +294,7 @@ function startInteraction(e: PointerEvent) {
     }
     const warmStart = new Map(witness!.coords)
     warmStart.set(point!, world)
-    try { draggedWitness.value = solve(props.problem!, 6, warmStart) }
+    try { draggedWitness.value = solve(props.problem!, 0, warmStart, new Map([[point!, world]])) }
     catch { draggedWitness.value = { coords: warmStart, energy: witness!.energy } }
   }
 

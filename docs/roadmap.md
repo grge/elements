@@ -39,7 +39,9 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
    far: the axioms (with `triangle`, three points not on a line, which angle-side-angle needs: on a
    line it derived false equal lengths), the triangle theorems, the five constructions (I.9–12,
    I.23) and chapter 1's debts (the midpoint proven; reflection; the perpendicular bisector case by
-   case). Next: spreads; the copied angle as a locus; case splits, which the circumcentre waits on.
+   case). Angles now construct (rays at a given angle, bisectors), so `eq-angle`, `supp` and `right` figures drag
+   smoothly instead of falling back to the solver. Next: spreads; case splits, which the circumcentre
+   waits on.
 6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
    explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
    help. Sketched before built, once two chapters show what it lays out; [the Plates

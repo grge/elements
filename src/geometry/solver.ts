@@ -229,9 +229,11 @@ function buildConstrainedPairs(problem: GeometryProblem, cidx: CoordIdx): Set<st
   return s
 }
 
-function computeGradient(x: Coords, problem: GeometryProblem, pts: string[], cidx: CoordIdx, constrained: Set<string>): [number, Grad] {
+function computeGradient(x: Coords, problem: GeometryProblem, pts: string[], cidx: CoordIdx, constrained: Set<string>, pin?: Map<string, [number, number]>): [number, Grad] {
   const g = new Float64Array(x.length)
-  const e = gaugeGrad(x, g, pts, cidx)
+  // While dragging, the dragged point is held under the pointer (instead of the gauge).
+  let e = pin?.size ? pinGrad(x, g, cidx, pin) : gaugeGrad(x, g, pts, cidx)
+  e = e
     + collinearGrad(problem.lines, x, g, cidx)
     + circleGrad(problem.circles, x, g, cidx)
     + eqDistGrad(problem.constraints, x, g, cidx)
@@ -243,6 +245,30 @@ function computeGradient(x: Coords, problem: GeometryProblem, pts: string[], cid
 
 // ── Adam ──────────────────────────────────────────────────────────────
 
+function pinGrad(x: Coords, g: Grad, cidx: CoordIdx, pin: Map<string, [number, number]>, w = 1e4): number {
+  let e = 0
+  for (const [p, [px, py]] of pin) {
+    const i = cidx.get(p)
+    if (i === undefined) continue
+    const dx = x[i * 2] - px, dy = x[i * 2 + 1] - py
+    e += w * (dx * dx + dy * dy)
+    g[i * 2] += 2 * w * dx; g[i * 2 + 1] += 2 * w * dy
+  }
+  return e
+}
+
+/** A seeded generator, so a figure the solver draws is the same every time. */
+function rng(seed: number): () => number {
+  let a = seed >>> 0
+  return () => {
+    a = (a + 0x6D2B79F5) >>> 0
+    let t = a
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 function adam(
   x0: Float64Array,
   problem: GeometryProblem,
@@ -251,6 +277,7 @@ function adam(
   constrained: Set<string>,
   steps = 800,
   lr = 0.05,
+  pin?: Map<string, [number, number]>,
 ): { x: Float64Array; energy: number } {
   const x = new Float64Array(x0)
   const m = new Float64Array(x.length)
@@ -259,7 +286,7 @@ function adam(
   let energy = Infinity
 
   for (let t = 1; t <= steps; t++) {
-    const [e, g] = computeGradient(x, problem, pts, cidx, constrained)
+    const [e, g] = computeGradient(x, problem, pts, cidx, constrained, pin)
     energy = e
     for (let i = 0; i < x.length; i++) {
       m[i] = β1*m[i] + (1-β1)*g[i]
@@ -280,7 +307,10 @@ export function solve(
   problem: GeometryProblem,
   maxRestarts = 12,
   warmStart?: Map<string, [number, number]>,
+  /** Points to hold where they are (the point being dragged). */
+  pin?: Map<string, [number, number]>,
 ): WitnessModel {
+  const random = rng([...problem.points].sort().join(' ').split('').reduce((h, ch) => Math.imul(h ^ ch.charCodeAt(0), 16777619), 2166136261))
   const pts = [...problem.points].sort()
   const cidx = new Map(pts.map((p, i) => [p, i]))
   const n = pts.length
@@ -300,27 +330,28 @@ export function solve(
       // Warm start: seed all points from previous witness
       for (let i = 0; i < n; i++) {
         const [wx, wy] = warmStart!.get(pts[i])!
-        x0[i*2] = wx + (Math.random()-0.5)*0.02
-        x0[i*2+1] = wy + (Math.random()-0.5)*0.02
+        x0[i*2] = wx
+        x0[i*2+1] = wy
       }
     } else {
       const radius = 1.5 + r * 0.6
       const angleOffset = r * 0.37
       for (let i = 0; i < n; i++) {
-        const θ = (2 * Math.PI * i / n) + angleOffset + (Math.random() - 0.5) * 0.4
+        const θ = (2 * Math.PI * i / n) + angleOffset + (random() - 0.5) * 0.4
         x0[i*2]   = Math.cos(θ) * radius
         x0[i*2+1] = Math.sin(θ) * radius
         // Seed known points from warm start even in random restarts
         if (warmStart?.has(pts[i])) {
           const [wx, wy] = warmStart.get(pts[i])!
-          x0[i*2] = wx + (Math.random()-0.5)*0.3
-          x0[i*2+1] = wy + (Math.random()-0.5)*0.3
+          x0[i*2] = wx + (random()-0.5)*0.3
+          x0[i*2+1] = wy + (random()-0.5)*0.3
         }
       }
     }
 
     const steps = n > 6 ? 1200 : 800
-    const result = adam(x0, problem, pts, cidx, constrained, steps)
+    // A warm start continues from where the figure was: a short run, so a drag follows the pointer.
+    const result = adam(x0, problem, pts, cidx, constrained, r < 0 && pin ? 300 : steps, 0.05, pin)
     if (!best || result.energy < best.energy) best = result
     if (best.energy < 1e-4) break
   }

@@ -28,7 +28,7 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
-import { measureResidual } from './measure'
+import { angle as angleAt, measureResidual } from './measure'
 
 export type Point = [number, number]
 
@@ -133,6 +133,10 @@ export type Locus =
   | { kind: 'line'; through: [string, string] }
   | { kind: 'circle'; center: string; radius: [string, string] }
   | { kind: 'bisector'; of: [string, string] }
+  /** The two rays from `vertex` making the angle `angle` (or its supplement) with the ray to `from`. */
+  | { kind: 'angle'; vertex: string; from: string; angle: [string, string, string]; supplement: boolean }
+  /** The line through `vertex` bisecting the angle between its arms (or the outer bisector). */
+  | { kind: 'angle-bisector'; vertex: string; arms: [string, string]; outer: boolean }
 
 export type Step =
   | { kind: 'free'; point: string }
@@ -169,6 +173,26 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
     const on = line.filter(q => q !== p && isPlaced.has(q)).sort((x, y) => rank(x) - rank(y))
     if (on.length >= 2) out.push({ kind: 'line', through: [on[0], on[1]] })
   }
+  // Equal angles and supplements: a ray at a known angle from a placed vertex, or a bisector.
+  for (const m of model.measures) {
+    if (m.name !== 'eq-angle' && m.name !== 'supp') continue
+    if (!m.args.every(q => q === p || isPlaced.has(q))) continue
+    const t1 = m.args.slice(0, 3), t2 = m.args.slice(3)
+    const occurrences = m.args.filter(q => q === p).length
+    if (occurrences === 1) {
+      const [mine, other] = t1.includes(p) ? [t1, t2] : [t2, t1]
+      if (mine[1] === p) continue   // a vertex to be found is not on a ray
+      const from = mine[0] === p ? mine[2] : mine[0]
+      if (from === mine[1] || other[0] === other[1] || other[2] === other[1]) continue
+      // On a line through the vertex the angle is fixed already: the rays would meet that line only
+      // at the vertex.
+      if (model.lines.some(l => l.includes(p) && l.includes(mine[1]))) continue
+      out.push({ kind: 'angle', vertex: mine[1], from, angle: [other[0], other[1], other[2]], supplement: m.name === 'supp' })
+    } else if (occurrences === 2 && t1.includes(p) && t2.includes(p) && t1[1] === t2[1] && t1[1] !== p) {
+      const a = t1[0] === p ? t1[2] : t1[0], b = t2[0] === p ? t2[2] : t2[0]
+      if (a !== b && a !== t1[1] && b !== t1[1]) out.push({ kind: 'angle-bisector', vertex: t1[1], arms: [a, b], outer: m.name === 'supp' })
+    }
+  }
   for (const cls of model.lengths) {
     const complete = cls.filter(([a, b]) => isPlaced.has(a) && isPlaced.has(b))
     const others = cls
@@ -187,6 +211,7 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
+    + model.measures.filter(m => m.name === 'eq-angle' || m.name === 'supp').length
 }
 
 const DP_LIMIT = 18
@@ -279,7 +304,8 @@ export function paramCount(step: Step): number {
 
 // ───────────────────────────── geometry ─────────────────────────────
 
-export type Curve = { kind: 'line'; p: Point; d: Point } | { kind: 'circle'; c: Point; r: number }
+/** A line, or with `ray` the half of it from p in the direction d; or a circle. */
+export type Curve = { kind: 'line'; p: Point; d: Point; ray?: boolean } | { kind: 'circle'; c: Point; r: number }
 
 const sub = (a: Point, b: Point): Point => [a[0] - b[0], a[1] - b[1]]
 const dot = (a: Point, b: Point) => a[0] * b[0] + a[1] * b[1]
@@ -287,9 +313,45 @@ const cross = (a: Point, b: Point) => a[0] * b[1] - a[1] * b[0]
 const dist = (a: Point, b: Point) => Math.hypot(a[0] - b[0], a[1] - b[1])
 
 /** A locus as a curve, given the positions of the points it depends on (null if degenerate). */
+/** The curve of a locus that `point` is on (or nearest): of an angle's two rays, the one it took. */
+export function curveNear(locus: Locus, at: Map<string, Point>, point: Point): Curve | null {
+  const cs = curvesOf(locus, at)
+  return cs.length ? cs.reduce((best, c) => residual(point, c) < residual(point, best) ? c : best) : null
+}
+
+/** A locus as curves (two rays for an angle, one curve otherwise); empty if degenerate. */
+export function curvesOf(locus: Locus, at: Map<string, Point>): Curve[] {
+  const g = (q: string) => at.get(q)!
+  if (locus.kind === 'angle') {
+    const v = g(locus.vertex), y = g(locus.from)
+    const [a, b, c] = locus.angle.map(g)
+    if (dist(v, y) < 1e-12 || dist(a, b) < 1e-12 || dist(c, b) < 1e-12) return []
+    const theta = locus.supplement ? Math.PI - angleAt(a, b, c) : angleAt(a, b, c)
+    const d = sub(y, v)
+    const rot = (t: number): Point => [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t)]
+    return [{ kind: 'line', p: v, d: rot(theta), ray: true }, { kind: 'line', p: v, d: rot(-theta), ray: true }]
+  }
+  if (locus.kind === 'angle-bisector') {
+    const v = g(locus.vertex), [a, b] = locus.arms.map(g)
+    if (dist(a, v) < 1e-12 || dist(b, v) < 1e-12) return []
+    const ua = sub(a, v), ub = sub(b, v)
+    const na = Math.hypot(...ua), nb = Math.hypot(...ub)
+    const u: Point = [ua[0] / na, ua[1] / na], w: Point = [ub[0] / nb, ub[1] / nb]
+    let d: Point = locus.outer ? [u[0] - w[0], u[1] - w[1]] : [u[0] + w[0], u[1] + w[1]]
+    if (Math.hypot(...d) < 1e-9) {
+      if (locus.outer) return []        // the arms point the same way: no outer bisector
+      d = [-u[1], u[0]]                 // a straight angle: the bisector is the perpendicular
+    }
+    return [{ kind: 'line', p: v, d }]
+  }
+  const c = curveOf(locus, at)
+  return c ? [c] : []
+}
+
 export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
   const g = (q: string) => at.get(q)!
   switch (locus.kind) {
+    case 'angle': case 'angle-bisector': return curvesOf(locus, at)[0] ?? null
     case 'line': {
       const [a, b] = locus.through.map(g)
       return dist(a, b) < 1e-12 ? null : { kind: 'line', p: a, d: sub(b, a) }
@@ -336,9 +398,20 @@ function intersect(u: Curve, v: Curve): Point[] | 'same' {
 }
 
 function residual(p: Point, curve: Curve): number {
-  return curve.kind === 'line'
-    ? Math.abs(cross(sub(p, curve.p), curve.d)) / Math.hypot(...curve.d)
-    : Math.abs(dist(p, curve.c) - curve.r)
+  if (curve.kind === 'circle') return Math.abs(dist(p, curve.c) - curve.r)
+  if (curve.ray && dot(sub(p, curve.p), curve.d) < 0) return dist(p, curve.p)
+  return Math.abs(cross(sub(p, curve.p), curve.d)) / Math.hypot(...curve.d)
+}
+
+/** Where a locus is closest to holding at p: the least residual over its curves. */
+function locusResidual(p: Point, locus: Locus, at: Map<string, Point>): number {
+  const cs = curvesOf(locus, at)
+  return cs.length ? Math.min(...cs.map(c => residual(p, c))) : Infinity
+}
+
+/** Is c on the curve's half, if it is a ray? */
+function onRay(c: Point, curve: Curve, tol: number): boolean {
+  return curve.kind !== 'line' || !curve.ray || dot(sub(c, curve.p), curve.d) >= -tol * Math.hypot(...curve.d)
 }
 
 function isBetween(a: Point, b: Point, c: Point, tol: number): boolean {
@@ -405,6 +478,8 @@ export function describeLocus(l: Locus): string {
     case 'line': return `line ${n(l.through)}`
     case 'circle': return `circle about ${displayName(l.center)} with radius ${n(l.radius)}`
     case 'bisector': return `the perpendicular bisector of ${n(l.of)}`
+    case 'angle': return `the arm from ${displayName(l.vertex)} at ${l.supplement ? 'the supplement of ' : ''}angle ${n(l.angle)} to ${n([l.vertex, l.from])}`
+    case 'angle-bisector': return `the ${l.outer ? 'outer ' : ''}bisector of angle ${n([l.arms[0], l.vertex, l.arms[1]])}`
   }
 }
 
@@ -441,10 +516,18 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       pos = target ? [...target] : [params[pi], params[pi + 1]]
       used.push(pos[0], pos[1]); pi += 2
     } else if (step.kind === 'on') {
-      const curve = curveOf(step.locus, at)
-      if (!curve) return fail(`${describeLocus(step.locus)} is degenerate`)
+      // A locus of two rays (an angle) takes the one nearest where the point is wanted or was; a fresh
+      // figure takes the first.
+      const curves = curvesOf(step.locus, at)
+      if (!curves.length) return fail(`${describeLocus(step.locus)} is degenerate`)
+      const near = target ?? options.previous?.get(x)
+      const curve = near && curves.length > 1
+        ? curves.reduce((best, c) => residual(near, c) < residual(near, best) ? c : best)
+        : curves[0]
       if (curve.kind === 'line') {
-        const { domain, applied } = lineDomain(x, curve, orders, at, tol())
+        const found = lineDomain(x, curve, orders, at, tol())
+        const domain: [number, number] = curve.ray ? [Math.max(0, found.domain[0]), found.domain[1]] : found.domain
+        const applied = found.applied
         if (domain[0] > domain[1] + 1e-12) return fail(`no point of ${describeLocus(step.locus)} satisfies its order`)
         decided = applied
         const s = target ? sFromT(dot(sub(target, curve.p), curve.d) / dot(curve.d, curve.d), domain) : params[pi]
@@ -458,10 +541,17 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       }
       pi += 1
     } else {
-      const [u, v] = step.loci.map(l => curveOf(l, at))
-      if (!u || !v) return fail(`a locus of ${displayName(x)} is degenerate`)
-      const found = intersect(u, v)
-      if (found === 'same') return fail(`${step.loci.map(describeLocus).join(' and ')} coincide`)
+      const [us, vs] = step.loci.map(l => curvesOf(l, at))
+      if (!us.length || !vs.length) return fail(`a locus of ${displayName(x)} is degenerate`)
+      // Every pair of curves (an angle's locus is two rays); a point on a ray must be on its half.
+      const found: Point[] = []
+      let same = 0
+      for (const u of us) for (const v of vs) {
+        const f = intersect(u, v)
+        if (f === 'same') { same++; continue }
+        found.push(...f.filter(c => onRay(c, u, tol()) && onRay(c, v, tol())))
+      }
+      if (same === us.length * vs.length) return fail(`${step.loci.map(describeLocus).join(' and ')} coincide`)
       if (found.length === 0) return fail(`${step.loci.map(describeLocus).join(' and ')} do not meet`)
       const ok = found.filter(c => {
         at.set(x, c)
@@ -487,8 +577,8 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     scale = Math.max(scale, Math.abs(pos[0]), Math.abs(pos[1]))
 
     for (const c of cp.checks.filter(c => c.step === k)) {
-      const curve = curveOf(c.locus, at)
-      if (curve && residual(at.get(c.point)!, curve) > tol()) violations.push({ step: k, what: `${displayName(c.point)} on ${describeLocus(c.locus)}` })
+      const r = locusResidual(at.get(c.point)!, c.locus, at)
+      if (Number.isFinite(r) && r > tol()) violations.push({ step: k, what: `${displayName(c.point)} on ${describeLocus(c.locus)}` })
     }
     for (const { points: [p, q] } of cp.distinct.filter(d => d.step === k)) {
       if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${displayName(p)} and ${displayName(q)} distinct` })

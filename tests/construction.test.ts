@@ -5,6 +5,7 @@ import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { drawableFacts } from '../src/geometry/extraction'
 import { buildModel, plan, realise, execute, drag, paramCount, type Point, type ConstructionPlan } from '../src/geometry/construction'
+import { measureResidual } from '../src/geometry/measure'
 
 // The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
 const kb = new KnowledgeBase([...bookRules, ...fixtureRules])
@@ -30,6 +31,10 @@ function worstFact(facts: GroundPredicate[], c: Map<string, Point>): { residual:
         const t = L > 1e-12 ? (ab[0] * ax[0] + ab[1] * ax[1]) / L : 0
         r += Math.max(0, -t, t - 1) * Math.sqrt(L)
       }
+    }
+    if (f.name === 'eq-angle' || f.name === 'supp' || f.name === 'eq-spread') {
+      const m = measureResidual(f.name, f.args, n => c.get(n))
+      r = Number.isNaN(m) ? 0 : m * scale    // radians, on the figure's scale like the rest
     }
     if (r / scale > worst.residual) worst = { residual: r / scale, fact: `${f.name} ${f.args.join(' ')}` }
   }
@@ -60,6 +65,14 @@ const figures: Array<{ text: string; dof: number; mayFail?: boolean }> = [
   { text: 'copy-segment a l b c\ncopy-segment p q r s', dof: 12 },
   { text: 'circle-circle-intersection o a p b i', dof: 8, mayFail: true },  // the circles may not meet
   { text: 'line-line-intersection a b c d i', dof: 8 },
+  // Chapter 2: angles placed by rays and bisectors, not by the numerical solver.
+  { text: 'eq-angle a b c d e f', dof: 11 },
+  { text: 'supp a b c d e f', dof: 11 },
+  { text: 'right a b c', dof: 6 },
+  { text: 'copy-angle a b c e g d', dof: 9 },
+  { text: 'bisect-angle a b c d', dof: 6, mayFail: true },     // only possible when ba < bc
+  { text: 'perpendicular a c d', dof: 4 },
+  { text: 'drop-perpendicular p e f m', dof: 5 },
 ]
 
 describe('construction planning', () => {
@@ -97,6 +110,19 @@ describe('construction planning', () => {
 })
 
 describe('construction details', () => {
+  it('checks a theorem on every frame: the isosceles angles hold however the figure is dragged', () => {
+    const facts = factsOf('circle a b c\neq-angle a b c a c b')
+    const cp = plan(buildModel(facts))
+    expect(cp.used).toBe(cp.equations - 1)   // the angles follow from the circle: a check, not a locus
+    const random = seeded(3)
+    const start = realise(cp)
+    expect(start.valid).toBe(true)
+    for (let i = 0; i < 100; i++) {
+      const d = execute(cp, wiggle(cp, start.params, random), { previous: start.drawing.coords })
+      expect(d.violations).toEqual([])
+    }
+  })
+
   it('builds I.2 the way Euclid does: g beyond b, l beyond a', () => {
     const facts = factsOf('copy-segment a l b c')
     const cp = plan(buildModel(facts))

@@ -133,13 +133,21 @@ From the drawable facts two representations are built:
 | step | degrees of freedom | |
 |------|-----|---|
 | free | 2 | an input |
-| on a locus | 1 | a slider along a line, a circle or a perpendicular bisector |
+| on a locus | 1 | a slider along a line, a circle, a perpendicular bisector, a ray at a given angle or an angle's bisector |
 | where two loci meet | 0 | an intersection, with a choice of branch |
 
 Loci are built from points already placed: the line through two points of a collinear group; a circle
 about a placed centre whose radius is any placed segment of equal length (the compass carries a length;
 Euclid I.2 shows this is no stronger than the collapsing compass); the perpendicular bisector of two
 placed points the new point is equidistant from.
+
+Equal angles and supplements give loci too: a point whose angle at a placed vertex must equal a known
+angle lies on one of two rays from the vertex (either side of the placed arm), and a point making
+equal angles with two placed arms lies on their bisector (the outer bisector for supplements; for a
+straight angle, the perpendicular). Of the two rays the drawing keeps the one the point is on, as it
+keeps an intersection's branch. An angle condition on a point already on a line through the vertex is
+not used: that line meets the rays only at the vertex. Angles a figure states but cannot use (a theorem,
+such as the isosceles triangle's) are checked on every frame.
 
 The order of construction is chosen by an exact search, dynamic programming over the set of placed
 points, that uses as many of the figure's equations as possible (each one used removes a degree of
