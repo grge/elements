@@ -52,6 +52,9 @@ export interface ExtractOptions {
   fresh?: FreshNames
 }
 
+/** A fact as a key: `circle(a,b,c)`. */
+export const factKey = (f: { name: string; args: readonly string[] }) => `${f.name}(${f.args.join(',')})`
+
 /** Unfold facts and read off their constraints, what to draw, and what the drawing cannot read. */
 export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], options: ExtractOptions = {}): Extraction {
   const sets = {
@@ -60,7 +63,7 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], op
   }
   let origin = 0
   const add = (into: Map<string, DrawableFact>, n: UnfoldNode) => {
-    const key = `${n.fact.name}(${n.fact.args.join(',')})`
+    const key = factKey(n.fact)
     // A fact reached twice keeps its shallowest depth, and where it came from there.
     const seen = into.get(key)
     if (!seen || n.depth < seen.depth) into.set(key, { ...n.fact, depth: n.depth, origin })

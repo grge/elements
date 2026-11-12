@@ -40,9 +40,9 @@ describe('emphasis', () => {
     expect(seg.segments.size).toBe(2)
   })
 
-  it('records which points each element is drawn through', () => {
+  it('records which facts made each element', () => {
     const scene = sceneOf('eq-triangle a b c')
-    expect(scene.meta.circles.map(c => c.center).sort()).toEqual(['a', 'b'])
+    expect(scene.meta.circles.flat().sort()).toEqual(['circle(a,b,c)', 'circle(b,a,c)'])
     expect(scene.meta.ticks.every(i => i >= 0 && i < scene.segments.length)).toBe(true)
   })
 })

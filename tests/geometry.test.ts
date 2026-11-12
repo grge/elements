@@ -69,12 +69,33 @@ describe('the figure', () => {
     expect(figure.lines.length).toBe(2)
   })
 
+  it('draws between as a finite straight line, its line continuing faint', () => {
+    const figure = figureOf([{ name: 'between', args: ['a', 'b', 'c'] }])!
+    expect(figure.strokes.map(s => s.ends)).toEqual([['a', 'c']])
+    expect(figure.lines).toMatchObject([{ points: ['a', 'b', 'c'], faint: true }])
+    // A line stated through the same points is drawn at full strength.
+    const both = figureOf([{ name: 'between', args: ['a', 'b', 'c'] }, { name: 'collinear', args: ['a', 'c', 'd'] }])!
+    expect(both.lines).toMatchObject([{ faint: false }])
+  })
+
+  it('draws supplements as two arcs and a right angle as a square', () => {
+    const supp = figureOf([{ name: 'supp', args: ['a', 'b', 'c', 'c', 'b', 'd'] }])!
+    expect(supp.angles.map(a => `${a.points.join('')} ${a.as}`)).toEqual(['abc arc', 'cbd arc'])
+    const right = figureOf([{ name: 'right', args: ['a', 'b', 'c'] }])!
+    expect(right.angles.map(a => `${a.points.join('')} ${a.as}`)).toEqual(['abc square'])
+  })
+
+  it('draws nothing for distinct', () => {
+    const figure = figureOf([{ name: 'distinct', args: ['a', 'b'] }])!
+    expect([figure.lines, figure.strokes, figure.circles, figure.angles]).toEqual([[], [], [], []])
+  })
+
   it('merges circles with the same centre and a radius stated equal', () => {
     const figure = figureOf([
       { name: 'circle', args: ['o', 'a', 'b'] }, { name: 'circle', args: ['o', 'c', 'd'] },
       { name: 'eq-lines', args: ['o', 'a', 'o', 'c'] },
     ])!
-    expect(figure.circles).toEqual([{ center: 'o', points: ['a', 'b', 'c', 'd'], depth: 0 }])
+    expect(figure.circles).toEqual([{ center: 'o', points: ['a', 'b', 'c', 'd'], depth: 0, facts: ['circle(o,a,b)', 'circle(o,c,d)'] }])
   })
 })
 

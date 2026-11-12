@@ -140,9 +140,9 @@ of freedom they remove), loci for an unknown point given the others, choices (or
 branches and bound sliders), and a drawing. Marks (ticks, arcs) are a different kind of thing: they
 depict *equivalence classes* across the whole figure, so they belong to equivalences, not relations
 (see *Equality chains*). Each relation's interpretations are gathered in one table
-(`src/geometry/relations.ts`): its reading by the model, whether it is drawn, and its residual. Its
-loci and its drawing join the table as the planner and the renderer move onto it; a new geometric
-primitive (`parallel`) would then be one entry.
+(`src/geometry/relations.ts`): its reading by the model, whether and how it is drawn, and its
+residual. Its loci join the table when the planner moves onto it; a new geometric primitive
+(`parallel`) would then be one entry.
 
 ### What each relation draws
 
@@ -159,6 +159,12 @@ primitive (`parallel`) would then be one entry.
 
 The word chosen is the drawing you get: `circle a b c` and `eq-lines a b a c` mean the same, and draw
 a circle and two ticked segments respectively. That is deliberate.
+
+Built (November 2026): each relation's entry in the table draws it through a pen (a line, a finite
+straight line, a circle, an angle as an arc or a square); `right` has an entry of its own, so it is drawn
+as a square while the planner reads its definition. Every element keeps the facts that made it, which
+is how hovering a fact in the source brings its elements forward. A point only the planner's route uses
+(the auxiliary point inside `right`) is not drawn, as the route is not.
 
 ### The planner's route: shown on touch
 

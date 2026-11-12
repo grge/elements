@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan } from '../src/geometry/construction'
+import { relationOf } from '../src/geometry/relations'
 import { bookRules } from './book'
 import { parseRules } from '../src/language/parser'
 
@@ -49,7 +50,8 @@ describe('the planner does not notice', () => {
     if (!def) continue
     it(name, () => {
       const x = extract(kb, [{ name, args: def.head.args }])
-      if (!x.depicted.length) return
+      // Only where the planner can read what is drawn (`right` is drawn as itself, a square).
+      if (!x.depicted.length || x.depicted.some(f => !relationOf(f)?.read)) return
       const fromConstraints = plan(buildModel(x.constraints))
       const fromDepicted = plan(buildModel(x.depicted))
       expect(fromConstraints.steps).toEqual(fromDepicted.steps)

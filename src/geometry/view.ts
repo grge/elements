@@ -26,15 +26,17 @@ export function computeRenderTransform(
   figure?: Figure | null,
   insetLeft = 0,
 ): RenderTransform | null {
-  const coords = witness.coords
+  // Fit what is drawn: points only the planner's route uses are not (scene.ts).
+  const drawn = figure ? new Set([...figure.points, ...figure.marks.flatMap(m => m.members.flatMap(x => x.points))]) : null
+  const coords = drawn ? new Map([...witness.coords].filter(([p]) => drawn.has(p))) : witness.coords
   if (!coords.size) return null
 
   const px = [...coords.values()].map(([x]) => x)
   const py = [...coords.values()].map(([, y]) => y)
   const ax = [...px], ay = [...py]
   for (const circle of figure?.circles ?? []) {
-    const c = coords.get(circle.center)
-    const onCircle = [...circle.points].map(p => coords.get(p)).filter((p): p is [number, number] => !!p)
+    const c = witness.coords.get(circle.center)
+    const onCircle = [...circle.points].map(p => witness.coords.get(p)).filter((p): p is [number, number] => !!p)
     if (!c || !onCircle.length) continue
     const r = onCircle.reduce((sum, [qx, qy]) => sum + Math.hypot(qx - c[0], qy - c[1]), 0) / onCircle.length
     ax.push(c[0] - r, c[0] + r)

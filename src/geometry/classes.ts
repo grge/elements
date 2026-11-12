@@ -42,8 +42,12 @@ export class UnionFind {
  * Merge collinear groups that share two points (two points fix a line; distinct names are taken to
  * be distinct points). Each merged group keeps the least depth of those merged into it.
  */
-export function mergeLines(groups: { points: Set<string>; depth: number }[]): { points: Set<string>; depth: number }[] {
-  const out = groups.map(g => ({ points: new Set(g.points), depth: g.depth }))
+export function mergeLines<T extends { points: Set<string>; depth: number }>(
+  groups: T[],
+  /** Anything else to merge, from `from` into `into`. */
+  merge: (into: T, from: T) => void = () => {},
+): T[] {
+  const out = groups.map(g => ({ ...g, points: new Set(g.points) }))
   for (let merged = true; merged;) {
     merged = false
     outer: for (let i = 0; i < out.length; i++) {
@@ -51,6 +55,7 @@ export function mergeLines(groups: { points: Set<string>; depth: number }[]): { 
         if ([...out[i].points].filter(p => out[j].points.has(p)).length >= 2) {
           out[j].points.forEach(p => out[i].points.add(p))
           out[i].depth = Math.min(out[i].depth, out[j].depth)
+          merge(out[i], out[j])
           out.splice(j, 1)
           merged = true
           break outer

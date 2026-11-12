@@ -10,13 +10,16 @@
  *             a pair kept apart, or a measure. Absent for a relation the figure cannot impose
  *             (`eq-point`: the drawing takes distinct names for distinct points).
  *   depicted  whether the figure draws it as itself where a path from a written fact first reaches
- *             it: a circle is drawn as a circle, though the planner reads its definition.
+ *             it: a circle is drawn as a circle, though the planner reads its definition. A relation
+ *             can be depicted and defined (`right`: Byrne's square, its definition read by the planner).
+ *   draw      how it is drawn (design.md, "What each relation draws"), through a pen (figure.ts).
+ *             Equalities draw nothing of their own: their marks come from the classes in marks.ts.
  *   holds     whether it holds at given positions; `tol` is a length on the figure's scale. A
  *             degenerate case (an angle with an arm of no length) counts as holding: nothing to measure.
  *   residual  for the numeric solver: how far an equation is from holding, 0 when it does.
  *
  * Which relations are constraints, which are drawn and which are unread all follow from the table
- * (extraction.ts). How each one is drawn is still the renderer's business (scene.ts).
+ * (extraction.ts), and how it is drawn from `draw`.
  */
 
 import { angle, spread } from './measure'
@@ -33,12 +36,27 @@ export interface ModelReader {
   measure(name: string, args: readonly string[]): void
 }
 
+/** What a relation draws with (figure.ts); the pen knows the fact's depth and where it came from. */
+export interface Pen {
+  /** The line through the points, across the page. */
+  line(points: readonly string[]): void
+  /** The finite straight line a–c at full strength; its line, through `through`, continues faint. */
+  segment(a: string, c: string, through: readonly string[]): void
+  /** The circle about `center` through the points. */
+  circle(center: string, through: readonly string[]): void
+  /** The angle a-b-c with its arms: an arc, or Byrne's square for a right angle. */
+  angle(a: string, b: string, c: string, as: 'arc' | 'square'): void
+  /** Two lengths stated equal: circles about one centre with these radii are one circle. */
+  sameLength(a: string, b: string, c: string, d: string): void
+}
+
 export interface Relation {
   name: string
   /** A number of points, or at least `min`. */
   arity: number | { min: number }
   read?(args: readonly string[], m: ModelReader): void
   depicted: boolean
+  draw?(args: readonly string[], pen: Pen): void
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
 }
@@ -65,6 +83,7 @@ const TABLE: Relation[] = [
   {
     name: 'collinear', arity: { min: 3 }, depicted: true,
     read: (args, m) => m.collinear(args),
+    draw: (args, pen) => pen.line(args),
     holds: (ps, tol) => {
       const [p, q] = farthestPair(ps), len = d(p, q)
       return len <= tol || ps.every(r => Math.abs((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0])) / len <= tol)
@@ -73,6 +92,7 @@ const TABLE: Relation[] = [
   {
     name: 'between', arity: 3, depicted: true,
     read: ([a, b, c], m) => { m.collinear([a, b, c]); m.between(a, b, c) },
+    draw: ([a, b, c], pen) => pen.segment(a, c, [a, b, c]),
     holds: ([a, b, c], tol) => {
       const ac = d(a, c)
       if (ac <= tol) return d(a, b) <= tol
@@ -84,12 +104,14 @@ const TABLE: Relation[] = [
   {
     name: 'eq-lines', arity: 4, depicted: true,
     read: ([a, b, c, e], m) => m.equal(a, b, c, e),
+    draw: ([a, b, c, e], pen) => pen.sameLength(a, b, c, e),
     holds: ([a, b, c, e], tol) => Math.abs(d(a, b) - d(c, e)) <= tol,
   },
   {
     // Defined in the book (equal radii), so the planner reads eq-lines; drawn as a circle.
     name: 'circle', arity: 3, depicted: true,
     read: ([a, b, c], m) => m.equal(a, b, a, c),
+    draw: ([a, b, c], pen) => pen.circle(a, [b, c]),
     holds: ([a, b, c], tol) => Math.abs(d(a, b) - d(a, c)) <= tol,
   },
   {
@@ -111,6 +133,8 @@ const TABLE: Relation[] = [
     // Angles a-b-c and d-e-f together make a straight angle.
     name: 'supp', arity: 6, depicted: true,
     read: (args, m) => m.measure('supp', args),
+    // The two angles' arcs: where they share a vertex and an arm, together a straight angle.
+    draw: ([a, b, c, d, e, f], pen) => { pen.angle(a, b, c, 'arc'); pen.angle(d, e, f, 'arc') },
     ...measured(P => {
       if (same(P[0], P[1]) || same(P[2], P[1]) || same(P[3], P[4]) || same(P[5], P[4])) return NaN
       return Math.abs(angle(P[0], P[1], P[2]) + angle(P[3], P[4], P[5]) - Math.PI)
@@ -121,6 +145,13 @@ const TABLE: Relation[] = [
     name: 'eq-spread', arity: 8, depicted: true,
     read: (args, m) => m.measure('eq-spread', args),
     ...measured(P => Math.abs(spread(P[0], P[1], P[2], P[3]) - spread(P[4], P[5], P[6], P[7]))),
+  },
+  {
+    // Defined in the book (an angle equal to its own supplement), so the planner reads its definition;
+    // drawn as Byrne draws it, a small square at the vertex.
+    name: 'right', arity: 3, depicted: true,
+    draw: ([a, b, c], pen) => pen.angle(a, b, c, 'square'),
+    ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
   },
   {
     // Not read: the drawing takes distinct names for distinct points. Evaluated as a claim.

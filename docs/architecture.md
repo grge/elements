@@ -120,10 +120,12 @@ blocks.
 
 **The relation table** (`relations.ts`) is the boundary between the logic and the figure: one entry
 per relation the drawing layer knows, with its number of points, how the construction model reads it
-(`read`), whether the figure draws it as itself (`depicted`), whether it holds at given positions
+(`read`), whether the figure draws it as itself (`depicted`) and how (`draw`, through a pen: a line, a
+finite straight line, a circle, an angle as an arc or a square), whether it holds at given positions
 (`holds`), and for the solver how far it is from holding (`residual`). Extraction, the model, the
-checks a drawing is held to and numeric evidence all ask the table instead of switching on names. How
-each relation is drawn is still the business of `figure.ts` and `scene.ts`.
+figure, the checks a drawing is held to and numeric evidence all ask the table instead of switching
+on names. Every element of the figure keeps the facts that made it (`meta` in `scene.ts`), so bringing
+forward what a hovered fact draws is a lookup.
 
 **Extraction** (`extraction.ts`, `extract`) unfolds the page's facts as the logic does, all the way to
 open predicates, keeping the tree (`unfoldTree` in `inference.ts`), and reads three things off it. The

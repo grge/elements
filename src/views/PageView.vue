@@ -281,7 +281,8 @@ const figureFocus = computed(() => {
   if (!rt) return null
   try {
     const args = h.args.map(a => pointOf(a) ?? a)
-    const facts = extract(rt.kb, [{ name: h.name, args }]).depicted
+    // Its outline: what it draws, and the constructions in it whose lemmas mark the figure.
+    const facts = extract(rt.kb, [{ name: h.name, args }]).outline
     return facts.length ? { facts, points: args.filter(a => pointOf(a) !== null) } : null
   } catch { return null }
 })

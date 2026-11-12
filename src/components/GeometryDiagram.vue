@@ -31,7 +31,7 @@
         <circle v-for="(c, i) in scene.circles" :key="`gc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
         <line v-for="(l, i) in scene.segments" :key="`gs${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
         <line v-for="(l, i) in scene.ticks" :key="`gk${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
-        <path v-for="(a, i) in scene.arcs" :key="`ga${i}`" :d="a.d" :style="weight(a.level)" />
+        <path v-for="(a, i) in scene.arcs" :key="`ga${i}`" :d="a.d" :style="look(a.level, 'arcs', i)" />
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
@@ -39,7 +39,7 @@
         <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
         <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
         <line v-for="(l, i) in scene.ticks" :key="`k${i}`" class="tick" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', scene.meta.ticks[i])" />
-        <path v-for="(a, i) in scene.arcs" :key="`a${i}`" class="arc" :d="a.d" :style="weight(a.level)" />
+        <path v-for="(a, i) in scene.arcs" :key="`a${i}`" class="arc" :class="a.kind" :d="a.d" :style="look(a.level, 'arcs', i)" />
         <template v-for="(r, i) in scene.route" :key="`r${i}`">
           <line v-if="r.kind === 'line'" class="route" :x1="r.x1" :y1="r.y1" :x2="r.x2" :y2="r.y2" />
           <circle v-else class="route" :cx="r.cx" :cy="r.cy" :r="r.r" />
@@ -203,7 +203,7 @@ const emphasis = computed<Emphasis | null>(() =>
   props.focus && scene.value ? emphasise(scene.value, props.focus.facts, props.focus.points) : null)
 
 /** How an element is drawn: its level, and whether the focus brings it forward or lets it recede. */
-function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments', i: number) {
+function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments' | 'arcs', i: number) {
   const base = weight(level)
   const em = emphasis.value
   if (!em || !props.focus?.facts.length) return base   // a name alone lights its point, nothing else
@@ -396,6 +396,7 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
 }
 .crisp .tick { stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 .crisp .arc, .ghost path { fill: none; stroke: var(--dg-ink, #fff); stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
+.crisp .arc.square { stroke-linejoin: miter; stroke-linecap: butt; }
 
 /* The route: the loci that placed the touched point. Not the figure, so drawn apart: thin, dashed,
    in the accent colour. */

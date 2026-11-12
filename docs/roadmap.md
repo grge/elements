@@ -155,9 +155,9 @@ would sit naturally beside the algebraic lens.
 - **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,
   instead of falling back to the solver for the whole figure.
 - **A drawing-layer boundary**: the relation table (`relations.ts`, November 2026) holds each relation's
-  reading by the model, its number of points and its residual; extraction, the checks and numeric
-  evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`), each relation's drawing
-  (`scene.ts`), and the solver's energies. Then the table is a plug-in, a *model* of the theory (see
+  reading by the model, its number of points, its drawing and its residual; extraction, the figure, the
+  checks and numeric evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`) and the
+  solver's energies (by the model's structure, not per relation). Then the table is a plug-in, a *model* of the theory (see
   *Beyond*: three lenses, sibling books).
 - **Annotations from proven facts**: ticks and arcs come from stated and proven equalities (built
   November 2026, design.md *Marks*). Still to do: a user's lemmas travelling to other pages, and the

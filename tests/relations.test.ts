@@ -16,6 +16,8 @@ describe('the relation table', () => {
   it('is where extraction learns which relations are constraints and which are drawn', () => {
     expect([...CONSTRAINT_RELATIONS].sort()).toEqual(['between', 'circle', 'collinear', 'distinct', 'eq-angle', 'eq-lines', 'eq-spread', 'supp'])
     expect(DEPICTED_RELATIONS.has('circle')).toBe(true)
+    expect(DEPICTED_RELATIONS.has('right')).toBe(true)     // drawn as itself, read through its definition
+    expect(CONSTRAINT_RELATIONS.has('right')).toBe(false)
     expect(CONSTRAINT_RELATIONS.has('eq-point')).toBe(false)
   })
 
