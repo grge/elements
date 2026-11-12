@@ -28,6 +28,7 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
+import { measureResidual } from './measure'
 
 export type Point = [number, number]
 
@@ -43,6 +44,8 @@ export interface ConstructionModel {
   between: [string, string, string][]
   /** Pairs of points that must not coincide. */
   distinct: [string, string][]
+  /** Equal angles and spreads (measure.ts): no locus places a point by them yet, so they are checked. */
+  measures: { name: string; args: string[] }[]
 }
 
 export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel {
@@ -52,6 +55,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
   const segParent = new Map<string, string>()
   const between: [string, string, string][] = []
   const distinct: [string, string][] = []
+  const measures: { name: string; args: string[] }[] = []
 
   const segKey = (a: string, b: string) => a < b ? `${a}\u0001${b}` : `${b}\u0001${a}`
   const segFind = (k: string): string => {
@@ -83,6 +87,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
       case 'circle': equal(f.args[0], f.args[1], f.args[0], f.args[2]); break
       case 'eq-lines': equal(f.args[0], f.args[1], f.args[2], f.args[3]); break
       case 'distinct': if (f.args[0] !== f.args[1]) distinct.push([f.args[0], f.args[1]]); break
+      case 'eq-angle': case 'eq-spread': measures.push({ name: f.name, args: [...f.args] }); break
     }
   }
 
@@ -118,6 +123,7 @@ export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel
     lengths: [...classes.values()].filter(c => c.length >= 2),
     between,
     distinct,
+    measures,
   }
 }
 
@@ -145,6 +151,8 @@ export interface ConstructionPlan {
   orders: OrderFact[]
   /** Points that must not coincide, decided at the step that places the later one. */
   distinct: DistinctFact[]
+  /** Equal angles and spreads, checked at the step that places their last point. */
+  measures: { step: number; name: string; args: string[] }[]
   dof: number
   /** Number of equations the figure states, and how many the plan uses to place points. */
   equations: number
@@ -258,9 +266,10 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
   const stepOf = (p: string) => order.indexOf(p)
   const orders = model.between.map(b => ({ step: Math.max(...b.map(stepOf)), between: b }))
   const distinct = model.distinct.map(d => ({ step: Math.max(...d.map(stepOf)), points: d }))
+  const measures = model.measures.map(m => ({ step: Math.max(...m.args.map(stepOf)), ...m }))
   const dof = steps.reduce((s, st) => s + (st.kind === 'free' ? 2 : st.kind === 'on' ? 1 : 0), 0)
   const equations = countEquations(model)
-  return { steps, checks, orders, distinct, dof, equations, used: 2 * n - dof }
+  return { steps, checks, orders, distinct, measures, dof, equations, used: 2 * n - dof }
 }
 
 /** Parameters each step takes. */
@@ -483,6 +492,10 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     }
     for (const { points: [p, q] } of cp.distinct.filter(d => d.step === k)) {
       if (dist(at.get(p)!, at.get(q)!) <= tol()) violations.push({ step: k, what: `${displayName(p)} and ${displayName(q)} distinct` })
+    }
+    for (const m of cp.measures.filter(m => m.step === k)) {
+      const r = measureResidual(m.name, m.args, p => at.get(p))
+      if (r > 1e-7) violations.push({ step: k, what: `${m.name} ${m.args.map(displayName).join(' ')}` })
     }
     for (const order of orders) {
       if (decided.has(order)) continue

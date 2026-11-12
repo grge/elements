@@ -16,6 +16,7 @@ import { FreshNames, displayName } from '../kb/names'
 import type { Lemma } from '../language/parser'
 import { buildModel, configurations, plan, type Point } from './construction'
 import { GEOMETRY_FRONTIER } from './extraction'
+import { measureResidual } from './measure'
 
 export type Evidence =
   | { kind: 'none'; why: string }
@@ -84,6 +85,10 @@ export function holds(f: GroundPredicate, coords: Map<string, Point>): boolean {
       const cross = Math.abs((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / ac
       const t = ((b[0] - a[0]) * (c[0] - a[0]) + (b[1] - a[1]) * (c[1] - a[1])) / (ac * ac)
       return cross <= tol && t >= -tol / ac && t <= 1 + tol / ac
+    }
+    case 'eq-angle': case 'eq-spread': {
+      const r = measureResidual(f.name, f.args, p => coords.get(p))
+      return Number.isNaN(r) || r <= 1e-7
     }
     default: return true
   }

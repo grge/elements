@@ -9,11 +9,15 @@ export interface BetweenConstraint   { kind: 'between';   middle: string; endpoi
 export interface OnCircleConstraint  { kind: 'on-circle'; center: string; radiusPoint: string; targetPoint: string; depth?: number }
 export interface EqualDistConstraint { kind: 'eq-dist';   pair1: [string, string]; pair2: [string, string]; depth?: number }
 
+/** An equality of angles or spreads (see measure.ts): checked and solved, not yet constructed. */
+export interface MeasureConstraint   { kind: 'measure'; name: string; args: string[]; depth?: number }
+
 export type Constraint =
   | CollinearConstraint
   | BetweenConstraint
   | OnCircleConstraint
   | EqualDistConstraint
+  | MeasureConstraint
 
 export interface Line   { points: Set<string>; depth?: number }
 export interface Circle { center: string; points: Set<string>; radiusClass: string; depth?: number }

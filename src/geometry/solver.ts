@@ -5,6 +5,7 @@
  */
 
 import type { GeometryProblem, WitnessModel, Line, Circle, Constraint } from './constraints'
+import { measureResidual } from './measure'
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -165,6 +166,31 @@ function betweenGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1
   return e
 }
 
+// Equal angles and spreads: energy (difference)², gradient by central differences on the points
+// involved (a handful of coordinates per fact).
+function measureGrad(cs: Constraint[], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3): number {
+  let e = 0
+  for (const c of cs) {
+    if (c.kind !== 'measure') continue
+    const ids = c.args.map(p => cidx.get(p)!)
+    const residual = () => {
+      const r = measureResidual(c.name, c.args, p => { const i = cidx.get(p)!; return [x[i * 2], x[i * 2 + 1]] })
+      return Number.isNaN(r) ? 0 : r
+    }
+    const r0 = residual()
+    e += w * r0 * r0
+    const h = 1e-6
+    for (const i of new Set(ids)) for (const k of [i * 2, i * 2 + 1]) {
+      const v = x[k]
+      x[k] = v + h; const rp = residual()
+      x[k] = v - h; const rm = residual()
+      x[k] = v
+      g[k] += w * (rp * rp - rm * rm) / (2 * h)
+    }
+  }
+  return e
+}
+
 function separationGrad(x: Coords, g: Grad, constrained: Set<string>, w = 1.0, minSep = 0.3): number {
   // Only penalise pairs that share NO geometric constraint.
   // Points on the same line/circle are allowed to be close.
@@ -210,6 +236,7 @@ function computeGradient(x: Coords, problem: GeometryProblem, pts: string[], cid
     + circleGrad(problem.circles, x, g, cidx)
     + eqDistGrad(problem.constraints, x, g, cidx)
     + betweenGrad(problem.constraints, x, g, cidx)
+    + measureGrad(problem.constraints, x, g, cidx)
     + separationGrad(x, g, constrained)
   return [e, g]
 }

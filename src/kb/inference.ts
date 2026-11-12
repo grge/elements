@@ -241,8 +241,11 @@ export function forwardClosure(
     const key = groundKey(f)
     if (facts.has(key)) return false
     facts.set(key, f)
-    if (!index.has(f.name)) index.set(f.name, [])
-    index.get(f.name)!.push(f)
+    for (const k of [f.name, ...f.args.map((a, i) => argKey(f.name, i, a))]) {
+      let list = index.get(k)
+      if (!list) index.set(k, list = [])
+      list.push(f)
+    }
     agenda.push(f)
     return key === goalKey
   }
@@ -286,11 +289,18 @@ export function forwardClosure(
   while (agenda.length > 0 && (maxSteps === undefined || steps < maxSteps)) {
     const fact = agenda.shift()!
 
-    for (const rule of kb.rulesWithBody(fact.name)) {
+    // Semi-naive: only matches that use this fact are new (any match of older facts alone was
+    // found when the last of them was processed). So bind each body atom it fits, join the rest.
+    for (const rule of new Set(kb.rulesWithBody(fact.name))) {
       if (rule.body.length === 0) continue
 
       const freeVars = headOnlyVariables(rule)
-      for (const s of bodySatisfied(rule.body, index, emptySubst())) {
+      const matches = rule.body.flatMap((atom, i) => {
+        if (atom.name !== fact.name) return []
+        const s0 = unify(fact, atom, emptySubst())
+        return s0 ? [...bodySatisfied(rule.body.filter((_, j) => j !== i), index, s0)] : []
+      })
+      for (const s of matches) {
         const derived = freeVars.length === 0
           ? [applySubst(s, rule.head)]
           : instantiateOverUniverse(rule, s, universe)
@@ -308,6 +318,13 @@ export function forwardClosure(
   return [...facts.values()]
 }
 
+/** Index key for facts of `name` whose argument `i` is `value` (the plain name keys all of them). */
+const argKey = (name: string, i: number, value: string) => `${name}\u0001${i}\u0001${value}`
+
+/**
+ * Every way to satisfy a body, extending `s`. Joins the atom with the most bound arguments first, and
+ * looks its candidates up by the most selective bound argument instead of scanning every fact.
+ */
 function* bodySatisfied(
   body: Predicate[],
   index: Map<string, GroundPredicate[]>,
@@ -315,9 +332,23 @@ function* bodySatisfied(
 ): Generator<Subst> {
   if (body.length === 0) { yield s; return }
 
-  const [first, ...rest] = body
-  for (const fact of index.get(first.name) ?? []) {
-    const s1 = unify(fact, first, s)
+  let best = 0, bestBound = -1
+  body.forEach((atom, i) => {
+    const bound = atom.args.filter(a => s.has(a)).length
+    if (bound > bestBound) { best = i; bestBound = bound }
+  })
+  const atom = body[best]
+  const rest = body.filter((_, i) => i !== best)
+  let list = index.get(atom.name) ?? []
+  atom.args.forEach((a, i) => {
+    const v = s.get(a)
+    if (v === undefined) return
+    const narrower = index.get(argKey(atom.name, i, v)) ?? []
+    if (narrower.length < list.length) list = narrower
+  })
+  // Facts added while this runs are found later, by the semi-naive step that processes them.
+  for (let k = 0, n = list.length; k < n; k++) {
+    const s1 = unify(list[k], atom, s)
     if (s1 !== null) yield* bodySatisfied(rest, index, s1)
   }
 }
