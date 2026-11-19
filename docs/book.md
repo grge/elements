@@ -162,11 +162,16 @@ I.31 (parallel and equal), I.34 (opposite sides and angles), I.33, and the diago
 other.
 
 **Not yet: the midline.** Its proof goes through I.33 on a second parallelogram, and lemmas do not
-yet become rules, so the closure redoes that reasoning; and nothing in the book derives that a
-midpoint differs from its ends, or that its corners are off the other lines. It proves with sixteen
-hypotheses and seven times the checker's budget (eight seconds), which is not a page. Wanted first:
-non-degeneracy the engine can derive (a midpoint of distinct points differs from both; lemma
-compilation; case splits). The diagonals lemma already carries three such triangles.
+yet become rules, so the closure redoes that reasoning. Three rules now derive most of the
+non-degeneracy it needs (chapter 2: a point between b and d is not a corner off b-d; points on two
+sides from a corner make a triangle with it; chapter 3: a parallel through a point off a line stays
+off it), which took the diagonals lemma's three extra triangles away. The midline still needs a
+crossing for the second parallelogram's diagonals, and twice the checker's budget (nine seconds).
+What it lacks is less a rule than room: a fourth rule, that a midpoint of distinct points differs
+from its ends, made the heavy lemmas of chapters 1 and 2 twice as slow (every new pair of distinct
+points on a line adds `parallel` facts, which the closure walks class by class), and with those
+facts given as hypotheses the midline is still over budget. Wanted first: lemma compilation (I.33
+as a rule), or a faster closure (roadmap, *Logic*, performance).
 
 Also left out: corresponding angles (they need two points on the same side of a line, which unlike
 opposite sides has no crossing to say it); the angle sum (I.32), a sum, until the engine can add

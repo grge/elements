@@ -47,6 +47,13 @@ triangle x b c: triangle a b c, eq-point x a
 false: triangle a b c, collinear a b c
 distinct a b: triangle a b c
 
+# A point between b and d is not a corner a off the line b-d.
+distinct a m: between b m d, triangle a b d
+
+# From a corner a, a point d of one side and e of the other, neither of them a, make a triangle with
+# a: the two lines through a are different lines.
+triangle a d e: triangle a b c, between a d b, between a e c, distinct a d, distinct a e
+
 # Side-angle-side (Euclid I.4, an axiom here as in Hilbert): two sides and the angle between them
 # equal, then the third sides are equal, and so are the angles at a and d.
 eq-lines a c d f: eq-lines b a e d, eq-lines b c e f, eq-angle a b c d e f

@@ -36,6 +36,9 @@ parallel a b a c: collinear a b c, distinct a b, distinct a c
 # Two lines through one point that run the same way are one line.
 collinear a b c: parallel a b a c
 
+# So a line through d running the same way as a-b, and through c off a-b, keeps d off a-b too.
+triangle a b d: parallel a b d c, triangle a b c, distinct d c
+
 # ── alternate angles
 
 # Equal alternate angles make parallels (Euclid I.27): the line e-f crosses e-a at e and f-d at f, with
@@ -115,8 +118,7 @@ parallelogram a b c d:
     triangle c d a
 
 # The diagonals bisect each other: the triangles on a-b and c-d have equal alternate angles at both ends
-# of equal sides. The parallelogram is written out, to name where its diagonals cross; the last three
-# triangles keep its corners off the other lines, which the engine cannot conclude for itself.
+# of equal sides. The parallelogram is written out, to name where its diagonals cross.
 ? midpoint m a c:
     parallel a b d c
     parallel a d b c
@@ -124,9 +126,6 @@ parallelogram a b c d:
     between b m d
     triangle a b c
     triangle c d a
-    triangle a b d
-    triangle a b m
-    triangle c d m
 ? midpoint m b d:
     parallel a b d c
     parallel a d b c
@@ -134,6 +133,3 @@ parallelogram a b c d:
     between b m d
     triangle a b c
     triangle c d a
-    triangle a b d
-    triangle a b m
-    triangle c d m

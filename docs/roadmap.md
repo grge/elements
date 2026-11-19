@@ -131,7 +131,11 @@ would sit naturally beside the algebraic lens.
   `saturate.ts`. Lemmas with `distinct` facts run the closure to the end to rule out a contradiction,
   and chapter 2 made that dearer: its arm and supplement axioms hold for every third point, so each
   `between` fact spawns angle facts for all points (`march`'s order lemmas went from 0.4 s to 3.6 s,
-  `hexagon`'s take 2.6 s). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
+  `hexagon`'s take 2.6 s). Chapter 3 adds to it: `parallel` is an equivalence whose classes hold every
+  pair of distinct points on a line, and a rule whose first atom is unbound walks every class pair by
+  pair, again whenever anything changes (saturate is not semi-naive). A rule that a midpoint differs
+  from its ends doubled `drop-perpendicular` (1.6 s to 3.1 s) and was left out; reordering rule bodies
+  did not help (the greedy join already chooses). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
 - **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
 - One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
   a reason first.
