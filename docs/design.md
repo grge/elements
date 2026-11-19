@@ -181,9 +181,9 @@ under the source. A ray at a copied angle is drawn as a half-line.
 
 ### Marks: from statements and proofs
 
-Tick marks and angle arcs mark equalities, and an equality is marked only if it is
+Tick marks and angle arcs mark equalities, arrows mark parallels, and each is marked only if it is
 
-- **stated**: an `eq-lines` or `eq-angle` fact on the page or in a definition it uses; or
+- **stated**: an `eq-lines`, `eq-angle` or `parallel` fact on the page or in a definition it uses; or
 - **proven**: a ✓ lemma on the page, or a ✓ lemma *about a construction the figure uses*. Lemmas
   travel with their predicates: wherever `eq-triangle a b c` occurs in a figure, at any depth, the
   proven `? eq-lines a b b c: eq-triangle a b c` contributes ab = bc for those points. Matching is a
@@ -197,6 +197,13 @@ until a lemma about it is written on its page and checks. Proof becomes a mark, 
 What a lemma can match is the figure's *outline*: the written facts and the definitions they use,
 down to what is drawn and no further. A lemma about circles matches drawn circles, never the radii a
 circle unfolds to, so a circle does not tick its own radii through a lemma that merely restates them.
+
+Each equivalence says in the relation table how its classes are marked and read (`classMark`): equal
+segments share a number of ticks at their middle, equal angles a number of concentric arcs, parallel
+lines a number of arrows (chevrons) along them, all pointing one way within a class, set off the
+middle towards where they point so that a side both equal and parallel to another carries both clear
+of each other. Hovering reads a chain with the relation's sign: `pq = ab`, `cd ∥ ab`. Byrne marks
+parallels by colour; the arrows are the schoolbook convention, which works in one ink.
 
 Some relations are marks too, not equalities: a right angle's square, a supplement's arcs (`mark`
 in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:

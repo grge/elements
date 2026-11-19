@@ -74,6 +74,57 @@ eq-angle a e f d f e:
 # Playfair's form: through c, only one line runs the same way as a-b.
 ? collinear c d e: parallel a b c d, parallel a b c e
 
+# ── corresponding angles, and angles on the same side
+#
+# Below, the line e-g crosses e-a at e and f-d at f, in the order e, f, g, and d is on the same side of
+# it as a. Same side is said as opposite sides twice: the line d-f continued past f to x has x on the
+# far side from d (it crosses at f) and on the far side from a (a-x crosses e-f at m).
+
+# Parallels make equal corresponding angles (I.29): a-e-f and x-f-e are alternate, and x-f-e and d-f-g
+# are vertical angles.
+? eq-angle a e f d f g:
+    parallel e a f d
+    between e f g
+    between d f x
+    between a m x
+    collinear e m f
+    triangle a e f
+    distinct f d
+    distinct f x
+    distinct f g
+
+# And the angles they make on the same side together make a straight line (I.29), supplements, so no
+# sum is needed.
+? supp a e f e f d:
+    parallel e a f d
+    between d f x
+    between a m x
+    collinear e m f
+    triangle a e f
+    distinct f d
+    distinct f x
+
+# The converses (I.28). Euclid proves them from I.27, without the postulate; the engine's proofs pass
+# through I.30 only to call the line f-x by the name f-d.
+? parallel e a f d:
+    eq-angle a e f d f g
+    between e f g
+    between d f x
+    between a m x
+    collinear e m f
+    triangle a e f
+    distinct f d
+    distinct f x
+    distinct f g
+? parallel e a f d:
+    supp a e f e f d
+    between d f x
+    between a m x
+    collinear e m f
+    triangle a e f
+    distinct f d
+    distinct f x
+
 # ══ Constructions ════════════════════════════════════════════════════════════════════════════════
 
 # The parallel to a-b through p (Euclid I.31): copy the angle a-b-p to p, on the far side of b-p from a.

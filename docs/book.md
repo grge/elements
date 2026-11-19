@@ -187,15 +187,19 @@ a `right` conclusion needs its own point beyond b, which a lemma's head cannot i
 in about four seconds. Both figures draw with ruler and compass, so a rectangle written this way
 sidesteps the solver's failure on four right angles.
 
-Also left out: corresponding angles (they need two points on the same side of a line, which unlike
-opposite sides has no crossing to say it); the angle sum (I.32), a sum, until the engine can add
-quantities (open questions).
+**Same side, as opposite sides twice** (November 2026). Corresponding angles, the angles on one side
+of a crossing line (supplements: I.29's third part needs no sum) and their converses (I.28) all need
+two points on the same side of a line. That is said through a third point opposite both, as Tarski
+defines it: the line d-f continued past f to x, which is across the crossing line from d (at f) and
+from a (a-x crosses it at m). Then corresponding angles are alternate angles and vertical angles.
 
-*Needs:* `parallel` in the drawing layer (read, checked, drawn as its two lines, and in the solver)
-and the parallel through a point as a locus in the planner: both done. Still to come: drawing a
-parallel's lines as its segments where the figure has them (today each is a line across the page, so
-a parallelogram's sides run past its corners), and Byrne's arrows on classes of parallel lines, as
-ticks mark classes of equal segments.
+Also left out: the angle sum (I.32), a sum, until the engine can add quantities (open questions).
+
+*Needs:* `parallel` in the drawing layer and the parallel through a point as a locus in the planner:
+both done (November 2026). A parallel is drawn as its two finite lines, continuing faint, and lines
+the figure knows to be parallel (stated, or proven by a lemma, as I.31's are on its page) carry
+arrows, one more for each class, as ticks mark equal segments (design.md, *Marks*). Byrne marks
+parallels by colour; arrows are the schoolbook convention, which reads in one colour.
 
 ### 4. Area
 
