@@ -95,14 +95,16 @@ function tokenizeLine(content: string, lineNum: number, out: Token[]): void {
     if (ch === '-')  { out.push({ type: TokenType.DASH,     value: '-',  line: lineNum }); i++; continue }
     if (ch === ',')  { out.push({ type: TokenType.COMMA,    value: ',',  line: lineNum }); i++; continue }
     if (ch === '?')  { out.push({ type: TokenType.QUESTION, value: '?',  line: lineNum }); i++; continue }
-    if (ch === ' ' || ch === '\t' || ch === '\r') { i++; continue }
+    // Any whitespace separates: a keyboard layout or input method may type a no-break or thin space.
+    if (/\s/u.test(ch)) { i++; continue }
     if (isIdentChar(ch)) {
       const start = i
       while (i < content.length && isIdentChar(content[i])) i++
       out.push({ type: TokenType.IDENTIFIER, value: content.slice(start, i), line: lineNum })
       continue
     }
-    throw new ParseError(`unexpected character '${ch}'`, lineNum)
+    const code = `U+${ch.codePointAt(0)!.toString(16).toUpperCase().padStart(4, '0')}`
+    throw new ParseError(/\p{L}|\p{N}|\p{P}|\p{S}/u.test(ch) ? `unexpected character '${ch}'` : `unexpected invisible character ${code}`, lineNum)
   }
 }
 

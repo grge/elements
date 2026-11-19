@@ -156,3 +156,10 @@ describe('parser', () => {
     ])).toThrow(/arity 1.*previously seen with arity 2|arity 2.*previously seen with arity 1/)
   })
 })
+
+describe('whitespace', () => {
+  it('takes no-break and thin spaces as spaces', () => {
+    const items = parseSource('circle a b c')
+    expect(items.length).toBe(1)
+  })
+})

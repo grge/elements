@@ -212,7 +212,7 @@ function tokens(code: string): Token[] {
   let expectPred = true
   for (let i = 0; i < code.length;) {
     const ch = code[i]
-    if (ch === ' ' || ch === '\t') { i++; continue }
+    if (/\s/u.test(ch)) { i++; continue }
     NAME.lastIndex = i
     const m = NAME.exec(code)
     if (m) {
@@ -547,6 +547,23 @@ const theme = EditorView.theme({
   '.cm-snippetField': { backgroundColor: 'var(--ed-selection, rgba(255,255,255,0.25))' },
 })
 
+/**
+ * Spaces typed or pasted as anything but a plain space become plain spaces. Chrome on Linux, with
+ * an input method, hands the editor no-break spaces (U+00A0) for typed ones; the page's text, and so
+ * the saved page, should not keep them. (The lexer accepts them anyway.)
+ */
+const plainSpaces = EditorState.transactionFilter.of(tr => {
+  if (!tr.docChanged) return tr
+  const changes: { from: number; to: number; insert: string }[] = []
+  tr.changes.iterChanges((_fa, _ta, from, to, inserted) => {
+    const text = inserted.toString()
+    if (/[\u00a0\u2000-\u200a\u202f\u205f\u3000]/u.test(text)) {
+      changes.push({ from, to, insert: text.replace(/[\u00a0\u2000-\u200a\u202f\u205f\u3000]/gu, ' ') })
+    }
+  })
+  return changes.length ? [tr, { changes, sequential: true }] : tr
+})
+
 const editable = new Compartment()
 const placeholderComp = new Compartment()
 
@@ -557,6 +574,7 @@ onMounted(() => {
       doc: props.modelValue,
       extensions: [
         history(),
+        plainSpaces,
         keys,
         keymap.of([...defaultKeymap, ...historyKeymap]),
         marksField, knownField, errorField, highlightField, highlightLinesField, reasonsField, pointer, signatureTooltip,
