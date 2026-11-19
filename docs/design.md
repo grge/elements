@@ -157,7 +157,10 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
 | `supp a b c d e f` | side by side (one vertex, one shared arm): one arc across both, a straight angle; otherwise a dotted arc at each, which never means equal |
 | `right a b c` | Byrne's small square at the vertex |
-| `distinct`, `triangle` | nothing: they rule configurations out |
+| `parallel a b c d` | the segments a–b and c–d, their lines continuing faint, with arrows where the figure knows them parallel |
+| `triangle a b c` | its three sides, as segments; that the corners are not on one line is checked |
+| `eq-area a b c d e f` | the two triangles with their sides, hatched alike (Byrne colours them) |
+| `distinct` | nothing: it rules configurations out |
 
 The word chosen is the drawing you get: `circle a b c` and `eq-lines a b a c` mean the same, and draw
 a circle and two ticked segments respectively. That is deliberate.
@@ -181,9 +184,10 @@ under the source. A ray at a copied angle is drawn as a half-line.
 
 ### Marks: from statements and proofs
 
-Tick marks and angle arcs mark equalities, arrows mark parallels, and each is marked only if it is
+Tick marks and angle arcs mark equalities, arrows mark parallels, hatching marks equal areas, and
+each is marked only if it is
 
-- **stated**: an `eq-lines`, `eq-angle` or `parallel` fact on the page or in a definition it uses; or
+- **stated**: an `eq-lines`, `eq-angle`, `parallel` or `eq-area` fact on the page or in a definition it uses; or
 - **proven**: a ✓ lemma on the page, or a ✓ lemma *about a construction the figure uses*. Lemmas
   travel with their predicates: wherever `eq-triangle a b c` occurs in a figure, at any depth, the
   proven `? eq-lines a b b c: eq-triangle a b c` contributes ab = bc for those points. Matching is a
@@ -204,6 +208,13 @@ lines a number of arrows (chevrons) along them, all pointing one way within a cl
 middle towards where they point so that a side both equal and parallel to another carries both clear
 of each other. Hovering reads a chain with the relation's sign: `pq = ab`, `cd ∥ ab`. Byrne marks
 parallels by colour; the arrows are the schoolbook convention, which works in one ink.
+
+Triangles of one area are hatched alike, as Byrne colours them (November 2026, chapter 4): the first
+class one way, the second the other, then across and along, so that where two classes overlap the
+hatchings cross. The hatching is in the ink, light enough for lines to read over it, and the hatched
+triangles' sides are drawn. Hovering a hatched triangle reads its chain: `△def = △abc`. A class whose
+triangles overlap or tile a figure (the four halves of a parallelogram, made by its two diagonals)
+hatches the whole figure alike, which says less than it should; see the review notes.
 
 Some relations are marks too, not equalities: a right angle's square, a supplement's arcs (`mark`
 in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:

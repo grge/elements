@@ -2,7 +2,7 @@
 
 elements ships with a book: the content of Euclid's plane geometry, rebuilt in an order that suits
 writing it as Horn clauses. Not a faithful edition: we keep what Euclid achieves and choose our own
-route to it. This page is the plan; chapter 1 exists, and chapter 2 is under way.
+route to it. This page is the plan, and notes on what was written: chapters 1 to 4 exist.
 
 ## What Euclid's plane geometry achieves
 
@@ -39,7 +39,7 @@ govern it, then builds the constructions and proves the results it makes possibl
 | 1 | Length | equal segments (`eq-lines`), with points, order and circles | the compass; equilateral triangle; rhombus; doubling and marching; midpoints |
 | 2 | Angle | equal angles (`eq-angle`) | congruence; the isosceles triangle; bisecting angles and segments; perpendiculars; copying angles |
 | 3 | Direction | parallel lines | the parallel through a point; alternate angles; the angle sum; parallelograms |
-| 4 | Area | equal area | Pythagoras; squaring rectangles, triangles, then any polygon |
+| 4 | Area | equal area (of triangles) | Pythagoras; squaring a polygon, a triangle, a rectangle |
 | 5 | Circle | (uses 1–4) | centre, chords, tangents; inscribed angles; circumcircle and incircle |
 | 6 | Ratio | equal ratios | similar triangles; dividing segments; fourth and mean proportionals; the golden section |
 | 7 | Regular figures | (uses all) | the triangle, square, hexagon, pentagon and fifteen-gon in a circle |
@@ -89,7 +89,7 @@ stepping the radius around a circle, each vertex "the other intersection". That 
 sixth side is a radius too) shows in the figure but needs angles to prove: a first task for chapters 2
 and 3.
 
-### 2. Angle  *(in progress: `book/02-angle.geo`, sections 1–4 written)*
+### 2. Angle  *(exists: `book/02-angle.geo`; sections 1–4, spreads set aside)*
 
 Euclid Book I's results that need no parallel postulate, for an engine with equalities but no sums or
 inequalities. Angles are the main thread; spreads close the chapter.
@@ -121,12 +121,21 @@ inequalities. Angles are the main thread; spreads close the chapter.
 Left for later: I.13–14 as sums (their supplement form is in 1), I.16–25 (inequalities), the hexagon
 closing (the angle sum, chapter 3), the compass-only midpoint (similar triangles, chapter 6).
 
+**Added for chapter 4 (November 2026): adding and taking away angles.** Euclid's common notions 2 and
+3 for angles, as chapter 1 has them for segments: a point x of the segment a-c cuts the angle a-b-c into
+a-b-x and x-b-c; angles cut into equal parts are equal, and equal parts taken from equal angles leave
+equal parts. A point on a segment puts the arm inside the angle, so no side of a line is needed; the
+parts are never added up. Pythagoras's windmill needs it (each of its two angles at b is a right angle
+and the angle a-b-c). The rules are said of a triangle's angle (`triangle a b c` in the body), which
+makes them fire far less often; with them, a rule that a crossing keeps a corner off a line (a-d
+crosses b-c at y, short of b, so d is off a-b). Together they cost the book's checks about 15%.
+
 *Needs:* angle and spread facts as checks in the drawing layer, Byrne's arcs, and the copied angle and
 the angle bisector as loci, so that figures stated with equal angles construct (all done); a right
 angle's square mark;
 symmetry recognition for six-place relations such as `supp` (it stops at five today).
 
-### 3. Direction  *(in progress: `book/03-direction.geo`, sections 1–5 written)*
+### 3. Direction  *(exists: `book/03-direction.geo`; all but the midline)*
 
 `parallel a b c d`: the lines a-b and c-d have the same direction, parallel or one line. Taking the
 same line as parallel to itself makes `parallel` an equivalence, like `eq-lines` and `eq-angle`, so
@@ -201,14 +210,51 @@ the figure knows to be parallel (stated, or proven by a lemma, as I.31's are on 
 arrows, one more for each class, as ticks mark equal segments (design.md, *Marks*). Byrne marks
 parallels by colour; arrows are the schoolbook convention, which reads in one colour.
 
-### 4. Area
+### 4. Area  *(exists: `book/04-area.geo`)*
 
-Equal area of triangles (invariant under any reordering of the vertices): shearing along a parallel
-keeps area (I.37), parallelograms and triangles on the same base, Pythagoras by Euclid's windmill, and
-the quadrature sequence: any polygon to a triangle of equal area, a triangle to a rectangle, a rectangle
-to a square.
+Euclid never measures an area: he cuts figures into pieces and puts them together again. So the book
+does too, with triangles as the pieces, and no arithmetic (decided November 2026; see *Open questions*).
 
-*Needs:* a way to add areas (see open questions).
+1. **Axioms.** `eq-area a b c d e f`: an equivalence on triangles in any order of their corners, which
+   the engine recognises as it is (the same machinery as equal angles). Congruent triangles have equal
+   areas (Euclid's common notion 4, said as side-angle-side). Triangles on one base between the same
+   parallels are equal (I.37, the shear), and a median halves a triangle (I.38 for bases side by side):
+   both axioms, since Euclid gets them from parallelograms by cutting and pasting in cases the engine
+   cannot split. Cutting a triangle from a corner (a point e between b and c) gives common notions 2
+   and 3 for areas. A triangle with the area of a true triangle is a true triangle.
+2. **Parallelograms and triangles.** A diagonal halves a parallelogram (I.34), and all four halves are
+   equal; parallelograms on one base between the same parallels (I.35); a parallelogram is double a
+   triangle on its base (I.41); a median's two halves.
+3. **Pythagoras** (I.47), Euclid's windmill, in split form: the line through the right angle parallel to
+   the sides of the square on the hypotenuse cuts it into two rectangles, each equal to the square
+   next to it. Proved: the windmill's two triangles are equal, the triangle f-b-c is half the square
+   on a-b, and the square on a-b equals its rectangle (their halves). The other rectangle is the same
+   with b and c exchanged.
+4. **Squaring a figure.** Constructions: dropping a corner of a quadrilateral (a polygon to a triangle,
+   a corner at a time; I.45's step), a triangle to a rectangle (I.42 in a right angle), a rectangle to a
+   square (II.14). The first two are proved; the third is drawn, its proof waiting for sums.
+
+**As written (November 2026).** Parallelograms, squares and rectangles are compared by their halves,
+the triangles a diagonal cuts them into; a quadrilateral by the triangles on a diagonal. Sums are
+figures cut into parts: Pythagoras says the square on b-c is cut into parts equal to the squares on
+a-b and a-c, never that they add up. That carries I.34–I.47, and stops at II.14: the square on b-h
+equals the rectangle because the square on m-h is both the squares on m-b and b-h and the square on
+m-b and the rectangle, and taking the square on m-b from both needs two sums of one figure, which
+split forms cannot say. I.48 (the converse of Pythagoras) stops in the same place.
+
+Pythagoras is stated by the parts of the squares the proof uses (a square's corner, a side, the side
+through a): written with whole squares it proves too, but takes the checker five times its budget (65
+seconds). Its three lemmas take 4 to 12 seconds; the rest of the chapter, 1 to 5. Several statements
+carry hypotheses that only rule out degenerate figures (`distinct a e` in I.35, `distinct b x`
+in the windmill): the closure cannot argue that a point differs from another by contradiction.
+
+Left out: I.36, I.38 for bases apart and I.39–40 (the converses need same side), I.43, the
+complements (every step proves but the last cut, which needs three points apart that the closure
+cannot know apart: sixteen hypotheses for a lemma nothing else uses), I.44 (applying an area to a
+line, done by the planner's locus), I.48 and II.1–14 (sums).
+
+*Needs:* `eq-area` and `triangle` in the drawing layer (triangles drawn as their sides, equal areas
+hatched alike) and an area locus in the planner: done (November 2026).
 
 ### 5. Circle
 
@@ -235,7 +281,12 @@ circle.
   Horn clauses can do this through auxiliary constructions (as Euclid does), or a generic arithmetic
   component could solve linear equations between quantities (as AlphaGeometry's algebraic reasoning
   does). The latter is not geometry-specific, so it would not break the engine's generality, but it is
-  not an abbreviation for Horn clauses either. Decide before chapter 4.
+  not an abbreviation for Horn clauses either. Decided for chapter 4 (November 2026): Euclid's way,
+  no arithmetic, sums as figures cut into parts. It carries the chapter to Pythagoras and stops at
+  II.14 and I.48, where two sums of one figure must be compared; with the angle sum (I.32) and chapter
+  6's ratios, that is the evidence for the decision. The common notions are now written three times,
+  for segments, angles and areas, in one shape (a point on a segment cuts a whole into parts), which
+  is the shape a recognised sum would have. See the review notes.
 - **What to prove and what to assume.** Hilbert-style axioms keep proofs short; Euclid's propositions
   are more instructive. Likely: assume what Euclid proves by superposition, prove the rest.
 - **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
