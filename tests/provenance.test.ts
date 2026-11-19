@@ -42,4 +42,11 @@ describe('provenance', () => {
     expect(text).toContain('(proven, of eq-triangle a b c (line 1))')
     expect(origins.sort()).toEqual([0, 1])
   })
+
+  it('reads a class of parallels with ∥', () => {
+    const { figure, say } = page('parallel a b c d')
+    const ci = figure.marks.findIndex(m => m.name === 'parallel')
+    const cd = figure.marks[ci].members.findIndex(m => m.points.join('') === 'cd')
+    expect(say({ facts: [], mark: { mark: ci, member: cd } }).text).toBe('cd ∥ ab (stated: parallel a b c d (line 1))')
+  })
 })

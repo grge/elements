@@ -21,6 +21,9 @@
  *   holds     whether it holds at given positions; `tol` is a length on the figure's scale. A
  *             degenerate case (an angle with an arm of no length) counts as holding: nothing to measure.
  *   residual  for the numeric solver: how far an equation is from holding, 0 when it does.
+ *   classMark for an equivalence: how a class of its blocks is marked where the figure knows it
+ *             (marks.ts), and the sign between members when a chain is read out: equal segments
+ *             share ticks, equal angles arcs, parallel lines arrows.
  *
  * Which relations are constraints, which are drawn and which are unread all follow from the table
  * (extraction.ts), and how it is drawn from `draw`.
@@ -67,6 +70,7 @@ export interface Relation {
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
+  classMark?: { as: 'ticks' | 'arcs' | 'arrows'; sign: string }
 }
 
 const d = (p: Point, q: Point) => Math.hypot(p[0] - q[0], p[1] - q[1])
@@ -111,6 +115,7 @@ const TABLE: Relation[] = [
   },
   {
     name: 'eq-lines', arity: 4, depicted: true,
+    classMark: { as: 'ticks', sign: '=' },
     read: ([a, b, c, e], m) => m.equal(a, b, c, e),
     draw: ([a, b, c, e], pen) => pen.sameLength(a, b, c, e),
     holds: ([a, b, c, e], tol) => Math.abs(d(a, b) - d(c, e)) <= tol,
@@ -131,6 +136,7 @@ const TABLE: Relation[] = [
   {
     // Angle a-b-c (vertex b, unsigned, 0 to π) equals angle d-e-f.
     name: 'eq-angle', arity: 6, depicted: true,
+    classMark: { as: 'arcs', sign: '=' },
     read: (args, m) => m.measure('eq-angle', args),
     ...measured(P => {
       const degenerate = (a: Point, b: Point, c: Point) => same(a, b) || same(c, b)
@@ -156,11 +162,13 @@ const TABLE: Relation[] = [
     ...measured(P => Math.abs(spread(P[0], P[1], P[2], P[3]) - spread(P[4], P[5], P[6], P[7]))),
   },
   {
-    // Lines a-b and c-d have the same direction: parallel, or one line. Drawn as its two lines; the
-    // planner places a point on the parallel through a placed one.
+    // Lines a-b and c-d have the same direction: parallel, or one line. Drawn as its two finite
+    // straight lines, continuing faint, as `between` draws; where the figure knows lines to be
+    // parallel, they carry arrows. The planner places a point on the parallel through a placed one.
     name: 'parallel', arity: 4, depicted: true,
+    classMark: { as: 'arrows', sign: '∥' },
     read: (args, m) => m.measure('parallel', args),
-    draw: ([a, b, c, e], pen) => { pen.line([a, b]); pen.line([c, e]) },
+    draw: ([a, b, c, e], pen) => { pen.segment(a, b, [a, b]); pen.segment(c, e, [c, e]) },
     // The sine of the angle between the lines: 0 when they are parallel.
     ...measured(([a, b, c, e]) => {
       if (same(a, b) || same(c, e)) return NaN

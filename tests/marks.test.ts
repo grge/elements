@@ -140,3 +140,48 @@ describe('right angles', () => {
     expect(merged.filter(c => c.as === 'right').map(c => c.members.map(m => m.points.join('')).sort())).toEqual([['emp', 'fmp']])
   })
 }, 60000)
+
+describe('parallels are marked with arrows, not ticks', () => {
+  const sceneOf = (text: string, lemmas = bookLemmas) => {
+    const { x, figure } = figureFor(text, lemmas)
+    const { drawing } = realise(plan(buildModel(x.constraints)))
+    const t = computeRenderTransform({ coords: drawing.coords, energy: 0 }, 800, 600, 40, figure)!
+    return { figure, scene: buildScene(figure, drawing.coords, t, 800, 600, 16) }
+  }
+
+  it('a stated parallel draws its two finite lines and arrows on both, one class one arrow each', () => {
+    const { figure, scene } = sceneOf('parallel a b c d', [])
+    expect(figure.strokes.map(s => s.ends.join(''))).toEqual(['ab', 'cd'])
+    expect(scene.ticks).toHaveLength(0)
+    expect(scene.arcs.filter(a => a.kind === 'arrow')).toHaveLength(2)
+  })
+
+  it('a parallelogram: arrows for its parallel sides, ticks only for sides proven equal', () => {
+    const { figure, scene } = sceneOf('parallelogram a b c d')
+    const kinds = figure.marks.map(m => m.name).sort()
+    expect(kinds.filter(k => k === 'parallel')).toHaveLength(2)
+    // Two classes of parallels: one arrow on each side of the first, two on each of the second.
+    expect(scene.arcs.filter(a => a.kind === 'arrow')).toHaveLength(2 * 1 + 2 * 2)
+    // Ticks come from equal lengths alone (the sides I.34 proves equal), never from a parallel: one
+    // class of two sides with one tick each, the other with two.
+    expect(figure.marks.filter(m => m.name === 'eq-lines').map(m => m.members.length)).toEqual([2, 2])
+    expect(scene.ticks).toHaveLength(2 * 1 + 2 * 2)
+    expect(new Set(scene.meta.ticks.map(si => figure.marks[scene.meta.segments[si].mark!.mark].name))).toEqual(new Set(['eq-lines']))
+  })
+
+  it('arrows of one class point one way', () => {
+    const { scene } = sceneOf('parallel a b d c', [])
+    const tips = scene.arcs.filter(a => a.kind === 'arrow').map(a => a.d.split(/[ML ]+/).filter(Boolean).map(Number))
+    // Each chevron: back-left, tip, back-right; its direction is tip minus the middle of the backs.
+    const dir = (p: number[]) => [p[2] - (p[0] + p[4]) / 2, p[3] - (p[1] + p[5]) / 2]
+    const [u, v] = tips.map(dir)
+    expect(u[0] * v[0] + u[1] * v[1]).toBeGreaterThan(0)
+  })
+
+  it('a proven parallel is drawn where its construction is: parallel-through shows its parallel', () => {
+    const { figure, scene } = sceneOf('parallel-through a b p q')
+    const cls = figure.marks.find(m => m.name === 'parallel')!
+    expect(cls.members.map(m => m.points.join('')).sort()).toEqual(['ab', 'pq'])
+    expect(scene.arcs.filter(a => a.kind === 'arrow')).toHaveLength(2)
+  })
+})

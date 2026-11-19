@@ -12,6 +12,7 @@ import { displayName } from '../kb/names'
 import type { DrawableFact } from './extraction'
 import type { Figure } from './figure'
 import type { MarkClass, MarkSource } from './marks'
+import { RELATIONS } from './relations'
 
 /** An element of the figure as the diagram reports it: the facts that made it, and its mark if any. */
 export interface ElementRef { facts: string[]; mark: { mark: number; member: number } | null }
@@ -68,7 +69,10 @@ function reason(s: MarkSource, where: (f: DrawableFact) => string): string {
 /** A member of a class as it is shown: a segment `ab`, an angle `∠abc`. */
 const member = (cls: MarkClass, i: number) => `${cls.k === 3 ? '∠' : ''}${cls.members[i].points.map(displayName).join('')}`
 
-/** The class from one member, each other member with the equality that reached it (breadth first). */
+/**
+ * The class from one member, each other member with the equality that reached it (breadth first),
+ * joined by its relation's sign: `ab = cd`, `ab ∥ dc`.
+ */
 export function explainChain(cls: MarkClass, from: number, why: (s: MarkSource) => string): string {
   const parts = [member(cls, from)]
   const seen = new Set([from])
@@ -83,5 +87,5 @@ export function explainChain(cls: MarkClass, from: number, why: (s: MarkSource) 
       parts.push(`${member(cls, next)} (${why(e.source)})`)
     }
   }
-  return parts.join(' = ')
+  return parts.join(` ${RELATIONS.get(cls.name)?.classMark?.sign ?? '='} `)
 }

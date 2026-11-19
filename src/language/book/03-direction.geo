@@ -84,7 +84,7 @@ parallel-through a b p q:
     between a m q
     collinear b m p
 
-? parallel b a p q: parallel-through a b p q, triangle a b p
+? parallel a b p q: parallel-through a b p q, distinct a b, distinct b p
 ? eq-lines p q a b: parallel-through a b p q
 
 # ══ Parallelograms ═══════════════════════════════════════════════════════════════════════════════

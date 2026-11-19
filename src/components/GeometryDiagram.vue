@@ -437,6 +437,8 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
 .crisp .tick { stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 .crisp .arc, .ghost path { fill: none; stroke: var(--dg-ink, #fff); stroke-width: var(--dg-stroke, 3); stroke-linecap: round; }
 .crisp .arc.square { stroke-linejoin: miter; stroke-linecap: butt; }
+/* Arrows along parallel lines: chevrons with a rounded tip. */
+.crisp .arc.arrow { stroke-linejoin: round; }
 /* Supplements not side by side: open, dotted arcs, which never mean equal. */
 .crisp .arc.open { stroke-dasharray: 0.1 7; stroke-linecap: round; }
 

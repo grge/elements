@@ -29,11 +29,12 @@ export interface Scene {
   ticks: number[][]
   points: { name: string; x: number; y: number }[]
   /**
-   * Arcs and squares at angles' vertices: arcs marking equal angles, as Byrne marks them (equal angles
-   * share a number of concentric arcs), arcs of angles drawn as themselves (`supp`), and Byrne's
-   * square for a right angle. SVG path data, with the level.
+   * Marks drawn as paths: arcs at angles' vertices marking equal angles, as Byrne marks them (equal
+   * angles share a number of concentric arcs), arcs of angles drawn as themselves (`supp`), Byrne's
+   * square for a right angle, and the arrows along parallel lines (parallels share a number of
+   * arrows, all pointing one way). SVG path data, with the level.
    */
-  arcs: { d: string; level: number; kind: 'arc' | 'square' | 'straight' | 'open' }[]
+  arcs: { d: string; level: number; kind: 'arc' | 'square' | 'straight' | 'open' | 'arrow' }[]
   /** The loci that placed the touched point, if any (see Helper), in screen coordinates. */
   route: ({ kind: 'line'; x1: number; y1: number; x2: number; y2: number } | { kind: 'circle'; cx: number; cy: number; r: number })[]
   /** Parallel to the arrays above: what made each element, as fact keys (extraction.ts `factKey`). */
@@ -193,12 +194,15 @@ export function buildScene(
   for (const a of figure.angles) angleAt(...a.points, 1, a.as, level(a.depth), a.facts, null, a.through)
 
   // Marks (marks.ts): each class of equal blocks with at least two members on screen (a mark must have
-  // something to be equal to). Classes of segments get ticks, one more stroke for each class, and
-  // classes of angles get concentric arcs, one more for each class, with their arms drawn as Byrne
-  // draws them. Each is as deep as the fact that made it known.
+  // something to be equal to), marked as its relation says (relations.ts `classMark`). Classes of
+  // equal segments get ticks, one more stroke for each class; classes of equal angles concentric
+  // arcs, one more for each class, with their arms drawn as Byrne draws them; classes of parallel
+  // lines arrows along their segments, one more for each class. Each is as deep as the fact that made
+  // it known.
   const visible = (m: { points: string[] }) => m.points.every(p => coords.has(p))
   const ticked: { segment: number; n: number; lv: number }[] = []
-  let segmentClasses = 0, angleClasses = 0
+  const arrowed: { segment: number; n: number; lv: number; facts: string[]; mark: { mark: number; member: number }; along: Point }[] = []
+  const counts = { ticks: 0, arcs: 0, arrows: 0 }
   figure.marks.forEach((cls, ci) => {
     const shown = cls.members.map((_, i) => i).filter(i => visible(cls.members[i]))
     // A class the closure knows to be right angles is drawn as squares (its relation's drawing), and
@@ -215,18 +219,30 @@ export function buildScene(
       }
       return
     }
-    if (shown.length < 2 || (cls.k !== 2 && cls.k !== 3)) return
-    const n = cls.k === 2 ? ++segmentClasses : ++angleClasses
+    const kind = RELATIONS.get(cls.name)?.classMark?.as
+    if (shown.length < 2 || !kind) return
+    if (kind === 'arcs' && cls.k !== 3) return
+    if (kind !== 'arcs' && cls.k !== 2) return
+    const n = ++counts[kind]
+    // Parallels point one way: the first member's direction on screen, which the others follow.
+    let along: Point | null = null
     for (const mi of shown) {
       const member = cls.members[mi]
       const lv = level(member.depth)
       const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
       const mark = { mark: ci, member: mi }
-      if (cls.k === 3) { angleAt(member.points[0], member.points[1], member.points[2], n, 'arc', lv, facts, mark); continue }
+      if (kind === 'arcs') { angleAt(member.points[0], member.points[1], member.points[2], n, 'arc', lv, facts, mark); continue }
       const si = addSegment(member.points[0], member.points[1], lv, facts)
       if (si === null) continue
-      meta.segments[si].mark = mark
-      ticked.push({ segment: si, n, lv })
+      // A segment says which equal lengths it is one of; its arrows carry their parallels themselves.
+      if (kind === 'ticks') { meta.segments[si].mark = mark; ticked.push({ segment: si, n, lv }); continue }
+      meta.segments[si].mark ??= mark
+      const [x1, y1, x2, y2] = segments[si]
+      const len = Math.hypot(x2 - x1, y2 - y1)
+      let u: Point = [(x2 - x1) / len, (y2 - y1) / len]
+      if (!along) along = u
+      else if (u[0] * along[0] + u[1] * along[1] < 0) u = [-u[0], -u[1]]
+      arrowed.push({ segment: si, n, lv, facts, mark, along: u })
     }
   })
   const ticks: number[][] = []
@@ -240,6 +256,26 @@ export function buildScene(
       const [cx, cy] = [mx + ux * off, my + uy * off]
       ticks.push([cx - uy * tick / 2, cy + ux * tick / 2, cx + uy * tick / 2, cy - ux * tick / 2, lv])
       meta.ticks.push(si)
+    }
+  }
+
+  // Arrows: n chevrons along a segment, pointing the class's way, set off its middle (where ticks go)
+  // towards where they point, so a side both equal and parallel to another carries both marks clear.
+  for (const { segment: si, n, lv, facts, mark, along: [ux, uy] } of arrowed) {
+    const [x1, y1, x2, y2] = segments[si]
+    const len = Math.hypot(x2 - x1, y2 - y1)
+    const size = tick * 0.7, gap = tick * 0.65
+    const span = size + (n - 1) * gap
+    if (len < span + tick * 3) continue   // too short to carry arrows clear of its ends and ticks
+    const shift = Math.min(tick * 1.4 + span / 2, len / 2 - span / 2 - tick * 0.5)
+    const [mx, my] = [(x1 + x2) / 2 + ux * shift, (y1 + y2) / 2 + uy * shift]
+    for (let i = 0; i < n; i++) {
+      const off = (i - (n - 1) / 2) * gap + size / 2
+      const [tx2, ty2] = [mx + ux * off, my + uy * off]                     // the tip
+      const [bx, by] = [tx2 - ux * size, ty2 - uy * size]                     // back along the line
+      const [nx, ny] = [-uy * size * 0.75, ux * size * 0.75]
+      arcs.push({ d: `M ${bx + nx} ${by + ny} L ${tx2} ${ty2} L ${bx - nx} ${by - ny}`, level: lv, kind: 'arrow' })
+      meta.arcs.push({ facts, mark })
     }
   }
 
