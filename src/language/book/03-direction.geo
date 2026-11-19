@@ -133,3 +133,30 @@ parallelogram a b c d:
     between b m d
     triangle a b c
     triangle c d a
+
+# ══ Rectangles and squares ═══════════════════════════════════════════════════════════════════════
+
+# A rectangle a-b-c-d: a parallelogram with a right angle.
+rectangle a b c d:
+    parallelogram a b c d
+    right d a b
+
+# Its angles at a and b are equal, and opposite angles are equal, so all four are right angles. The
+# angle at a is carried to b by alternate angles at a-b, which needs d-a extended past a to x on the
+# far side of a-b from c (x-c crosses a-b at n): a fact about sides the engine cannot see, so it is
+# said here.
+? eq-angle d a b a b c: rectangle a b c d, between d a x, distinct a x, between x n c, collinear a n b
+
+# Its diagonals are equal: the triangles d-a-b and c-b-a have two sides and the angle between them equal.
+? eq-lines a c b d: rectangle a b c d, between d a x, distinct a x, between x n c, collinear a n b
+
+# A square: a parallelogram with a right angle and two sides from a corner equal. Its sides are all
+# equal (opposite sides of a parallelogram are). It is a rectangle, so its angles are right and its
+# diagonals equal, with the same fact about sides.
+square a b c d:
+    parallelogram a b c d
+    right a b c
+    eq-lines a b b c
+
+? eq-lines b c c d: square a b c d
+? eq-lines c d d a: square a b c d

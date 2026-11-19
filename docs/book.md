@@ -145,6 +145,9 @@ the engine recognises it; parallel in Euclid's sense, never meeting, is `paralle
    and parallel segments make a parallelogram (I.33).
 6. **The midline** of a triangle: joining two sides' midpoints, parallel to the third side and half
    of it.
+7. **Rectangles and squares.** A rectangle is a parallelogram with a right angle; its angles are all
+   right and its diagonals equal. A square is a rectangle with equal sides from one corner, so all
+   four are equal.
 
 **Sides of a line without sides.** Alternate angles mean something only when the two points are on
 opposite sides of the line crossing the parallels (on the same side, equal unsigned angles make the
@@ -172,6 +175,17 @@ from its ends, made the heavy lemmas of chapters 1 and 2 twice as slow (every ne
 points on a line adds `parallel` facts, which the closure walks class by class), and with those
 facts given as hypotheses the midline is still over budget. Wanted first: lemma compilation (I.33
 as a rule), or a faster closure (roadmap, *Logic*, performance).
+
+**Definitions stay simple; lemmas state the sides they need** (decided November 2026). A rectangle is
+a parallelogram with a right angle, a square a parallelogram with a right angle and two equal sides
+from a corner, as one would say them. Carrying the right angle at a to b is I.29 across a-b, which
+needs d-a extended past a to a point x on the other side of a-b from c; the engine cannot see that,
+so the lemmas that need it say it (x-c crosses a-b at n), and the definitions do not. A square's
+sides need no sides; its angles and diagonals are a rectangle's, with the same crossing, and are not
+repeated. The rectangle's lemmas say the angles at a and b are equal rather than that b's is right:
+a `right` conclusion needs its own point beyond b, which a lemma's head cannot introduce. They check
+in about four seconds. Both figures draw with ruler and compass, so a rectangle written this way
+sidesteps the solver's failure on four right angles.
 
 Also left out: corresponding angles (they need two points on the same side of a line, which unlike
 opposite sides has no crossing to say it); the angle sum (I.32), a sum, until the engine can add

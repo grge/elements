@@ -54,7 +54,7 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 
 | Chapter | Needs first |
 |---------|-------------|
-| 3, direction | in progress: axioms, the postulate, I.31, parallelograms written (book.md, *3*); the midline waits on distinctness |
+| 3, direction | in progress: axioms, the postulate, I.31, parallelograms, rectangles and squares written (book.md, *3*); the midline waits on closure performance |
 | 4, area | how to add quantities (book.md, *Open questions*) |
 | 5, circle | mostly content, on chapters 1–4 |
 | 6, ratio | equal ratios as an equivalence on pairs of segments |
@@ -136,7 +136,18 @@ would sit naturally beside the algebraic lens.
   pair, again whenever anything changes (saturate is not semi-naive). A rule that a midpoint differs
   from its ends doubled `drop-perpendicular` (1.6 s to 3.1 s) and was left out; reordering rule bodies
   did not help (the greedy join already chooses). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
-- **Case splits**, so that facts true in every configuration need no `distinct` hypothesis.
+- **Sides of a line, in the logic.** The drawing knows which side of a line a point is on; the logic
+  does not, so every proof across a line (I.29, rectangles, corresponding angles) is told by a
+  crossing point in its hypotheses (book.md, *3*). Long term: `same-side` and `opposite-side` as
+  relations with their own axioms, as `between` has. Much of it is Horn (two points opposite a third
+  are on the same side; a crossing makes opposite sides), the shape of the diagrammatic consequences
+  in Avigad, Dean and Mumma's system E (2009), which is the model to read first. Tarski's axioms
+  define the same two relations by exactly our crossing (two points are on opposite sides when the
+  segment between them meets the line; on the same side when both are opposite a third). The rest
+  (Pasch; every point on one side, the other or the line) needs case splits, below. Meanwhile the
+  drawing could offer side facts it sees in every sample as candidate hypotheses, never as proofs.
+- **Case splits**, so that facts true in every configuration need no `distinct` hypothesis, and for
+  the parts of side reasoning that are not Horn.
 - One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
   a reason first.
 
