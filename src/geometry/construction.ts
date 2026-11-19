@@ -655,6 +655,37 @@ function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
 
 const good = (d: Drawing) => !d.failure && d.violations.length === 0
 
+/** A fact the plan does not construct, and the point the solver is said to place for it. */
+export interface Unconstructed { fact: GroundPredicate; step: number; point: string }
+
+/**
+ * The facts a plan does not construct: those that fail in every drawing it completes, over a
+ * handful of sampled parameters. A fact the construction guarantees never fails; one it only
+ * checks fails almost always (it holds only on a thinner set of parameters than the sampler
+ * lands on). Each is said to place the point of its own that the plan places last, preferring a
+ * named point to an auxiliary one: `c` in an equiangular triangle, not the auxiliary point of the
+ * angle copied at `c`.
+ */
+export function unconstructed(cp: ConstructionPlan, samples = 12): Unconstructed[] {
+  const sample = sampler(cp, 7)
+  let failing: Set<string> | undefined
+  for (let i = 0, seen = 0; i < samples * 4 && seen < samples; i++) {
+    const d = execute(cp, sample())
+    if (d.failure) continue
+    seen++
+    const now = new Set(d.violations.map(v => v.what))
+    failing = failing ? new Set([...failing].filter(w => now.has(w))) : now
+  }
+  if (!failing?.size) return []
+  const stepOf = new Map(cp.steps.map((s, k) => [s.point, k]))
+  return cp.checks.filter(c => failing!.has(describeFact(c.fact))).map(c => {
+    const named = c.fact.args.filter(p => !isAuxiliary(p))
+    const pool = named.length ? named : c.fact.args
+    const point = pool.reduce((a, b) => (stepOf.get(b) ?? -1) > (stepOf.get(a) ?? -1) ? b : a)
+    return { fact: c.fact, step: stepOf.get(point) ?? c.step, point }
+  })
+}
+
 /**
  * Up to `n` different configurations of a plan that satisfy every fact and are well spread (no two
  * points nearly coincide): the figures on which a claim is tested numerically.

@@ -4,7 +4,7 @@ import { bookRules, fixtureRules } from './book'
 import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
-import { buildModel, plan, realise, execute, drag, paramCount, type Point, type ConstructionPlan } from '../src/geometry/construction'
+import { buildModel, plan, realise, execute, drag, paramCount, unconstructed, describeFact, type Point, type ConstructionPlan } from '../src/geometry/construction'
 import { RELATIONS } from '../src/geometry/relations'
 
 // The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
@@ -230,4 +230,21 @@ describe('no point collapses onto another', () => {
       expect(closest).toBeGreaterThan(1e-3)
     })
   }
+})
+
+describe('facts a plan does not construct', () => {
+  it('names the fact and the point left to the solver', () => {
+    const cp = plan(buildModel(factsOf('eq-angle b a c a b c\neq-angle a b c b c a')))
+    expect(realise(cp).valid).toBe(false)
+    expect(unconstructed(cp).map(u => [u.point, describeFact(u.fact)])).toEqual([['c', 'eq-angle a b c b c a']])
+  })
+  it('prefers a named point to an auxiliary one', () => {
+    const cp = plan(buildModel(factsOf('right d a b\nright a b c\nright b c d\nright c d a')))
+    const u = unconstructed(cp)
+    expect(u.length).toBe(2)
+    expect(new Set(u.map(x => x.point))).toEqual(new Set(['c']))
+  })
+  it('finds none in a figure the plan constructs', () => {
+    expect(unconstructed(plan(buildModel(factsOf('eq-triangle a b c'))))).toEqual([])
+  })
 })

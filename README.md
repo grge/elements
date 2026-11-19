@@ -48,7 +48,7 @@ Pushing to `main` deploys to GitHub Pages (`.github/workflows/pages.yml`).
 - **The steps** under the source describe the construction in words; touching a point (or hovering its
   step) shows the loci that placed it. If the figure cannot be built in its current position (two
   circles that no longer meet), the failing step is marked and the reason shown. A figure the planner
-  cannot construct is drawn by a numerical solver instead, and the status line says so.
+  cannot construct is drawn by a numerical solver instead, and the page says which points it placed.
 - **Contents**: click `ELEMENTS` or the title to browse the book chapter by chapter, as cards with a
   miniature of each figure, or add predicates of your own (stored in your browser). A construction's
   page shows its definition with the propositions about it.

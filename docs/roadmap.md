@@ -138,12 +138,38 @@ would sit naturally beside the algebraic lens.
 
 ## Construction and drawing
 
-- **Next: say when the figure is solved, not constructed.** Today a figure the planner cannot build is
-  drawn by the numerical solver with only a status line to say so, and it looks just as constructed.
-  Design how the page shows which it is (and, once figures are hybrid, which points): see design.md,
-  *Constructed or solved*.
+- ~~Say when the figure is solved, not constructed~~ (November 2026; design.md, *Constructed or
+  solved*): solved points are pencilled asterisks, the steps are a key that names the facts no step
+  constructs, and a plate at the foot of the figure says solved or not met.
+- **The solver fails on four right angles.** `right d a b`, `right a b c`, `right b c d`,
+  `right c d a` (and every figure tried with such a quadrilateral in it) leaves energy in the
+  hundreds: one angle off by about 2°. The page now says so (NOT MET). Equiangular triangles solve
+  to 1e-7. Suspect the energy terms for `right`'s auxiliary supplement points; not looked into.
+- **Open: what a construction draws, and how a reader can tell.** A relation drawn as itself stops
+  the drawing there, so the points its definition brings in are not drawn: `right a b c` draws
+  Byrne's square, and its d (`between a b d`, the extension of ab) is placed by the planner, named in
+  the steps, and nowhere in the figure; `circle2 a b: circle a b c` draws its c₁ because `circle2`
+  has no drawing of its own. Which relations draw as themselves is invisible on the page. The
+  leading idea, not decided: **unfold everything and draw bottom-up**, each level of the unfolding
+  taking a turn after its body has drawn, to add to it or modify it (`right`'s turn turns the two
+  equal-angle arcs of its body into a square; `circle`'s draws the circle through its equal radii).
+  Then nothing the planner uses is hidden, and a relation is special only by what its turn does,
+  which the page could say (see *Logic*, recognised status). To settle first:
+  1. what a turn may do: add, replace marks its body drew, restyle; never delete outright, so every
+     fact keeps a visible trace (does `circle` keep its radii's ticks?);
+  2. facts two definitions share: who modifies them, in what order (innermost first?);
+  3. clutter: only `circle`, `right` and `supp` stop the unfolding today, so they are what changes
+     (a rectangle gains four faint stubs);
+  4. where it lives: a second hook on the relation table that sees what the body drew; figure.ts
+     composes, and extraction no longer decides where to stop.
+- **Points under the notice**: fitting the figure leaves no room for the plate at its foot, so a
+  low point can sit under it (Scratch's three equiangular triangles: e). For the design review.
+- **Equal angles alone draw no arcs**: a figure of only `eq-angle` facts (three equiangular
+  triangles) shows its points and nothing through them, in headless screenshots at least; possibly
+  the marks waiting on the closure worker. Check in a browser.
 - ~~The figure's rule~~ (built November 2026; design.md, *The figure: what it draws and why*).
-- **Plan from what the book proves** (tentative, after the above): before planning, ask the forward
+- **Plan from what the book proves** (deferred, November 2026: the engine should change on the
+  evidence of more chapters, and perhaps other geometries, first): before planning, ask the forward
   closure (the worker that merges marks) which facts in the planner's vocabulary the page implies,
   equal segments between its points, right angles, collinear points, and add them to the model as
   constraints; every fact is still checked. A figure drawn by the solver becomes a construction when

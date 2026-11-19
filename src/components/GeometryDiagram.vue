@@ -73,7 +73,13 @@
         <title>{{ p.title }}</title>
         <circle class="hit" r="22" />
         <circle class="ring" r="14" />
-        <circle class="dot" :r="p.aux ? 5 : 7" />
+        <!-- A solved point: a pencilled asterisk, in the hand of its name. -->
+        <g v-if="p.kind === 'solved'" class="dot asterisk">
+          <g :transform="`scale(${p.aux ? 0.7 : 1})`">
+            <path class="under" :d="asteriskFor(p.name)" /><path :d="asteriskFor(p.name)" />
+          </g>
+        </g>
+        <circle v-else class="dot" :r="p.aux ? 5 : 7" />
       </g>
     </svg>
     <div v-else class="empty-diagram">
@@ -96,7 +102,8 @@ import {
   curveNear,
 } from '../geometry/construction'
 import { displayName, isAuxiliary } from '../kb/names'
-import type { ConstructionState } from '../composables/useWorkspace'
+import { asteriskFor } from './asterisks'
+import type { ConstructionState, Solution } from '../composables/useWorkspace'
 
 const props = defineProps<{
   /** What to draw through the points (figure.ts). */
@@ -107,6 +114,8 @@ const props = defineProps<{
    */
   construction?: ConstructionState | null
   usePlanner?: boolean
+  /** Without the planner: the solved figure, and which points the construction left to the solver. */
+  solution?: Solution | null
   /** Width in px of the strip on the left where text lies over the figure. */
   veil?: number
   padding?: number
@@ -155,7 +164,7 @@ const baseWitness = computed<WitnessModel | null>(() => {
       if (!drawing.failure) lastCoords = drawing.coords
       return { coords: drawing.coords, energy: 0 }
     }
-    return solve(props.construction.model) || null
+    return props.solution?.witness ?? solve(props.construction.model) ?? null
   } catch (e) {
     console.warn('Drawing error:', e)
     return null
@@ -175,7 +184,7 @@ function fit(witness: WitnessModel) {
 
 // ── how each point can be moved ──
 
-type PointKind = 'free' | 'slide' | 'fixed' | 'locked'
+type PointKind = 'free' | 'slide' | 'fixed' | 'locked' | 'solved'
 const freeable = new WeakMap<ConstructionPlan, Map<string, boolean>>()
 
 /** Can this determined point become an input under another order of construction, losing nothing? */
@@ -187,7 +196,13 @@ function canFree(state: ConstructionState, point: string): boolean {
 }
 
 function kindOf(point: string): PointKind {
-  if (!planning.value) return 'free'
+  if (!planning.value) {
+    // Solved: the points left to the solver say so; the rest keep how the construction places them
+    // (any point drags, the solver following, so none is locked).
+    if (props.solution?.points.has(point)) return 'solved'
+    const step = props.construction?.plan.steps.find(s => s.point === point)
+    return !step || step.kind === 'free' ? 'free' : step.kind === 'on' ? 'slide' : 'fixed'
+  }
   const step = local.value!.plan.steps.find(s => s.point === point)
   if (!step || step.kind === 'free') return 'free'
   if (step.kind === 'on') return 'slide'
@@ -199,6 +214,7 @@ const TITLES: Record<PointKind, string> = {
   slide: 'drag along its line or circle',
   fixed: 'determined by the construction; dragging reverses it',
   locked: 'determined by the construction',
+  solved: 'found by solving: the construction does not place it',
 }
 
 // ── the scene in screen coordinates ──
@@ -466,10 +482,14 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
 }
 .pt .ring, .pt .dot { transform-box: fill-box; transform-origin: center; }
 
-/* free: solid; slide: solid with a standing ring; determined: open; locked: small and quiet */
+/* free: solid; slide: solid with a standing ring; determined: open; locked: small and quiet;
+   solved: a pencilled asterisk, placed by the solver rather than by ruler and compass */
 .pt.slide .ring { opacity: 0.5; transform: scale(0.75); }
 .pt.fixed .dot, .pt.locked .dot { fill: var(--dg-paper, #000); stroke: var(--dg-accent, #f40); stroke-width: 3; }
 .pt.locked .dot { transform: scale(0.8); }
+/* A solved point: an asterisk pencilled in, over a halo in the paper colour so lines break around it. */
+.asterisk path { fill: none; stroke: var(--dg-accent, #f40); stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.asterisk path.under { stroke: var(--dg-paper, #000); stroke-width: 6; }
 
 .pt:not(.locked):hover .ring, .pt.active .ring { opacity: 1; transform: scale(1); }
 .pt:not(.locked):hover .dot, .pt.active .dot { transform: scale(1.3); }

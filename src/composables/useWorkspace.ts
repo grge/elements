@@ -5,7 +5,10 @@ import { KnowledgeBase } from '../kb/inference'
 import { extract } from '../geometry/extraction'
 import { drawFigure, type Figure } from '../geometry/figure'
 import { marksNow, mergedMarks } from './useClosure'
-import { buildModel, execute, plan as planConstruction, realise, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
+import { buildModel, execute, plan as planConstruction, realise, unconstructed, type ConstructionModel, type ConstructionPlan, type Point } from '../geometry/construction'
+import { solve, type WitnessModel } from '../geometry/solver'
+import { relationOf } from '../geometry/relations'
+import { factKey, type DrawableFact } from '../geometry/extraction'
 import { useKB, bookLemmas, type Namespace } from './useKB'
 
 /** The current construction of the figure: the planned program and its parameters. */
@@ -15,6 +18,18 @@ export interface ConstructionState {
   params: number[]
   /** False when no configuration satisfying every fact was found: not constructible this way. */
   valid: boolean
+}
+
+/** How far from holding a fact may be in a solved figure and still count as met. */
+const SOLVED_TOL = 1e-4
+
+/** A figure drawn by the solver: its positions, and the facts the construction leaves to it. */
+export interface Solution {
+  witness: WitnessModel
+  /** Each fact the plan does not construct, the point said to be solved for it, and whether it holds. */
+  facts: { fact: DrawableFact; point: string; holds: boolean }[]
+  /** The solved points. */
+  points: ReadonlySet<string>
 }
 
 const DEFAULT_SCRATCH = `circle a b c
@@ -216,6 +231,32 @@ export function useWorkspace() {
     } catch (e) { console.warn('Construction execution error:', e); return null }
   })
 
+  /**
+   * A figure the construction cannot carry out is solved numerically, and says so: which facts the
+   * plan does not construct, the point each is said to place, and whether the solved figure meets
+   * it. Solved once per construction model, here, so the page and the figure agree.
+   */
+  const solution = computed<Solution | null>(() => {
+    const c = construction.value
+    if (!c || c.valid) return null
+    try {
+      const witness = solve(c.model)
+      const scale = Math.max(1, ...[...witness.coords.values()].map(p => Math.hypot(...p)))
+      const written = new Map(extraction.value.constraints.map(f => [factKey(f), f]))
+      const facts = unconstructed(c.plan).map(u => {
+        const at = u.fact.args.map(p => witness.coords.get(p))
+        // Met as closely as a solver can meet it, not exactly: the solver stops within ~1e-6 of every
+        // fact, which a figure cannot show; one it fails to meet is off by far more (a rectangle's
+        // right angles, solved badly, by tenths).
+        const r = relationOf(u.fact)!
+        const ps = at as Point[]
+        const holds = at.every(Boolean) && (r.residual ? !(r.residual(ps) > SOLVED_TOL) : r.holds(ps, SOLVED_TOL * scale))
+        return { fact: written.get(factKey(u.fact)) ?? { ...u.fact, depth: 0 }, point: u.point, holds }
+      })
+      return { witness, facts, points: new Set(facts.map(f => f.point)) }
+    } catch (e) { console.warn('Solver error:', e); return null }
+  })
+
   function setConstruction(c: ConstructionState) {
     construction.value = c
   }
@@ -223,7 +264,7 @@ export function useWorkspace() {
   return {
     kb, predicates, userClauses, chapters,
     mode, selectedPred, selectedNamespace, readOnly, text, signature,
-    parseError, items, runtime, extraction, facts, figure, construction, drawing, setConstruction, setVerified,
+    parseError, items, runtime, extraction, facts, figure, construction, drawing, solution, setConstruction, setVerified,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }
 }

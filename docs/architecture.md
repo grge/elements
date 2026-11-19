@@ -213,7 +213,10 @@ order of construction in which that point is an input, and the figure switches t
 lost. During a drag each intersection stays on the branch nearest to where it was.
 
 If no configuration satisfies every fact, the figure is drawn by the **numerical solver**
-(`solver.ts`, Adam gradient descent on an energy) instead, and the page says so.
+(`solver.ts`, Adam gradient descent on an energy) instead, and the page says so: the facts the
+plan does not construct (`unconstructed`, those that fail in every sampled drawing), the point each
+is said to place, and whether the solved figure meets it (`solution` in `useWorkspace.ts`; how it
+looks: design.md, *Constructed or solved*).
 
 **Distinct points.** A `distinct` fact rules out an intersection that would coincide with the given
 point ("the other intersection", as the regular hexagon needs) and is checked on every frame. Without

@@ -44,6 +44,7 @@
         :figure="ws.figure.value"
         :construction="ws.construction.value"
         :use-planner="usingConstruction"
+        :solution="ws.solution.value"
         :veil="veil"
         :padding="48"
         :focus="figureFocus"
@@ -73,14 +74,24 @@
         </div>
         <ol v-if="planSteps.length" class="steps">
           <li
-            v-for="(s, i) in planSteps" :key="i" :class="{ failed: failure?.step === i, touched: stepHover === s.name }"
+            v-for="(s, i) in planSteps" :key="i"
+            :class="{ failed: failure?.step === i, touched: stepHover === s.name, solved: s.solved }"
             @pointerenter="stepHover = s.name" @pointerleave="stepHover = null"
-          ><b>{{ s.point }}</b> {{ s.how }}</li>
+          ><PointKey :name="s.name" :kind="s.kind" /><b>{{ s.point }}</b><span>{{ s.how }}<template v-if="s.solved">, then found by solving</template></span></li>
+          <li
+            v-for="(u, i) in unconstructedFacts" :key="`u${i}`" class="unconstructed" :class="{ touched: factHover === i, unmet: !u.holds }"
+            @pointerenter="factHover = i" @pointerleave="factHover = null"
+          >{{ u.text }}</li>
         </ol>
       </section>
 
       <footer class="foot">
-        <p class="status">{{ status }}</p>
+        <!-- How the figure was drawn, when that needs saying: a plate, set like the masthead. -->
+        <div v-if="notice && !elementInfo?.text" class="notice" :class="notice.level" role="status">
+          <span class="notice-tag"><span v-if="notice.level === 'solved'" class="notice-star" aria-hidden="true">✱</span>{{ notice.tag }}</span>
+          <span class="notice-body">{{ notice.text }}</span>
+        </div>
+        <p v-if="status || !notice || elementInfo?.text" class="status">{{ status }}</p>
       </footer>
     </main>
 
@@ -118,13 +129,14 @@ import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor, { type EditorHover } from '../components/CodeEditor.vue'
+import PointKey from '../components/PointKey.vue'
 import { extract } from '../geometry/extraction'
 import { provenance, type ElementRef } from '../geometry/provenance'
 import type { GroundPredicate } from '../kb/inference'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import { useThumbnails } from '../composables/useThumbnails'
-import { describeLocus, type Step } from '../geometry/construction'
+import { describeFact, describeLocus, type Step } from '../geometry/construction'
 import { displayName } from '../kb/names'
 import type { Namespace } from '../composables/useKB'
 
@@ -283,7 +295,13 @@ const elementInfo = computed(() => {
   const lines = p.origins.flatMap(o => { const l = written[o] ? lineOf(written[o]) : null; return l ? [l - 1] : [] })
   return { text: p.text, lines }
 })
-const sourceLines = computed(() => elementInfo.value?.lines ?? [])
+const sourceLines = computed(() => {
+  if (factHover.value !== null) {
+    const line = unconstructedFacts.value[factHover.value]?.line
+    return line ? [line - 1] : []
+  }
+  return elementInfo.value?.lines ?? []
+})
 
 /**
  * A name in the source as a point of the figure: the point itself, or, for a variable of the page's
@@ -298,6 +316,8 @@ function pointOf(name: string): string | null {
 /** What the figure brings forward: the hovered name's point, or everything the hovered atom draws. */
 const figureFocus = computed(() => {
   if (stepHover.value) return { facts: [], points: [stepHover.value] }
+  const u = factHover.value !== null ? unconstructedFacts.value[factHover.value] : null
+  if (u) return { facts: [u.fact], points: [...u.fact.args] }
   const el = elementHover.value, figure = ws.figure.value
   if (el && figure) {
     // A mark brings forward its whole class: what made each equality in its chain.
@@ -344,7 +364,30 @@ function describe(s: Step): string {
   }
 }
 const planSteps = computed(() =>
-  (ws.construction.value?.plan.steps ?? []).map(s => ({ name: s.point, point: displayName(s.point), how: describe(s) })))
+  (ws.construction.value?.plan.steps ?? []).map(s => ({
+    name: s.point, point: displayName(s.point), how: describe(s), solved: !!ws.solution.value?.points.has(s.point),
+    kind: ws.solution.value?.points.has(s.point) ? 'solved' as const
+      : s.kind === 'free' ? 'free' as const : s.kind === 'on' ? 'slide' as const : 'fixed' as const,
+  })))
+
+/**
+ * A solved figure: the facts its construction does not give, each with the point the solver places
+ * for it and whether the solved figure meets it. A fact unfolded from a written one says which.
+ */
+const factHover = ref<number | null>(null)
+const unconstructedFacts = computed(() => {
+  const sol = ws.solution.value, rt = ws.runtime.value
+  if (!sol || !rt) return []
+  const written = rt.configuration.allFacts()
+  return sol.facts.map(u => {
+    const from = u.fact.depth > 0 && u.fact.origin !== undefined ? written[u.fact.origin] : undefined
+    const fact = describeFact(u.fact) + (from ? `, from ${describeFact(from)}` : '')
+    const text = u.holds
+      ? `Not constructed: ${fact}. The solver places ${displayName(u.point)} so that it holds.`
+      : `Not constructed: ${fact}. The solver did not find a figure where it holds.`
+    return { ...u, text, line: from ? lineOf(from) : lineOf(u.fact) }
+  })
+})
 
 // Ruler and compass when a valid construction exists; otherwise the numerical solver.
 const usingConstruction = computed(() => !!ws.construction.value?.valid)
@@ -356,17 +399,29 @@ const unreadNote = computed(() => {
   const names = [...new Set(ws.extraction.value.unread.map(f => f.name))]
   return names.length ? `Not drawn: ${names.join(', ')} (the figure has no reading for ${names.length > 1 ? 'them' : 'it'}).` : ''
 })
-const status = computed(() => {
-  if (elementInfo.value?.text) return elementInfo.value.text
-  if (ws.construction.value && !ws.construction.value.valid) {
-    return 'No configuration satisfies every fact with this construction; drawn numerically instead.'
+/**
+ * How the figure was drawn, when that needs saying: solved numerically (mild), or a figure that does
+ * not meet its facts (an error: the solver failed, the construction cannot be carried out from
+ * here, or a fact does not hold in this drawing).
+ */
+const notice = computed<{ level: 'solved' | 'error'; tag: string; text: string } | null>(() => {
+  const sol = ws.solution.value
+  if (sol) {
+    const points = [...sol.points].map(displayName)
+    const list = points.length > 1 ? `${points.slice(0, -1).join(', ')} and ${points.at(-1)}` : points[0]
+    if (sol.facts.some(u => !u.holds) || (!sol.facts.length && sol.witness.energy > 1e-4)) {
+      return { level: 'error', tag: 'Not met', text: 'The solver found no figure that meets every fact. This is its closest try.' }
+    }
+    if (!sol.facts.length) return { level: 'solved', tag: 'Solved', text: 'No configuration of this construction meets every fact, so the figure is solved numerically.' }
+    return { level: 'solved', tag: 'Solved', text: `${points.length > 1 ? 'Points' : 'Point'} ${list} placed by the numerical solver.` }
   }
   const d = ws.drawing.value
-  if (!usingConstruction.value || !d) return unreadNote.value
-  if (d.failure) return `${displayName(d.failure.point)}: ${d.failure.reason}`
-  if (d.violations.length) return `Does not hold here: ${d.violations.map(v => v.what).join('; ')}`
-  return unreadNote.value
+  if (!usingConstruction.value || !d) return null
+  if (d.failure) return { level: 'error', tag: 'Stuck', text: `${displayName(d.failure.point)}: ${d.failure.reason}` }
+  if (d.violations.length) return { level: 'error', tag: 'Not met', text: `Does not hold here: ${d.violations.map(v => v.what).join('; ')}` }
+  return null
 })
+const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
 </script>
 
 <style>
@@ -482,9 +537,17 @@ const status = computed(() => {
   font: 0.9rem/1.7 var(--font-mono); color: var(--soft);
   text-shadow: var(--halo);
 }
-.steps b { color: var(--accent); font-weight: 600; margin-right: 0.5rem; }
+/* A key: each point's marker as the figure draws it, its name, how the construction places it. */
+.steps li:not(.unconstructed) { display: flex; align-items: baseline; gap: 0.55rem; }
+/* Beside the first line of its step, centred on it, however many lines the step wraps to. */
+.steps .point-key { align-self: flex-start; margin-top: calc((1.7em - 18px) / 2); }
+.steps b { color: var(--accent); font-weight: 600; min-width: 1.4em; }
 .steps li.touched { color: var(--ink); }
 .steps li.failed { color: var(--ink); text-decoration: underline wavy var(--accent); }
+/* A solved figure: the steps that place a solved point, and the facts no step constructs. */
+.steps li.unconstructed { color: var(--ink); margin-top: 0.4rem; }
+.steps li.unconstructed.touched { color: var(--accent); }
+.steps li.unmet { text-decoration: underline wavy var(--accent); }
 
 .foot {
   position: absolute; z-index: 1; left: calc(var(--veil) + 1.5rem); right: 1.5rem; bottom: 0.8rem;
@@ -498,6 +561,32 @@ const status = computed(() => {
   text-shadow: var(--halo);
 }
 .empty { color: var(--soft); font-family: var(--font-mono); padding-left: var(--veil); }
+
+/* The notice: a plate in the masthead's manner, a tag in the display face and the words in mono.
+   Solved: the tag a block of ink, the words on paper inside a rule of ink. An error: the whole plate
+   in the accent, knocked out in the paper colour, with a hard offset shadow of ink, like a sticker
+   slapped on the poster. */
+.notice {
+  flex: none; display: flex; align-items: stretch; max-width: min(100%, 44rem);
+  font: 0.85rem/1.4 var(--font-mono);
+  animation: notice-in 0.22s ease-out;
+}
+.notice-tag {
+  flex: none; display: flex; align-items: center; gap: 0.4rem;
+  padding: 0.35rem 0.8rem;
+  font: 900 0.95rem var(--font-display); letter-spacing: 0.06em; text-transform: uppercase;
+}
+.notice-body { padding: 0.45rem 0.8rem; }
+.notice-star { font-family: var(--font-mono); font-weight: 400; font-size: 1.15em; line-height: 1; }
+
+.notice.solved .notice-tag { background: var(--ink); color: var(--paper); }
+.notice.solved .notice-body { background: var(--paper); color: var(--ink); box-shadow: inset 0 0 0 3px var(--ink); }
+
+.notice.error { background: var(--accent); color: var(--paper); box-shadow: 6px 6px 0 var(--ink); transform: rotate(-0.6deg); }
+.notice.error .notice-tag { font-size: 1.15rem; border-right: 3px solid var(--paper); }
+.notice.error .notice-body { font-weight: 600; }
+
+@keyframes notice-in { from { opacity: 0; translate: 0 6px; } }
 
 .quiet {
   background: none; border: 0; color: var(--soft); cursor: pointer; white-space: nowrap;

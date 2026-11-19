@@ -262,27 +262,46 @@ status line (`src/geometry/provenance.ts`), lights the source lines it came from
 what the same facts draw; hovering a mark brings forward its whole class and reads its chain, e.g.
 *pq = bc (stated: eq-lines b c p q (line 2)) = al (proven, of transfer a b c l (line 1))*.
 
-## Constructed or solved: not yet designed
+## Constructed or solved
 
-*Next on the roadmap; discussed November 2026, nothing decided.* A figure the planner cannot construct
-is drawn by the numerical solver, and only the status line says so: its lines, its points and its
-steps look like a construction's. The page should be honest about which it is, and, once figures are
-part constructed and part solved, about which points. Options so far, which combine:
+Built November 2026 (options 1 and 2 of the four discussed; 3 and 4 below are still open). A figure
+the planner cannot construct is drawn by the numerical solver, and the page now says which points
+it placed and which facts it was left to meet.
 
-1. **Points marked by how they were placed**: constructed points keep their markers (free, sliding,
-   determined); a solved point gets one of its own (say a small hollow diamond, "found by solving").
-   The unit that will last into hybrid figures.
-2. **Steps that tell the truth**: the steps that work, then where the construction stops, naming the
-   facts it does not construct and how closely the solved figure meets them; hovering one lights it
-   in the source and the figure. The status sentence moves here.
-3. **A different hand for a solved figure**: pencilled rather than inked, so Byrne's crisp line always
-   means constructed. Visible, but whole-figure, so too coarse for hybrid figures.
+- **Which facts, which points** (`unconstructed` in `src/geometry/construction.ts`). The plan is
+  drawn from a dozen sampled parameters; a fact that fails in every drawing it completes is one the
+  construction does not give, only checks. Each is said to place the point of its own the plan
+  places last, a named point before an auxiliary one: in an equiangular triangle `c`, and in four
+  right angles `c` again, not the auxiliary point of the angle copied there. The workspace solves
+  once (`solution` in `useWorkspace.ts`) and checks each such fact on the solved figure to within
+  1e-4: the solver stops within about 1e-6 of every fact, which no figure can show, and one it fails
+  to meet is off by far more.
+- **A solved point is a pencilled asterisk**, three uneven strokes not quite meeting, in one of four
+  hands chosen by its name so that no two look stamped and none changes as the figure redraws
+  (`src/components/asterisks.ts`). The other points keep their markers; any of them drags, the
+  solver following. Tried and dropped: a hollow diamond (read as just another marker), a blurred
+  dot, a dotted ring, a cloud of dots, a trembling dot and a scribble.
+- **The steps are a key**: each point's marker as the figure draws it, its name, how it is placed.
+  A solved point's step ends "then found by solving", and below the steps each fact no step
+  constructs is named ("Not constructed: eq-angle a b c b c a. The solver places c so that it
+  holds.", with ", from right b c d" for a fact unfolded from a written one). Hovering it lights it
+  in the figure and its line in the source; one the solver did not meet is underlined.
+- **A plate at the foot of the figure**, in the masthead's manner, a tag in the display face beside
+  the words in mono, in the theme's own colours. Solved: the tag a block of ink (✱ SOLVED), the words
+  on paper inside a rule of ink, "Points c, f and i placed by the numerical solver." An error, the
+  whole plate in the accent with a hard offset shadow of ink and a slight tilt: the solver met no
+  figure (NOT MET), the construction cannot be carried out from here (STUCK), or a fact does not
+  hold in this drawing (NOT MET). Hovering an element still shows where it came from instead.
+  Tried and dropped: themes that change with the state (a pencil grey, a violet; Vermilion for
+  errors), which read as a change of theme rather than news about the figure.
+
+Still open from the discussion:
+
+3. **A different hand for a whole solved figure**: pencilled rather than inked, so Byrne's crisp line
+   always means constructed. Too coarse once figures are hybrid.
 4. **The other branches**: where a point took one of several branches (which ray, which intersection),
    touching it shows the others faintly. Unsigned angles let four equal angles make a crossed
    quadrilateral as well as a rectangle, and the planner may draw either.
-
-The leaning is 1 and 2 first, prototyped on a solved figure beside a constructed one before anything
-is committed.
 
 ## Designed, not yet built
 
