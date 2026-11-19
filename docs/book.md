@@ -227,9 +227,10 @@ does too, with triangles as the pieces, and no arithmetic (decided November 2026
    triangle on its base (I.41); a median's two halves.
 3. **Pythagoras** (I.47), Euclid's windmill, in split form: the line through the right angle parallel to
    the sides of the square on the hypotenuse cuts it into two rectangles, each equal to the square
-   next to it. Proved: the windmill's two triangles are equal, the triangle f-b-c is half the square
-   on a-b, and the square on a-b equals its rectangle (their halves). The other rectangle is the same
-   with b and c exchanged.
+   next to it. The windmill is a construction, so the proposition has a page and Euclid's figure; on
+   it are proved the windmill's two triangles equal and the square on a-b equal to its rectangle
+   (their halves), and, with a whole square, that f-b-c is half the square on a-b. The other rectangle
+   is the same with b and c exchanged.
 4. **Squaring a figure.** Constructions: dropping a corner of a quadrilateral (a polygon to a triangle,
    a corner at a time; I.45's step), a triangle to a rectangle (I.42 in a right angle), a rectangle to a
    square (II.14). The first two are proved; the third is drawn, its proof waiting for sums.

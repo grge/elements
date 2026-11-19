@@ -106,36 +106,15 @@ eq-area a e c x w z:
 # parallel to the sides of the square on b-c, cuts that square into two rectangles, and each equals the
 # square on the side next to it. That is the theorem as this book can say it: the square cut into parts
 # equal to the two squares, without adding them up.
+
+# The windmill: Euclid's figure for Pythagoras, on a right triangle a-b-c with its right angle at a.
 #
-# The squares stand outside the triangle, which is said with the points where the windmill's lines
-# cross: f-c crosses a-b at x, and a-d crosses b-c at y.
-
-# The windmill's two triangles are equal: a-b-d and f-b-c have b-a = b-f and b-d = b-c, and their angles
-# at b are each a right angle and the angle a-b-c together.
-? eq-area a b d f b c:
-    triangle a b c
-    right a b f
-    eq-lines b a b f
-    right c b d
-    eq-lines b c b d
-    between f x c
-    between a x b
-    distinct b x
-    between a y d
-    between b y c
-    distinct b y
-
-# f-b-c is half the square on a-b: it stands on f-b between the parallels f-b and g-a-c.
-? eq-area f b c f b a: square a b f g, between g a c, distinct a c
-
-# The square on a-b equals the rectangle on b-d that reaches the line through a parallel to b-d. Their
-# halves a-b-f and l-b-d are equal, for l anywhere on that line (Euclid's l is where it meets the far
-# side of the square on b-c): a-b-f is f-b-c (on f-b between parallels), which is a-b-d (the windmill),
-# which is l-b-d (on b-d between parallels). The squares are given by the parts the proof uses: the
-# square on a-b by its corner at b, its side b-f and its side through a, which runs along a-c; the
-# square on b-c by its corner at b and its side b-d. Written as whole squares the proof is the same,
-# but takes the checker five times its budget.
-? eq-area a b f l b d:
+# Its squares are given by the parts the proof uses: the square on a-b by its corner at b, its side b-f
+# and its side through a, which runs along a-c; the square on b-c by its corner at b and its side b-d.
+# l is on the line through a parallel to b-d, which cuts the square on b-c in two (Euclid's l is where
+# it meets the far side). The squares stand outside the triangle, which is said with the points where
+# the windmill's lines cross: f-c crosses a-b at x, and a-d crosses b-c at y.
+windmill a b c f d l x y:
     triangle a b c
     right a b f
     eq-lines b a b f
@@ -149,6 +128,19 @@ eq-area a e c x w z:
     between a y d
     between b y c
     distinct b y
+
+# The windmill's two triangles are equal: a-b-d and f-b-c have b-a = b-f and b-d = b-c, and their angles
+# at b are each a right angle and the angle a-b-c together.
+? eq-area a b d f b c: windmill a b c f d l x y
+
+# f-b-c is half the square on a-b: it stands on f-b between the parallels f-b and g-a-c.
+? eq-area f b c f b a: square a b f g, between g a c, distinct a c
+
+# The square on a-b equals the rectangle on b-d that reaches the line through a parallel to b-d: their
+# halves a-b-f and l-b-d are equal, for l anywhere on that line. a-b-f is f-b-c (on f-b between
+# parallels), which is a-b-d (the windmill), which is l-b-d (on b-d between parallels). Written with
+# whole squares the proof is the same, but takes the checker five times its budget.
+? eq-area a b f l b d: windmill a b c f d l x y
 
 # ══ Squaring a figure ════════════════════════════════════════════════════════════════════════════
 #

@@ -493,10 +493,11 @@ function lineDomain(x: string, curve: Extract<Curve, { kind: 'line' }>, orders: 
 }
 
 /** Map a slider parameter s to a position t within [lo, hi] (s in [0,1] if bounded, s >= 0 if a ray). */
+/** A slider's position on its line. Only a line unbounded both ways reads the sign of s. */
 function tFromS(s: number, [lo, hi]: [number, number]): number {
-  if (isFinite(lo) && isFinite(hi)) return lo + Math.min(1, Math.max(0, s)) * (hi - lo)
-  if (isFinite(lo)) return lo + Math.max(0, s)
-  if (isFinite(hi)) return hi - Math.max(0, s)
+  if (isFinite(lo) && isFinite(hi)) return lo + Math.min(1, Math.abs(s)) * (hi - lo)
+  if (isFinite(lo)) return lo + Math.abs(s)
+  if (isFinite(hi)) return hi - Math.abs(s)
   return s
 }
 
@@ -539,6 +540,11 @@ export function describeFact(f: GroundPredicate): string {
 export interface ExecuteOptions {
   /** Previous positions: where the order facts leave a choice of intersection, take the nearest. */
   previous?: Map<string, Point>
+  /**
+   * Where nothing says which branch to take (no previous or desired position), take one at random from
+   * this source, not the first: of two intersections, or of a locus's two curves.
+   */
+  branch?: () => number
   /** Desired positions: choose parameters that put each point as near as possible to these. */
   targets?: Map<string, Point>
   /** Called with the parameters actually used (useful together with `targets`). */
@@ -577,7 +583,7 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       const near = target ?? options.previous?.get(x)
       const curve = near && curves.length > 1
         ? curves.reduce((best, c) => residual(near, c) < residual(near, best) ? c : best)
-        : curves[0]
+        : options.branch && curves.length > 1 ? curves[Math.floor(options.branch() * curves.length)] : curves[0]
       if (curve.kind === 'line') {
         const found = lineDomain(x, curve, orders, at, tol())
         // A ray's point stays off its vertex: there it would make an angle with an arm of no length.
@@ -629,7 +635,8 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         return fail(`${step.loci.map(describeLocus).join(' and ')} meet only at ${taken.map(displayName).join(', ')}, which ${displayName(x)} must differ from`)
       }
       const near = target ?? options.previous?.get(x)
-      pos = near ? choices.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best) : choices[0]
+      pos = near ? choices.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best)
+        : options.branch ? choices[Math.floor(options.branch() * choices.length)] : choices[0]
     }
 
     at.set(x, pos)
@@ -691,7 +698,11 @@ export interface Realisation {
  * sample that satisfies every fact.
  */
 /** Random parameters for a plan, from a seeded generator (so a figure is stable). */
-function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
+/**
+ * Parameters at random, seeded by the plan. `signed`: a slider on a line unbounded both ways may go
+ * either way from its defining point, not only forwards.
+ */
+function sampler(cp: ConstructionPlan, seed = 0, signed = false): () => number[] {
   const random = rng(hash(JSON.stringify(cp.steps)) + seed)
   return () => {
     const out: number[] = []
@@ -701,7 +712,8 @@ function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
         out.push(r * Math.cos(a), r * Math.sin(a))
       } else if (step.kind === 'on') {
         // Slider values: inside an interval, a little way along a ray, or near the defining points.
-        out.push(step.locus.kind === 'circle' ? 2 * Math.PI * random() : 0.2 + 0.6 * random())
+        const s = 0.2 + 0.6 * random()
+        out.push(step.locus.kind === 'circle' ? 2 * Math.PI * random() : signed && random() < 0.5 ? -s : s)
       }
     }
     return out
@@ -755,6 +767,9 @@ export function configurations(cp: ConstructionPlan, n: number, attempts = 40 * 
   return out
 }
 
+/** Attempts at plain parameters before branches and slider directions are varied too. */
+const VARY_AFTER = 40
+
 export function realise(cp: ConstructionPlan, options: { previous?: Map<string, Point>; attempts?: number } = {}): Realisation {
   const counts = cp.steps.map(paramCount)
   const total = counts.reduce((a, b) => a + b, 0)
@@ -773,9 +788,16 @@ export function realise(cp: ConstructionPlan, options: { previous?: Map<string, 
   // Of drawings that fail, the best is one carried out to the end that misses the fewest facts: the
   // solver starts from it (useWorkspace's solution), so it should place every point it can.
   const miss = (d: Drawing) => (d.failure ? 1e6 - d.failure.step * 1e3 : 0) + d.violations.length
+  // A figure whose order facts are checked only after the choice they depend on (which side a square
+  // stands on, checked where its lines cross later) can fail every attempt the same way: a slider
+  // only ever forwards, an intersection always the first. If the first attempts find nothing, the
+  // rest vary both.
+  const varied = sampler(cp, 1, true)
+  const branch = rng(hash(JSON.stringify(cp.steps)) + 2)
   for (let i = 0; i < (options.attempts ?? 400) && found < 30; i++) {
-    const params = sample()
-    const drawing = execute(cp, params)
+    const vary = found === 0 && i >= VARY_AFTER
+    const params = vary ? varied() : sample()
+    const drawing = execute(cp, params, vary ? { branch } : {})
     if (!good(drawing)) {
       if (!best || (!best.valid && miss(drawing) < miss(best.drawing))) best = { params, drawing, valid: false }
       continue

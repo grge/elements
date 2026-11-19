@@ -96,9 +96,16 @@ construct with ruler and compass, including the circle of II.14.
   (the triangle) last. The preference for written order loses to the count of degrees of freedom. A
   perpendicular locus (reading `right` directly, as `parallel` is read) would fix this; it is also the
   hidden point d of *what a construction draws* (roadmap).
+- **Branches are chosen before the facts that decide them.** The windmill's page said NOT MET: c
+  slides on a line, d is one of two meeting points, and that the squares stand outside the triangle
+  is checked only where f-c and a-d cross, after both are placed. Every attempt took the slider
+  forwards and the first meeting point, so all 400 failed alike, and the solver did no better. Now,
+  after 40 attempts with nothing found, `realise` varies slider directions and branches too (a
+  stopgap: pages that construct at once are unchanged). The real fix is to let an order fact on a
+  later point choose an earlier branch, or to search branches as the planner searches orders.
 - **Default figures are chosen at random**, seeded: the quadrilateral of `drop-corner` and the
-  scratchpad's windmill come out lopsided. Nothing prefers a figure that reads well: spread out, no
-  slivers, points not crowded.
+  windmill come out lopsided. Nothing prefers a figure that reads well: spread out, no slivers,
+  points not crowded.
 - **Loci live in `construction.ts`, by relation name**, not in the relation table (roadmap): seven
   kinds now.
 - **Above 18 points the search is greedy.** Pythagoras with both windmills and whole squares would be
@@ -117,10 +124,12 @@ to Pythagoras without arithmetic, in the shape of Euclid's own proof.
   and the ones before (or the chapters it declares), which a sibling book needs anyway (it forks at
   chapter 3), and which is the relevance cut performance wants.
 - **A proposition without a construction of its own has no figure.** A lemma belongs to the latest
-  predicate it mentions, so Pythagoras shows on `eq-area`'s page, whose figure is two triangles; Euclid's
-  figure for I.47 is drawn nowhere in the book (chapter 3's corresponding angles likewise). Either a
-  lemma's figure is drawn when it is chosen, or each proposition that matters gets a construction of
-  its own (a `windmill`), whose lemmas must then check in full.
+  predicate it mentions, so Pythagoras first showed on `eq-area`'s page, whose figure is two
+  triangles, and Euclid's figure for I.47 was drawn nowhere (chapter 3's corresponding angles still
+  are not). The book now gives it a construction, `windmill`, whose page draws the figure and lists
+  its lemmas; the cost is that a construction's lemmas carry all of it (the windmill's triangles took
+  7 s stated alone, 12 s over the whole windmill). The general answer may be that a lemma's figure is
+  drawn when it is chosen.
 - **Area is of triangles only.** Parallelograms and squares are compared by their halves, and
   "triangle a-b-e has the area of quadrilateral a-b-c-d" can only be said as "the piece added equals
   the piece taken away": the squaring lemmas are thin. A relation on quadrilaterals (the engine

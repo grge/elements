@@ -183,7 +183,8 @@ would sit naturally beside the algebraic lens.
   b); the solver's separation term keeps them apart but leaves the point stuck beside the other, and
   descent never reaches the far side (from the true answer it holds at 1e-5). The page says NOT MET.
   Worth trying: warm starts from several of the planner's attempts, which choose branches
-  differently (realise's sampler is seeded per plan, so this needs seeds), or keeping such pairs
+  differently (realise now varies branches and slider directions once 40 plain attempts have found
+  nothing, for the windmill: review-notes.md, *The construction planner*), or keeping such pairs
   apart by the planner's branch rather than by a barrier.
 - **Open: what a construction draws, and how a reader can tell.** A relation drawn as itself stops
   the drawing there, so the points its definition brings in are not drawn: `right a b c` draws

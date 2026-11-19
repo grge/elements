@@ -309,3 +309,14 @@ describe('equal areas', () => {
     expect(valid).toBe(true)
   })
 })
+
+describe('branches the order facts decide only later', () => {
+  it('the windmill constructs: its squares stand outside the triangle, which only its crossings say', () => {
+    // c slides on the parallel to b-f through a, and d is one of two meeting points; that c and d are
+    // on the far sides of a-b and b-c is checked only where f-c and a-d cross, after both are placed.
+    const cp = plan(buildModel(factsOf('windmill a b c f d l x y')))
+    const r = realise(cp)
+    expect(r.valid).toBe(true)
+    expect(execute(cp, r.params, { previous: r.drawing.coords }).violations).toEqual([])
+  })
+})
