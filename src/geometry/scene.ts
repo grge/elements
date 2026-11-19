@@ -35,6 +35,12 @@ export interface Scene {
    * arrows, all pointing one way). SVG path data, with the level.
    */
   arcs: { d: string; level: number; kind: 'arc' | 'square' | 'straight' | 'open' | 'arrow' }[]
+  /**
+   * Triangles marked equal in area, hatched as Byrne colours them: triangles of one area share a
+   * hatching (`n`: the first class one way, the second the other, then across and along), so where
+   * two areas overlap the hatchings cross. SVG path data, with the level.
+   */
+  fills: { d: string; n: number; level: number }[]
   /** The loci that placed the touched point, if any (see Helper), in screen coordinates. */
   route: ({ kind: 'line'; x1: number; y1: number; x2: number; y2: number } | { kind: 'circle'; cx: number; cy: number; r: number })[]
   /** Parallel to the arrays above: what made each element, as fact keys (extraction.ts `factKey`). */
@@ -43,6 +49,7 @@ export interface Scene {
     circles: string[][]
     segments: { ends: [string, string]; facts: string[]; mark: { mark: number; member: number } | null }[]
     arcs: { facts: string[]; mark: { mark: number; member: number } | null }[]
+    fills: { facts: string[]; mark: { mark: number; member: number } }[]
     /** The segment each tick is on. */
     ticks: number[]
   }
@@ -82,7 +89,7 @@ export function buildScene(
   /** How much fainter a line drawn only as the continuation of finite straight lines is. */
   const FAINT = 2
 
-  const meta: Scene['meta'] = { lines: [], circles: [], segments: [], arcs: [], ticks: [] }
+  const meta: Scene['meta'] = { lines: [], circles: [], segments: [], arcs: [], fills: [], ticks: [] }
   const lines: number[][] = []
   for (const line of figure.lines) {
     const pts = line.points.map(at).filter((p): p is Point => !!p)
@@ -197,12 +204,14 @@ export function buildScene(
   // something to be equal to), marked as its relation says (relations.ts `classMark`). Classes of
   // equal segments get ticks, one more stroke for each class; classes of equal angles concentric
   // arcs, one more for each class, with their arms drawn as Byrne draws them; classes of parallel
-  // lines arrows along their segments, one more for each class. Each is as deep as the fact that made
-  // it known.
+  // lines arrows along their segments, one more for each class; classes of triangles of one area a
+  // hatching, a different one for each class, with their sides drawn. Each is as deep as the fact
+  // that made it known.
   const visible = (m: { points: string[] }) => m.points.every(p => coords.has(p))
   const ticked: { segment: number; n: number; lv: number }[] = []
   const arrowed: { segment: number; n: number; lv: number; facts: string[]; mark: { mark: number; member: number }; along: Point }[] = []
-  const counts = { ticks: 0, arcs: 0, arrows: 0 }
+  const fills: Scene['fills'] = []
+  const counts = { ticks: 0, arcs: 0, arrows: 0, hatch: 0 }
   figure.marks.forEach((cls, ci) => {
     const shown = cls.members.map((_, i) => i).filter(i => visible(cls.members[i]))
     // A class the closure knows to be right angles is drawn as squares (its relation's drawing), and
@@ -221,8 +230,7 @@ export function buildScene(
     }
     const kind = RELATIONS.get(cls.name)?.classMark?.as
     if (shown.length < 2 || !kind) return
-    if (kind === 'arcs' && cls.k !== 3) return
-    if (kind !== 'arcs' && cls.k !== 2) return
+    if (cls.k !== (kind === 'arcs' || kind === 'hatch' ? 3 : 2)) return
     const n = ++counts[kind]
     // Parallels point one way: the first member's direction on screen, which the others follow.
     let along: Point | null = null
@@ -232,6 +240,16 @@ export function buildScene(
       const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
       const mark = { mark: ci, member: mi }
       if (kind === 'arcs') { angleAt(member.points[0], member.points[1], member.points[2], n, 'arc', lv, facts, mark); continue }
+      if (kind === 'hatch') {
+        const [a, b, c] = member.points
+        const ps = [at(a), at(b), at(c)]
+        if (ps.some(p => !p)) continue
+        addSegment(a, b, lv, facts); addSegment(b, c, lv, facts); addSegment(c, a, lv, facts)
+        const [[x1, y1], [x2, y2], [x3, y3]] = ps as Point[]
+        fills.push({ d: `M ${x1} ${y1} L ${x2} ${y2} L ${x3} ${y3} Z`, n, level: lv })
+        meta.fills.push({ facts, mark })
+        continue
+      }
       const si = addSegment(member.points[0], member.points[1], lv, facts)
       if (si === null) continue
       // A segment says which equal lengths it is one of; its arrows carry their parallels themselves.
@@ -283,11 +301,11 @@ export function buildScene(
   // definition drawn as itself, such as right's) is not drawn: like the route, it is how, not what.
   const mentioned = new Set([...figure.points, ...figure.marks.flatMap(m => m.members.flatMap(x => x.points))])
   const points = [...coords].filter(([name]) => mentioned.has(name)).map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
-  return { lines, circles, segments, ticks, points, arcs, route, meta }
+  return { lines, circles, segments, ticks, points, arcs, fills, route, meta }
 }
 
 /** Which elements of a scene to bring forward: those made by the given facts. */
-export interface Emphasis { lines: Set<number>; circles: Set<number>; segments: Set<number>; arcs: Set<number>; points: Set<string> }
+export interface Emphasis { lines: Set<number>; circles: Set<number>; segments: Set<number>; arcs: Set<number>; fills: Set<number>; points: Set<string> }
 
 export function emphasise(scene: Scene, facts: readonly GroundPredicate[], points: Iterable<string>): Emphasis {
   const keys = new Set(facts.map(factKey))
@@ -298,6 +316,7 @@ export function emphasise(scene: Scene, facts: readonly GroundPredicate[], point
     circles: which(scene.meta.circles),
     segments: which(scene.meta.segments.map(s => s.facts)),
     arcs: which(scene.meta.arcs.map(a => a.facts)),
+    fills: which(scene.meta.fills.map(f => f.facts)),
     points: new Set([...points, ...facts.flatMap(f => f.args)]),
   }
 }

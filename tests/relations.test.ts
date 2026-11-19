@@ -14,7 +14,7 @@ const kb = new KnowledgeBase(bookRules)
 
 describe('the relation table', () => {
   it('is where extraction learns which relations are constraints and which are drawn', () => {
-    expect([...CONSTRAINT_RELATIONS].sort()).toEqual(['between', 'circle', 'collinear', 'distinct', 'eq-angle', 'eq-lines', 'eq-spread', 'parallel', 'supp'])
+    expect([...CONSTRAINT_RELATIONS].sort()).toEqual(['between', 'circle', 'collinear', 'distinct', 'eq-angle', 'eq-area', 'eq-lines', 'eq-spread', 'parallel', 'supp', 'triangle'])
     expect(DEPICTED_RELATIONS.has('circle')).toBe(true)
     expect(DEPICTED_RELATIONS.has('right')).toBe(true)     // drawn as itself, read through its definition
     expect(CONSTRAINT_RELATIONS.has('right')).toBe(false)
@@ -47,7 +47,11 @@ describe('the relation table', () => {
     expect(holds({ name: 'distinct', args: ['a', 'e'] }, at)).toBe(false)
     expect(holds({ name: 'distinct', args: ['a', 'c'] }, at)).toBe(true)
     expect(holds({ name: 'supp', args: ['d', 'a', 'b', 'd', 'a', 'b'] }, at)).toBe(true)     // two right angles
-    expect(holds({ name: 'triangle', args: ['a', 'b', 'd'] }, at)).toBe(true)               // nothing to measure
+    expect(holds({ name: 'triangle', args: ['a', 'b', 'd'] }, at)).toBe(true)
+    expect(holds({ name: 'triangle', args: ['a', 'b', 'c'] }, at)).toBe(false)              // on one line
+    // Equal areas, by their sizes: a-b-d and a-c-d are 2 and 1; a-b-d and b-a-d one triangle.
+    expect(holds({ name: 'eq-area', args: ['a', 'b', 'd', 'b', 'a', 'd'] }, at)).toBe(true)
+    expect(holds({ name: 'eq-area', args: ['a', 'b', 'd', 'a', 'c', 'd'] }, at)).toBe(false)
   })
 })
 

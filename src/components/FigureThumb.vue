@@ -1,6 +1,14 @@
 <template>
   <svg class="figure-thumb" :viewBox="`0 0 ${W} ${H}`" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
     <template v-if="scene">
+      <defs>
+        <pattern v-for="(angle, i) in HATCH_ANGLES" :key="`hp${i}`" :id="`${uid}-hatch${i}`" patternUnits="userSpaceOnUse"
+          width="4" height="4" :patternTransform="`rotate(${angle})`">
+          <line class="hatch" x1="0" y1="0" x2="0" y2="4" />
+        </pattern>
+      </defs>
+      <path v-for="(f, i) in scene.fills" :key="`f${i}`" class="fill" :d="f.d"
+        :fill="`url(#${uid}-hatch${(f.n - 1) % HATCH_ANGLES.length})`" :opacity="fade(f.level)" />
       <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :opacity="fade(l[4])" />
       <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :opacity="fade(c[3])" />
       <line v-for="(l, i) in [...scene.segments, ...scene.ticks]" :key="`s${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :opacity="fade(l[4])" />
@@ -12,7 +20,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, useId } from 'vue'
 
 /** Deeper levels fainter, as on the page (thumbnails are too small for thinner). */
 const fade = (level: number | undefined) => Math.max(0.3, 0.62 ** (level ?? 0)).toFixed(3)
@@ -29,6 +37,9 @@ const props = defineProps<{
 }>()
 
 const W = 160, H = 112, PAD = 14
+const HATCH_ANGLES = [45, -45, 0, 90, 22.5, -67.5]
+/** Patterns are found by id across the whole page: each thumbnail needs its own. */
+const uid = `thumb-${useId()}`
 
 const scene = computed(() => {
   const th = props.thumbnail
@@ -42,6 +53,8 @@ const scene = computed(() => {
 .figure-thumb { display: block; width: 100%; height: auto; overflow: hidden; }
 line, circle, path { fill: none; stroke: var(--dg-ink, currentColor); stroke-width: 1.6; }
 .point { fill: var(--dg-accent, currentColor); stroke: var(--dg-paper, transparent); stroke-width: 1; }
+.fill { stroke: none; }
+.hatch { stroke-width: 0.9; opacity: 0.7; }
 .fallback {
   fill: var(--dg-accent, currentColor);
   font: 400 22px var(--ed-font, monospace);

@@ -281,3 +281,31 @@ describe('parallels', () => {
     }
   })
 })
+
+describe('equal areas', () => {
+  const size = (a: Point, b: Point, c: Point) => Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2
+
+  it('holds by the sizes of the triangles, whatever the order of their corners', () => {
+    const p = RELATIONS.get('eq-area')!
+    expect(p.holds([[0, 0], [2, 0], [0, 1], [5, 5], [5, 6], [7, 5]], 1e-9)).toBe(true)     // 1 and 1
+    expect(p.holds([[0, 0], [2, 0], [0, 1], [5, 5], [5, 7], [7, 5]], 1e-9)).toBe(false)    // 1 and 2
+  })
+
+  it('places a corner on a parallel to its base, at the height that makes the area', () => {
+    const cp = plan(buildModel(factsOf('eq-area a b c d e f')))
+    const f = cp.steps[5]
+    expect(f.kind === 'on' && f.locus).toEqual({ kind: 'area', base: ['d', 'e'], area: ['a', 'b', 'c'] })
+    const { valid, drawing } = realise(cp)
+    expect(valid).toBe(true)
+    const at = (q: string) => drawing.coords.get(q)!
+    expect(size(at('d'), at('e'), at('f'))).toBeCloseTo(size(at('a'), at('b'), at('c')), 9)
+  })
+
+  it('shears a triangle: a corner where that parallel meets another locus', () => {
+    const cp = plan(buildModel(factsOf('eq-area a b c a b d\ncircle a b d')))
+    const d = cp.steps[3]
+    expect(d.kind === 'meet' && d.loci.map(l => l.kind).sort()).toEqual(['area', 'circle'])
+    const { valid } = realise(cp)
+    expect(valid).toBe(true)
+  })
+})

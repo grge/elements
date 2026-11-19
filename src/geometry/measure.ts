@@ -1,9 +1,10 @@
 /**
- * Angles and spreads: the measures behind eq-angle, supp and eq-spread (relations.ts).
+ * Angles, spreads and areas: the measures behind eq-angle, supp, eq-spread and eq-area (relations.ts).
  *
  *   eq-angle a b c d e f       angle a-b-c (vertex b, unsigned, 0 to π) equals angle d-e-f
  *   eq-spread a b c d e f g h  the spread between lines a-b and c-d equals that between e-f and g-h
  *   supp a b c d e f           angles a-b-c and d-e-f together make a straight angle
+ *   eq-area a b c d e f        triangle a-b-c has the area of triangle d-e-f (unsigned)
  *
  * The spread between two lines is Wildberger's: the squared cross product of their directions over
  * the product of their squared lengths, in effect sin² of the angle between them. It does not tell an
@@ -22,4 +23,9 @@ export function spread(a: Point, b: Point, c: Point, d: Point): number {
   const cross = u[0] * v[1] - u[1] * v[0]
   const q = (u[0] * u[0] + u[1] * u[1]) * (v[0] * v[0] + v[1] * v[1])
   return q === 0 ? NaN : (cross * cross) / q
+}
+
+/** The signed area of triangle a-b-c: positive when a, b, c turn anticlockwise (y up). */
+export function area(a: Point, b: Point, c: Point): number {
+  return ((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / 2
 }

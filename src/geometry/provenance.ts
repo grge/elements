@@ -66,8 +66,8 @@ function reason(s: MarkSource, where: (f: DrawableFact) => string): string {
   return `proven, of ${s.facts.map(where).join(' and ')}`
 }
 
-/** A member of a class as it is shown: a segment `ab`, an angle `∠abc`. */
-const member = (cls: MarkClass, i: number) => `${cls.k === 3 ? '∠' : ''}${cls.members[i].points.map(displayName).join('')}`
+/** A member of a class as it is shown: a segment `ab`, an angle `∠abc`, a triangle `△abc`. */
+const member = (cls: MarkClass, i: number) => `${RELATIONS.get(cls.name)?.classMark?.prefix ?? ''}${cls.members[i].points.map(displayName).join('')}`
 
 /**
  * The class from one member, each other member with the equality that reached it (breadth first),

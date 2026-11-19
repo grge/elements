@@ -30,9 +30,15 @@ const show = (l: Lemma) =>
 
 const provable = (l: Lemma) => checkLemma(l, kb).result === 'verified'
 
+/**
+ * Checks are long and synchronous (chapter 4's Pythagoras takes about 12 s). Yielding to the event loop
+ * before each lets the worker answer the test runner, which gives up on a worker silent for a minute.
+ */
+const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
+
 describe('the book', () => {
   for (const lemma of bookLemmas) {
-    it(`✓ ? ${show(lemma)}`, () => expect(provable(lemma)).toBe(true), 10000)
+    it(`✓ ? ${show(lemma)}`, async () => { await yieldToRunner(); expect(provable(lemma)).toBe(true) }, 30000)
   }
 })
 
@@ -40,9 +46,9 @@ describe('regression lemmas', () => {
   for (const lemma of regressionLemmas) {
     const key = show(lemma)
     if (expectedFalse.has(key)) {
-      it(`✗ ? ${key} (should not be provable)`, () => expect(provable(lemma)).toBe(false), 10000)
+      it(`✗ ? ${key} (should not be provable)`, async () => { await yieldToRunner(); expect(provable(lemma)).toBe(false) }, 30000)
     } else {
-      it(`✓ ? ${key}`, () => expect(provable(lemma)).toBe(true), 10000)
+      it(`✓ ? ${key}`, async () => { await yieldToRunner(); expect(provable(lemma)).toBe(true) }, 30000)
     }
   }
 

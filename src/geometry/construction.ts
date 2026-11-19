@@ -29,7 +29,7 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
-import { angle as angleAt } from './measure'
+import { angle as angleAt, area as areaOf } from './measure'
 import { relationOf, type ModelReader } from './relations'
 import { UnionFind, mergeLines, segmentKey, segmentEnds } from './classes'
 
@@ -117,6 +117,11 @@ export type Locus =
   | { kind: 'angle-bisector'; vertex: string; arms: [string, string]; outer: boolean }
   /** The line through `through` parallel to the line `to`. */
   | { kind: 'parallel'; through: string; to: [string, string] }
+  /**
+   * The two lines parallel to `base`, one either side, at the height that gives a triangle on it the
+   * area of the triangle `area` (Euclid I.44 applies a given area to a given line).
+   */
+  | { kind: 'area'; base: [string, string]; area: [string, string, string] }
 
 export type Step =
   | { kind: 'free'; point: string }
@@ -162,6 +167,17 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
       if (other.includes(through)) continue
       out.push({ kind: 'parallel', through, to: [other[0], other[1]] })
     }
+  }
+  // Equal areas: p is a corner of one triangle, the rest placed; it is on a parallel to the side
+  // opposite it, at the height that makes the area.
+  for (const m of model.measures) {
+    if (m.name !== 'eq-area') continue
+    if (!m.args.every(q => q === p || isPlaced.has(q)) || m.args.filter(q => q === p).length !== 1) continue
+    const t1 = m.args.slice(0, 3), t2 = m.args.slice(3)
+    const [mine, other] = t1.includes(p) ? [t1, t2] : [t2, t1]
+    const base = mine.filter(q => q !== p)
+    if (base[0] === base[1]) continue
+    out.push({ kind: 'area', base: [base[0], base[1]], area: [other[0], other[1], other[2]] })
   }
   // Equal angles and supplements: a ray at a known angle from a placed vertex, or a bisector.
   for (const m of model.measures) {
@@ -235,7 +251,7 @@ function pivots(l: Locus): string[] {
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => m.name === 'eq-angle' || m.name === 'supp' || m.name === 'parallel').length
+    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area'].includes(m.name)).length
 }
 
 const DP_LIMIT = 18
@@ -354,6 +370,15 @@ export function curvesOf(locus: Locus, at: Map<string, Point>): Curve[] {
     const rot = (t: number): Point => [d[0] * Math.cos(t) - d[1] * Math.sin(t), d[0] * Math.sin(t) + d[1] * Math.cos(t)]
     return [{ kind: 'line', p: v, d: rot(theta), ray: true }, { kind: 'line', p: v, d: rot(-theta), ray: true }]
   }
+  if (locus.kind === 'area') {
+    const [u, v] = locus.base.map(g), [a, b, c] = locus.area.map(g)
+    const d = sub(v, u), len = Math.hypot(...d)
+    if (len < 1e-12) return []
+    const h = 2 * Math.abs(areaOf(a, b, c)) / len
+    const n: Point = [-d[1] / len * h, d[0] / len * h]
+    return h === 0 ? [{ kind: 'line', p: u, d }]
+      : [{ kind: 'line', p: [u[0] + n[0], u[1] + n[1]], d }, { kind: 'line', p: [u[0] - n[0], u[1] - n[1]], d }]
+  }
   if (locus.kind === 'angle-bisector') {
     const v = g(locus.vertex), [a, b] = locus.arms.map(g)
     if (dist(a, v) < 1e-12 || dist(b, v) < 1e-12) return []
@@ -374,7 +399,7 @@ export function curvesOf(locus: Locus, at: Map<string, Point>): Curve[] {
 export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
   const g = (q: string) => at.get(q)!
   switch (locus.kind) {
-    case 'angle': case 'angle-bisector': return curvesOf(locus, at)[0] ?? null
+    case 'angle': case 'angle-bisector': case 'area': return curvesOf(locus, at)[0] ?? null
     case 'line': {
       const [a, b] = locus.through.map(g)
       return dist(a, b) < 1e-12 ? null : { kind: 'line', p: a, d: sub(b, a) }
@@ -502,6 +527,7 @@ export function describeLocus(l: Locus): string {
     case 'parallel': return `the parallel to ${n(l.to)} through ${n([l.through])}`
     case 'angle': return `the arm from ${displayName(l.vertex)} at ${l.supplement ? 'the supplement of ' : ''}angle ${n(l.angle)} to ${n([l.vertex, l.from])}`
     case 'angle-bisector': return `the ${l.outer ? 'outer ' : ''}bisector of angle ${n([l.arms[0], l.vertex, l.arms[1]])}`
+    case 'area': return `a parallel to ${n(l.base)} at the height that gives the area of ${n(l.area)}`
   }
 }
 

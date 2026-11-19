@@ -23,13 +23,14 @@
  *   residual  for the numeric solver: how far an equation is from holding, 0 when it does.
  *   classMark for an equivalence: how a class of its blocks is marked where the figure knows it
  *             (marks.ts), and the sign between members when a chain is read out: equal segments
- *             share ticks, equal angles arcs, parallel lines arrows.
+ *             share ticks, equal angles arcs, parallel lines arrows, equal triangles a hatching.
+ *             `prefix` goes before a member's points when it is named (`∠abc`, `△abc`).
  *
  * Which relations are constraints, which are drawn and which are unread all follow from the table
  * (extraction.ts), and how it is drawn from `draw`.
  */
 
-import { angle, spread } from './measure'
+import { angle, area, spread } from './measure'
 
 export type Point = [number, number]
 
@@ -70,7 +71,7 @@ export interface Relation {
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
-  classMark?: { as: 'ticks' | 'arcs' | 'arrows'; sign: string }
+  classMark?: { as: 'ticks' | 'arcs' | 'arrows' | 'hatch'; sign: string; prefix?: string }
 }
 
 const d = (p: Point, q: Point) => Math.hypot(p[0] - q[0], p[1] - q[1])
@@ -128,6 +129,17 @@ const TABLE: Relation[] = [
     holds: ([a, b, c], tol) => Math.abs(d(a, b) - d(a, c)) <= tol,
   },
   {
+    // Three points not on one line: drawn as its three sides. Read as three pairs kept apart; that they
+    // are not on one line the planner cannot impose, only check.
+    name: 'triangle', arity: 3, depicted: true,
+    read: ([a, b, c], m) => { m.distinct(a, b); m.distinct(b, c); m.distinct(a, c) },
+    draw: ([a, b, c], pen) => { pen.segment(a, b, [a, b]); pen.segment(b, c, [b, c]); pen.segment(c, a, [c, a]) },
+    holds: ([a, b, c], tol) => {
+      const ab = d(a, b)
+      return ab > tol && Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / ab > tol
+    },
+  },
+  {
     name: 'distinct', arity: 2, depicted: true,
     read: ([a, b], m) => m.distinct(a, b),
     byNames: ([a, b]) => a !== b,
@@ -136,7 +148,7 @@ const TABLE: Relation[] = [
   {
     // Angle a-b-c (vertex b, unsigned, 0 to π) equals angle d-e-f.
     name: 'eq-angle', arity: 6, depicted: true,
-    classMark: { as: 'arcs', sign: '=' },
+    classMark: { as: 'arcs', sign: '=', prefix: '∠' },
     read: (args, m) => m.measure('eq-angle', args),
     ...measured(P => {
       const degenerate = (a: Point, b: Point, c: Point) => same(a, b) || same(c, b)
@@ -160,6 +172,19 @@ const TABLE: Relation[] = [
     name: 'eq-spread', arity: 8, depicted: true,
     read: (args, m) => m.measure('eq-spread', args),
     ...measured(P => Math.abs(spread(P[0], P[1], P[2], P[3]) - spread(P[4], P[5], P[6], P[7]))),
+  },
+  {
+    // Triangle a-b-c has the area of triangle d-e-f, unsigned. An equality: it draws nothing of its own;
+    // where the figure knows triangles to be equal they are hatched alike, as Byrne colours them. The
+    // planner places a corner on the parallel to its base at the height that makes the area. Measured
+    // as the difference of the areas over their sum, so it does not scale with the figure.
+    name: 'eq-area', arity: 6, depicted: true,
+    classMark: { as: 'hatch', sign: '=', prefix: '△' },
+    read: (args, m) => m.measure('eq-area', args),
+    ...measured(P => {
+      const s = Math.abs(area(P[0], P[1], P[2])), t = Math.abs(area(P[3], P[4], P[5]))
+      return s + t === 0 ? NaN : Math.abs(s - t) / (s + t)
+    }),
   },
   {
     // Lines a-b and c-d have the same direction: parallel, or one line. Drawn as its two finite

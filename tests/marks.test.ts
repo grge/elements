@@ -185,3 +185,27 @@ describe('parallels are marked with arrows, not ticks', () => {
     expect(scene.arcs.filter(a => a.kind === 'arrow')).toHaveLength(2)
   })
 })
+
+describe('triangles of equal area are hatched alike', () => {
+  const sceneOf = (text: string, lemmas = bookLemmas) => {
+    const { x, figure } = figureFor(text, lemmas)
+    const { drawing } = realise(plan(buildModel(x.constraints)))
+    const t = computeRenderTransform({ coords: drawing.coords, energy: 0 }, 800, 600, 40, figure)!
+    return { figure, scene: buildScene(figure, drawing.coords, t, 800, 600, 16) }
+  }
+
+  it('a stated equal area hatches both triangles with one hatching, and draws their sides', () => {
+    const { scene } = sceneOf('eq-area a b c d e f', [])
+    expect(scene.fills.map(f => f.n)).toEqual([1, 1])
+    expect(scene.meta.segments.map(s => s.ends.join('')).sort()).toEqual(['ab', 'bc', 'ca', 'de', 'ef', 'fd'])
+    expect(scene.ticks).toHaveLength(0)
+  })
+
+  it('a parallelogram\'s halves, which chapter 4 proves equal, share a hatching', () => {
+    const { figure, scene } = sceneOf('parallelogram a b c d')
+    const halves = figure.marks.filter(m => m.name === 'eq-area')
+    expect(halves).toHaveLength(1)
+    expect(halves[0].members.length).toBeGreaterThanOrEqual(2)
+    expect(new Set(scene.fills.map(f => f.n))).toEqual(new Set([1]))
+  })
+})

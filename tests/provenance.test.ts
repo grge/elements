@@ -49,4 +49,10 @@ describe('provenance', () => {
     const cd = figure.marks[ci].members.findIndex(m => m.points.join('') === 'cd')
     expect(say({ facts: [], mark: { mark: ci, member: cd } }).text).toBe('cd ∥ ab (stated: parallel a b c d (line 1))')
   })
+
+  it('names equal triangles as triangles, not angles', () => {
+    const { figure, say } = page('eq-area a b c d e f')
+    const ci = figure.marks.findIndex(m => m.name === 'eq-area')
+    expect(say({ facts: [], mark: { mark: ci, member: 1 } }).text).toBe('△def = △abc (stated: eq-area a b c d e f (line 1))')
+  })
 })

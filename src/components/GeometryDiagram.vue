@@ -24,6 +24,11 @@
         <mask :id="`${uid}-ghost`" maskUnits="userSpaceOnUse" x="0" y="0" :width="viewportWidth" :height="viewportHeight">
           <rect :width="viewportWidth" :height="viewportHeight" :fill="`url(#${uid}-out)`" />
         </mask>
+        <!-- Hatchings for triangles of one area: a class each, each at its own angle. -->
+        <pattern v-for="(angle, i) in HATCH_ANGLES" :key="`hp${i}`" :id="`${uid}-hatch${i}`" patternUnits="userSpaceOnUse"
+          :width="HATCH_GAP" :height="HATCH_GAP" :patternTransform="`rotate(${angle})`">
+          <line class="hatch-line" x1="0" y1="0" x2="0" :y2="HATCH_GAP" />
+        </pattern>
       </defs>
 
       <g class="ghost" :mask="`url(#${uid}-ghost)`">
@@ -35,6 +40,8 @@
       </g>
 
       <g class="crisp" :mask="`url(#${uid}-crisp)`">
+        <path v-for="(f, i) in scene.fills" :key="`f${i}`" class="fill" :d="f.d"
+          :fill="`url(#${uid}-hatch${(f.n - 1) % HATCH_ANGLES.length})`" :style="look(f.level, 'fills', i)" />
         <line v-for="(l, i) in scene.lines" :key="`l${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'lines', i)" />
         <circle v-for="(c, i) in scene.circles" :key="`c${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]" :style="look(c[3], 'circles', i)" />
         <line v-for="(l, i) in scene.segments" :key="`s${i}`" class="segment" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]" :style="look(l[4], 'segments', i)" />
@@ -49,6 +56,8 @@
 
       <!-- Wide invisible strokes over each element: hovering one says where it came from. -->
       <g v-if="!dragging" class="hits">
+        <path v-for="(f, i) in scene.fills" :key="`hf${i}`" class="hit-fill" :d="f.d"
+          @pointerenter="hoverElement(scene.meta.fills[i])" @pointerleave="hoverElement(null)" />
         <line v-for="(l, i) in scene.lines" :key="`hl${i}`" :x1="l[0]" :y1="l[1]" :x2="l[2]" :y2="l[3]"
           @pointerenter="hoverElement({ facts: scene.meta.lines[i], mark: null })" @pointerleave="hoverElement(null)" />
         <circle v-for="(c, i) in scene.circles" :key="`hc${i}`" :cx="c[0]" :cy="c[1]" :r="c[2]"
@@ -136,6 +145,9 @@ const emit = defineEmits<{
 const VEIL_FADE = 48
 /** Length of a tick mark across an equal segment, in px: bold, as Byrne draws them. */
 const TICK = 16
+/** Hatchings for classes of equal triangles, in degrees: one way, the other, across, along, between. */
+const HATCH_ANGLES = [45, -45, 0, 90, 22.5, -67.5]
+const HATCH_GAP = 9
 const uid = `dg${Math.random().toString(36).slice(2, 8)}`
 
 // The construction being shown; dragging changes it locally and reports it on release.
@@ -234,7 +246,7 @@ const emphasis = computed<Emphasis | null>(() =>
   props.focus && scene.value ? emphasise(scene.value, props.focus.facts, props.focus.points) : null)
 
 /** How an element is drawn: its level, and whether the focus brings it forward or lets it recede. */
-function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments' | 'arcs', i: number) {
+function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments' | 'arcs' | 'fills', i: number) {
   const base = weight(level)
   const em = emphasis.value
   if (!em || !props.focus?.facts.length) return base   // a name alone lights its point, nothing else
@@ -463,8 +475,13 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
   opacity: 0.45;
 }
 
+/* Triangles of one area: hatched in the ink, light enough that lines read over them. */
+.crisp .fill { stroke: none; transition: opacity 0.15s; }
+.hatch-line { stroke: var(--dg-ink, #fff); stroke-width: 1.7; opacity: 0.6; }
+
 /* ── hovering an element ── */
 .hits line, .hits circle, .hits path { fill: none; stroke: transparent; stroke-width: 14; pointer-events: stroke; }
+.hits path.hit-fill { fill: transparent; stroke: none; pointer-events: fill; }
 
 /* ── points ── */
 .pt { cursor: grab; }

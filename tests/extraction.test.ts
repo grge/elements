@@ -24,8 +24,9 @@ describe('extraction', () => {
   })
 
   it('reports open predicates the figure cannot read instead of dropping them', () => {
-    const x = extract(kb, [{ name: 'triangle', args: ['a', 'b', 'c'] }, { name: 'eq-point', args: ['a', 'd'] }])
-    expect(keys(x.unread)).toEqual(['eq-point a d @0', 'triangle a b c @0'])
+    const k = new KnowledgeBase([...bookRules, ...parseRules('hidden a b c: hidden b a c')])
+    const x = extract(k, [{ name: 'hidden', args: ['a', 'b', 'c'] }, { name: 'eq-point', args: ['a', 'd'] }])
+    expect(keys(x.unread)).toEqual(['eq-point a d @0', 'hidden a b c @0'])
   })
 
   it('draws the first drawn node on each path: a circle, not its radii again', () => {
