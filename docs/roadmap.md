@@ -1,7 +1,8 @@
 # Roadmap
 
 Open problems and ideas, roughly in order of value within each section. See
-[architecture.md](architecture.md) for how things work now.
+[architecture.md](architecture.md) for how things work now, and [review-notes.md](review-notes.md) for
+what writing the book has shown about the engine, gathered for the review sessions.
 
 ## Principles
 
@@ -55,7 +56,7 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 | Chapter | Needs first |
 |---------|-------------|
 | 3, direction | written but for the midline: axioms, the postulate, alternate, corresponding and same-side angles, I.31, parallelograms, rectangles and squares (book.md, *3*); the midline waits on closure performance |
-| 4, area | how to add quantities (book.md, *Open questions*) |
+| 4, area | written, Euclid's way without sums (November 2026): equal area of triangles, parallelograms and triangles, Pythagoras in split form, squaring a quadrilateral and a triangle; II.14's proof and I.48 wait for sums (book.md, *4*) |
 | 5, circle | mostly content, on chapters 1–4 |
 | 6, ratio | equal ratios as an equivalence on pairs of segments |
 | 7, regular figures | content, on all the above |
@@ -136,6 +137,10 @@ would sit naturally beside the algebraic lens.
   pair, again whenever anything changes (saturate is not semi-naive). A rule that a midpoint differs
   from its ends doubled `drop-perpendicular` (1.6 s to 3.1 s) and was left out; reordering rule bodies
   did not help (the greedy join already chooses). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
+  Chapter 4 made this the main limit (review-notes.md has the measurements): the book's checks went
+  from 38 s to 86 s, Pythagoras with whole squares needs five times the budget (65 s), and most
+  derivations re-derive known facts. The benchmark for this work: Pythagoras with whole squares, and
+  the lemmas of chapters 1 to 3 back to their old times.
 - **Sides of a line, in the logic.** The drawing knows which side of a line a point is on; the logic
   does not, so every proof across a line (I.29, rectangles, corresponding angles) is told by a
   crossing point in its hypotheses (book.md, *3*). Long term: `same-side` and `opposite-side` as
@@ -197,6 +202,9 @@ would sit naturally beside the algebraic lens.
      (a rectangle gains four faint stubs);
   4. where it lives: a second hook on the relation table that sees what the body drew; figure.ts
      composes, and extraction no longer decides where to stop.
+- **A perpendicular locus.** `right` is read through its definition, whose extension point is a
+  slider and must be placed before the right angle can be used; so `triangle-to-rectangle` is built
+  backwards, from the rectangle (review-notes.md, *The construction planner*).
 - **Points under the notice**: fitting the figure leaves no room for the plate at its foot, so a
   low point can sit under it (Scratch's three equiangular triangles: e). For the design review.
 - **Equal angles alone draw no arcs**: a figure of only `eq-angle` facts (three equiangular
