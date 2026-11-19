@@ -5,8 +5,9 @@
 # come the isosceles triangle, vertical angles and right angles; then the constructions Euclid builds
 # on them. No parallels yet: everything here holds in hyperbolic geometry too.
 #
-# The engine has equalities but no sums, so angles that together make a straight line are related
-# directly (supplements), never added.
+# The engine has equalities but no sums. Angles that together make a straight line are related
+# directly (supplements); an angle cut in two by a point on a segment is the whole of its parts, as
+# Euclid's common notions say, without the parts ever being added up.
 
 # ══ Axioms ═══════════════════════════════════════════════════════════════════════════════════════
 
@@ -37,6 +38,26 @@ eq-angle a b c d e x: eq-angle a b c d e f, eq-point x f
 eq-angle a b c x b c: between b x a, distinct b x
 eq-angle a b c x b c: between b a x, distinct b a
 
+# ── adding and taking away angles
+
+# Common notions 2 and 3, for angles: a point x of the segment a-c cuts the angle a-b-c into a-b-x and
+# x-b-c. Angles cut into equal parts are equal (equals added to equals); and from equal angles, equal
+# parts taken away leave equal parts. A point on a segment says that the arm b-x lies inside the angle,
+# so no side of a line is needed. (x may be an end: then one part is no angle at all, the other the
+# whole.) Said of a triangle's angle, which either angle may be.
+eq-angle a b c d e f:
+    triangle a b c
+    between a x c
+    eq-angle a b x d e y
+    eq-angle x b c y e f
+    between d y f
+eq-angle x b c y e f:
+    triangle a b c
+    between a x c
+    eq-angle a b x d e y
+    eq-angle a b c d e f
+    between d y f
+
 # ── triangles
 
 # a, b and c are the corners of a triangle: three points not on one line. Like distinct, it is said
@@ -54,6 +75,10 @@ distinct a m: between b m d, triangle a b d
 # a: the two lines through a are different lines.
 triangle a d e: triangle a b c, between a d b, between a e c, distinct a d, distinct a e
 
+# Where a-d crosses the line b-c at y, short of b, d is off the line a-b: a-d meets that line only at
+# a, and b-c meets it only at b.
+triangle a b d: triangle a b c, between a y d, distinct b y, collinear b y c
+
 # Side-angle-side (Euclid I.4, an axiom here as in Hilbert): two sides and the angle between them
 # equal, then the third sides are equal, and so are the angles at a and d.
 eq-lines a c d f: eq-lines b a e d, eq-lines b c e f, eq-angle a b c d e f
@@ -64,6 +89,7 @@ eq-angle b a c e d f: eq-lines b a e d, eq-lines b c e f, eq-angle a b c d e f
 # triangle: three points on a line have angles of nothing or a straight line, which fix no lengths.
 eq-angle a b c d e f: eq-lines b a e d, eq-lines b c e f, eq-lines a c d f
 eq-lines b a e d: eq-angle a b c d e f, eq-angle b c a e f d, eq-lines b c e f, triangle a b c
+
 
 # ── supplements: two angles that together make a straight line, related without adding them
 
