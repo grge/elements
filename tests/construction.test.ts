@@ -248,3 +248,36 @@ describe('facts a plan does not construct', () => {
     expect(unconstructed(plan(buildModel(factsOf('eq-triangle a b c'))))).toEqual([])
   })
 })
+
+describe('parallels', () => {
+  it('holds for parallel lines and the same line, not for crossing ones', () => {
+    const p = RELATIONS.get('parallel')!
+    expect(p.holds([[0, 0], [1, 0], [0, 1], [3, 1]], 1e-9)).toBe(true)
+    expect(p.holds([[0, 0], [1, 0], [2, 0], [5, 0]], 1e-9)).toBe(true)
+    expect(p.holds([[0, 0], [1, 0], [0, 1], [3, 1.1]], 1e-9)).toBe(false)
+  })
+  it('constructs a parallelogram: the fourth corner where two parallels meet', () => {
+    const cp = plan(buildModel(factsOf('parallel a b d c\nparallel a d b c')))
+    expect(cp.steps.map(s => s.kind)).toEqual(['free', 'free', 'free', 'meet'])
+    const c = cp.steps[3]
+    expect(c.kind === 'meet' && c.loci.map(l => l.kind)).toEqual(['parallel', 'parallel'])
+    const r = realise(cp)
+    expect(r.valid).toBe(true)
+    const d = execute(cp, r.params)
+    expect(d.violations).toEqual([])
+  })
+  it('redrawn from where it was realised, keeps its branches (parallel-through)', () => {
+    // a is one of two circle intersections; on the other, line q-a runs parallel to p-b and the
+    // construction cannot go on. Redrawn with another figure's positions as the reference for branches
+    // it got stuck about half the time; with its own, never.
+    const cp = plan(buildModel(factsOf('parallel-through a b p q')))
+    for (let seed = 0; seed < 20; seed++) {
+      const r = realise(cp)
+      expect(r.valid).toBe(true)
+      const stale = new Map<string, Point>([['a', [Math.cos(seed), Math.sin(1.7 * seed)]], ['b', [0.3, -0.2]]])
+      for (const previous of [r.drawing.coords, new Map([...stale, ...r.drawing.coords])]) {
+        expect(execute(cp, r.params, { previous }).failure).toBeUndefined()
+      }
+    }
+  })
+})

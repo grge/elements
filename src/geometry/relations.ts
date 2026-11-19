@@ -156,6 +156,19 @@ const TABLE: Relation[] = [
     ...measured(P => Math.abs(spread(P[0], P[1], P[2], P[3]) - spread(P[4], P[5], P[6], P[7]))),
   },
   {
+    // Lines a-b and c-d have the same direction: parallel, or one line. Drawn as its two lines; the
+    // planner places a point on the parallel through a placed one.
+    name: 'parallel', arity: 4, depicted: true,
+    read: (args, m) => m.measure('parallel', args),
+    draw: ([a, b, c, e], pen) => { pen.line([a, b]); pen.line([c, e]) },
+    // The sine of the angle between the lines: 0 when they are parallel.
+    ...measured(([a, b, c, e]) => {
+      if (same(a, b) || same(c, e)) return NaN
+      const u = [b[0] - a[0], b[1] - a[1]], v = [e[0] - c[0], e[1] - c[1]]
+      return Math.abs(u[0] * v[1] - u[1] * v[0]) / (Math.hypot(u[0], u[1]) * Math.hypot(v[0], v[1]))
+    }),
+  },
+  {
     // Defined in the book (an angle equal to its own supplement), so the planner reads its definition;
     // drawn as Byrne draws it, a small square at the vertex.
     name: 'right', arity: 3, depicted: true,

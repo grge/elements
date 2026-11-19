@@ -53,9 +53,17 @@ export interface ConstructionModel {
   facts: GroundPredicate[]
 }
 
-export function buildModel(facts: readonly GroundPredicate[]): ConstructionModel {
+/**
+ * The construction model of some facts. `written`, the points of the facts as the page writes them
+ * (`parallel-through a b p q`), come first, in that order: the planner gives freedom to earlier points,
+ * so a construction's inputs stay its inputs, rather than whichever points its definition happens to
+ * mention first (`copy-angle a b p p b q` mentions p and b before a).
+ */
+export function buildModel(facts: readonly GroundPredicate[], written: readonly string[] = []): ConstructionModel {
   const points: string[] = []
   const see = (p: string) => { if (!points.includes(p)) points.push(p) }
+  const mentioned = new Set(facts.flatMap(f => relationOf(f)?.read ? f.args : []))
+  written.filter(p => mentioned.has(p)).forEach(see)
   const groups: { points: Set<string>; depth: number }[] = []
   const segments = new UnionFind()
   const between: [string, string, string][] = []
@@ -107,6 +115,8 @@ export type Locus =
   | { kind: 'angle'; vertex: string; from: string; angle: [string, string, string]; supplement: boolean }
   /** The line through `vertex` bisecting the angle between its arms (or the outer bisector). */
   | { kind: 'angle-bisector'; vertex: string; arms: [string, string]; outer: boolean }
+  /** The line through `through` parallel to the line `to`. */
+  | { kind: 'parallel'; through: string; to: [string, string] }
 
 export type Step =
   | { kind: 'free'; point: string }
@@ -139,6 +149,19 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
     if (!line.includes(p)) continue
     const on = line.filter(q => q !== p && isPlaced.has(q)).sort((x, y) => rank(x) - rank(y))
     if (on.length >= 2) out.push({ kind: 'line', through: [on[0], on[1]] })
+  }
+  // Parallels: p's line is known once its other point and the other line are placed.
+  for (const m of model.measures) {
+    if (m.name !== 'parallel') continue
+    const pairs: [string, string][] = [[m.args[0], m.args[1]], [m.args[2], m.args[3]]]
+    for (const [mine, other] of [[pairs[0], pairs[1]], [pairs[1], pairs[0]]]) {
+      if (!mine.includes(p) || other.includes(p)) continue
+      const through = mine[0] === p ? mine[1] : mine[0]
+      if (through === p || !isPlaced.has(through) || !other.every(q => isPlaced.has(q)) || other[0] === other[1]) continue
+      // Through a point of the other line, the parallel is that line: placed already as a line locus.
+      if (other.includes(through)) continue
+      out.push({ kind: 'parallel', through, to: [other[0], other[1]] })
+    }
   }
   // Equal angles and supplements: a ray at a known angle from a placed vertex, or a bisector.
   for (const m of model.measures) {
@@ -204,6 +227,7 @@ function sameLocus(a: Locus, b: Locus): boolean {
 function pivots(l: Locus): string[] {
   switch (l.kind) {
     case 'line': return [...l.through]
+    case 'parallel': return [l.through]
     case 'angle': case 'angle-bisector': return [l.vertex]
     default: return []
   }
@@ -211,7 +235,7 @@ function pivots(l: Locus): string[] {
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => m.name === 'eq-angle' || m.name === 'supp').length
+    + model.measures.filter(m => m.name === 'eq-angle' || m.name === 'supp' || m.name === 'parallel').length
 }
 
 const DP_LIMIT = 18
@@ -355,6 +379,10 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
       const [a, b] = locus.through.map(g)
       return dist(a, b) < 1e-12 ? null : { kind: 'line', p: a, d: sub(b, a) }
     }
+    case 'parallel': {
+      const [a, b] = locus.to.map(g)
+      return dist(a, b) < 1e-12 ? null : { kind: 'line', p: g(locus.through), d: sub(b, a) }
+    }
     case 'bisector': {
       const [a, b] = locus.of.map(g)
       if (dist(a, b) < 1e-12) return null
@@ -471,6 +499,7 @@ export function describeLocus(l: Locus): string {
     case 'line': return `line ${n(l.through)}`
     case 'circle': return `circle about ${displayName(l.center)} with radius ${n(l.radius)}`
     case 'bisector': return `the perpendicular bisector of ${n(l.of)}`
+    case 'parallel': return `the parallel to ${n(l.to)} through ${n([l.through])}`
     case 'angle': return `the arm from ${displayName(l.vertex)} at ${l.supplement ? 'the supplement of ' : ''}angle ${n(l.angle)} to ${n([l.vertex, l.from])}`
     case 'angle-bisector': return `the ${l.outer ? 'outer ' : ''}bisector of angle ${n([l.arms[0], l.vertex, l.arms[1]])}`
   }

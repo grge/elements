@@ -126,13 +126,57 @@ the angle bisector as loci, so that figures stated with equal angles construct (
 angle's square mark;
 symmetry recognition for six-place relations such as `supp` (it stops at five today).
 
-### 3. Direction
+### 3. Direction  *(in progress: `book/03-direction.geo`, sections 1–5 written)*
 
-`parallel a b c d`. The parallel postulate (in Playfair's form: one parallel through a point),
-alternate angles, the angle sum, parallelograms and their diagonals, the midline of a triangle.
-Constructions: the parallel through a point, translating a segment.
+`parallel a b c d`: the lines a-b and c-d have the same direction, parallel or one line. Taking the
+same line as parallel to itself makes `parallel` an equivalence, like `eq-lines` and `eq-angle`, so
+the engine recognises it; parallel in Euclid's sense, never meeting, is `parallel` with a `triangle`.
 
-*Needs:* the parallel through a point as a locus in the planner.
+1. **Axioms.** The equivalence: the same line read backwards, equal points substituted, any two
+   points of a line naming it. Equal alternate angles make a parallel (I.27), which holds without the
+   parallel postulate, in hyperbolic geometry too.
+2. **The parallel postulate**, in Playfair's form: through a point, only one parallel to a line. In a
+   section of its own, so that a hyperbolic book can fork here with everything before it unchanged.
+3. **What the postulate gives.** Parallels make equal alternate angles (I.29) and equal corresponding
+   angles; two lines parallel to a third are parallel to each other.
+4. **Constructions.** The parallel through a point (I.31), by copying an alternate angle; translating
+   a segment, by completing a parallelogram.
+5. **Parallelograms.** Opposite sides and angles equal (I.34); the diagonals bisect each other; equal
+   and parallel segments make a parallelogram (I.33).
+6. **The midline** of a triangle: joining two sides' midpoints, parallel to the third side and half
+   of it.
+
+**Sides of a line without sides.** Alternate angles mean something only when the two points are on
+opposite sides of the line crossing the parallels (on the same side, equal unsigned angles make the
+lines meet). The engine cannot say which side of a line a point is on, but it can say that a segment
+crosses a line: a and d are on opposite sides of e-f when some m has `between a m d` and
+`collinear e m f`. That crossing is a hypothesis wherever sides matter.
+
+**As written (November 2026).** The postulate is two axioms: lines parallel to a third are parallel
+(I.30, which with the axioms of 1 is Playfair's), and I.29, which Euclid proves by a sum of angles;
+Playfair's uniqueness is then a lemma. I.29 needs a true triangle a-e-f: `parallel` includes the
+same line, on which its angles at e and f are 0 or straight (without that guard the closure derived a
+contradiction from chapter 1's doubling). The parallel through a point is chapter 2's `copy-angle`
+with a crossing that picks the far side, and is also the translation of a segment. Proved: Playfair,
+I.31 (parallel and equal), I.34 (opposite sides and angles), I.33, and the diagonals bisecting each
+other.
+
+**Not yet: the midline.** Its proof goes through I.33 on a second parallelogram, and lemmas do not
+yet become rules, so the closure redoes that reasoning; and nothing in the book derives that a
+midpoint differs from its ends, or that its corners are off the other lines. It proves with sixteen
+hypotheses and seven times the checker's budget (eight seconds), which is not a page. Wanted first:
+non-degeneracy the engine can derive (a midpoint of distinct points differs from both; lemma
+compilation; case splits). The diagonals lemma already carries three such triangles.
+
+Also left out: corresponding angles (they need two points on the same side of a line, which unlike
+opposite sides has no crossing to say it); the angle sum (I.32), a sum, until the engine can add
+quantities (open questions).
+
+*Needs:* `parallel` in the drawing layer (read, checked, drawn as its two lines, and in the solver)
+and the parallel through a point as a locus in the planner: both done. Still to come: drawing a
+parallel's lines as its segments where the figure has them (today each is a line across the page, so
+a parallelogram's sides run past its corners), and Byrne's arrows on classes of parallel lines, as
+ticks mark classes of equal segments.
 
 ### 4. Area
 

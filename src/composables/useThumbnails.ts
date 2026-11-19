@@ -29,7 +29,7 @@ export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly
   const facts = x.constraints
   const figure = drawFigure(kb, x, lemmas)
   if (!figure) return null
-  const { drawing } = realise(plan(buildModel(facts)))
+  const { drawing } = realise(plan(buildModel(facts, args)))
   return drawing.coords.size ? { figure, coords: drawing.coords, extraction: x } : null
 }
 

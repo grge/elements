@@ -351,7 +351,7 @@ function startInteraction(e: PointerEvent) {
 
   function onUp(ev: PointerEvent) {
     if (ev.pointerId !== e.pointerId) return
-    if (planning.value) emit('update:construction', local.value!)
+    if (planning.value) emit('update:construction', { ...local.value!, coords: lastCoords })
     dragging.value = null
     const from = frozenTransform.value
     frozenTransform.value = null
@@ -390,7 +390,11 @@ onUnmounted(() => {
   if (animationFrame) cancelAnimationFrame(animationFrame)
 })
 
-watch(() => props.construction, c => { local.value = c ?? null }, { immediate: true })
+// A construction arrives with where it was drawn: branches are kept from there, not from the last figure.
+watch(() => props.construction, c => {
+  local.value = c ?? null
+  if (c?.coords) lastCoords = c.coords
+}, { immediate: true })
 
 // A new figure (not just its marks merging) starts afresh.
 watch([() => props.figure?.points.join(' '), () => props.usePlanner], () => {

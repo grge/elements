@@ -18,6 +18,12 @@ export interface ConstructionState {
   params: number[]
   /** False when no configuration satisfying every fact was found: not constructible this way. */
   valid: boolean
+  /**
+   * Where it was last drawn. Each intersection keeps the branch it took there; without this a redraw
+   * would take branches from wherever the points last were, on another page or before an edit, and a
+   * point could land on the other intersection, where the construction cannot go on (STUCK).
+   */
+  coords?: Map<string, Point>
 }
 
 /** How far from holding a fact may be in a solved figure and still count as met. */
@@ -210,10 +216,12 @@ export function useWorkspace() {
   watch(facts, fs => {
     if (fs.length === 0) { construction.value = null; return }
     try {
-      const model = buildModel(fs)
+      const model = buildModel(fs, runtime.value?.configuration.allFacts().flatMap(f => f.args) ?? [])
       const cp = planConstruction(model)
       const r = realise(cp, { previous: lastCoords })
-      construction.value = { model, plan: cp, params: r.params, valid: r.valid }
+      const coords = r.valid ? r.drawing.coords : undefined
+      if (coords) lastCoords = coords
+      construction.value = { model, plan: cp, params: r.params, valid: r.valid, coords }
     } catch (e) {
       console.warn('Construction planning error:', e)
       construction.value = null
@@ -225,7 +233,7 @@ export function useWorkspace() {
     const c = construction.value
     if (!c) return null
     try {
-      const d = execute(c.plan, c.params, { previous: lastCoords })
+      const d = execute(c.plan, c.params, { previous: c.coords ?? lastCoords })
       if (!d.failure) lastCoords = d.coords
       return d
     } catch (e) { console.warn('Construction execution error:', e); return null }

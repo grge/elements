@@ -167,7 +167,7 @@ while the point is touched. Hovering an element of the figure says where it came
 | step | degrees of freedom | |
 |------|-----|---|
 | free | 2 | an input |
-| on a locus | 1 | a slider along a line, a circle, a perpendicular bisector, a ray at a given angle or an angle's bisector |
+| on a locus | 1 | a slider along a line, a circle, a perpendicular bisector, a ray at a given angle, an angle's bisector or the parallel through a placed point |
 | where two loci meet | 0 | an intersection, with a choice of branch |
 
 Loci are built from points already placed: the line through two points of a collinear group; a circle
@@ -188,6 +188,9 @@ towards two placed points is on their perpendicular bisector (I.6). A point on a
 its vertex, and a meeting point already taken by another point is a failure, not a fallback: the
 drawing takes distinct names for distinct points. Angles a figure states but cannot use (a theorem,
 such as the isosceles triangle's) are checked on every frame.
+
+A parallel gives a locus once a point's partner and the other line are placed: the line through the
+partner with the other line's direction. A parallelogram's fourth corner is where two such meet.
 
 The order of construction is chosen by an exact search, dynamic programming over the set of placed
 points, that uses as many of the figure's equations as possible (each one used removes a degree of
