@@ -26,8 +26,12 @@ export interface ConstructionState {
   coords?: Map<string, Point>
 }
 
-/** How far from holding a fact may be in a solved figure and still count as met. */
-const SOLVED_TOL = 1e-4
+/**
+ * How far from holding a fact may be in a solved figure and still count as met: a thousandth (of a
+ * radian, about 0.06°, or of the figure's scale), far below what a figure shows, and above where the
+ * solver stops (an energy of 1e-4 leaves residuals near 3e-4). One it fails to meet is off by far more.
+ */
+const SOLVED_TOL = 1e-3
 
 /** A figure drawn by the solver: its positions, and the facts the construction leaves to it. */
 export interface Solution {
@@ -248,14 +252,16 @@ export function useWorkspace() {
     const c = construction.value
     if (!c || c.valid) return null
     try {
-      const witness = solve(c.model)
+      // From the construction's own attempt: it places every point it can, on the right side of
+      // every order, and misses only what it does not construct; random starts can settle where an
+      // angle condition holds vacuously (an extension point on the vertex, or beyond the wrong one).
+      const tried = execute(c.plan, c.params).coords
+      const witness = solve(c.model, undefined, tried.size === c.model.points.length ? tried : undefined)
       const scale = Math.max(1, ...[...witness.coords.values()].map(p => Math.hypot(...p)))
       const written = new Map(extraction.value.constraints.map(f => [factKey(f), f]))
       const facts = unconstructed(c.plan).map(u => {
         const at = u.fact.args.map(p => witness.coords.get(p))
-        // Met as closely as a solver can meet it, not exactly: the solver stops within ~1e-6 of every
-        // fact, which a figure cannot show; one it fails to meet is off by far more (a rectangle's
-        // right angles, solved badly, by tenths).
+        // Met as closely as a solver can meet it, not exactly (SOLVED_TOL).
         const r = relationOf(u.fact)!
         const ps = at as Point[]
         const holds = at.every(Boolean) && (r.residual ? !(r.residual(ps) > SOLVED_TOL) : r.holds(ps, SOLVED_TOL * scale))

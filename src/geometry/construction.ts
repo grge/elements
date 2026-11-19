@@ -744,11 +744,14 @@ export function realise(cp: ConstructionPlan, options: { previous?: Map<string, 
 
   let best: Realisation | null = null
   let bestScore = -Infinity, found = 0
+  // Of drawings that fail, the best is one carried out to the end that misses the fewest facts: the
+  // solver starts from it (useWorkspace's solution), so it should place every point it can.
+  const miss = (d: Drawing) => (d.failure ? 1e6 - d.failure.step * 1e3 : 0) + d.violations.length
   for (let i = 0; i < (options.attempts ?? 400) && found < 30; i++) {
     const params = sample()
     const drawing = execute(cp, params)
     if (!good(drawing)) {
-      if (!best) best = { params, drawing, valid: false }
+      if (!best || (!best.valid && miss(drawing) < miss(best.drawing))) best = { params, drawing, valid: false }
       continue
     }
     found++

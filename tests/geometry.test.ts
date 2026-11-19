@@ -7,7 +7,8 @@ import { saturate } from '../src/kb/saturate'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
 import { figureOf } from '../src/geometry/figure'
-import { buildModel } from '../src/geometry/construction'
+import { buildModel, plan, realise, execute } from '../src/geometry/construction'
+import { relationOf } from '../src/geometry/relations'
 import { solve } from '../src/geometry/solver'
 import { bookRules, fixtureRules } from './book'
 
@@ -123,6 +124,28 @@ describe('geometry solver', () => {
 
   it('circle-line-intersection solves reliably', () => {
     expect(reliableSolve('circle-line-intersection o a b c i', 5, 5)).toBe(true)
+  })
+
+  it('four right angles: solved from the construction\'s own attempt, every fact met', () => {
+    // The planner cannot construct a quadrilateral of four right angles (it would need the parallel
+    // postulate's consequences), so the page solves it, starting from the planner's attempt. From
+    // random starts the solver used to settle with each right angle's supplement point beyond the
+    // wrong vertex, where the angles it copies are one angle and trivially equal.
+    const rt = buildRuntimeState(kb, parseSource('right d a b\nright a b c\nright b c d\nright c d a'))
+    const model = buildModel(extract(rt.kb, rt.configuration.allFacts()).constraints)
+    const cp = plan(model)
+    const attempt = execute(cp, realise(cp).params).coords
+    expect(attempt.size).toBe(model.points.length)
+    const { coords } = solve(model, undefined, attempt)
+    const scale = Math.max(1, ...[...coords.values()].map(p => Math.hypot(...p)))
+    for (const f of model.facts) {
+      const r = relationOf(f)!
+      const ps = f.args.map(p => coords.get(p)!)
+      // As the page judges a solved figure (useWorkspace's SOLVED_TOL): a measure by its residual,
+      // an order or a distinctness at the figure's scale.
+      if (r.residual) expect(r.residual(ps), `${f.name} ${f.args.join(' ')}`).toBeLessThan(1e-3)
+      else expect(r.holds(ps, 1e-3 * scale), `${f.name} ${f.args.join(' ')}`).toBe(true)
+    }
   })
 
   it('witness has all expected points', () => {

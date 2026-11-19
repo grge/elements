@@ -112,36 +112,49 @@ function lengthGrad(classes: [string, string][][], x: Coords, g: Grad, cidx: Coo
   return e
 }
 
+// Order on a line: b between a and c. Collinear (the area term), and in order: (b - a)·(c - b) >= 0,
+// which holds exactly when b is on the segment (or at an end). A point on the wrong side is pushed
+// across at a rate that does not fade with distance. (A penalty on b's position t along a-c, as
+// before, fades as c moves away, so it sent an end off to infinity on the wrong side instead: four
+// right angles drew their supplements' points beyond the wrong vertex, where the angles they were to
+// copy are the same angle, and so trivially equal.)
 function betweenGrad(between: [string, string, string][], x: Coords, g: Grad, cidx: CoordIdx, w = 1e4): number {
   let e = 0
   for (const triple of between) {
-    const [ai, bi, ci2] = triple.map(n=>cidx.get(n)!)
-
-    // Collinearity term
+    const [ai, bi, ci2] = triple.map(n => cidx.get(n)!)
     e += w * triAreaSq(x, ai, bi, ci2)
     triAreaSqGrad(x, g, ai, bi, ci2, w)
+    const ux = x[bi*2] - x[ai*2], uy = x[bi*2+1] - x[ai*2+1]     // b - a
+    const vx = x[ci2*2] - x[bi*2], vy = x[ci2*2+1] - x[bi*2+1]   // c - b
+    const dot = ux * vx + uy * vy
+    if (dot >= 0) continue
+    e += w * dot * dot
+    const k = 2 * w * dot
+    // d(dot)/da = -(c - b), d(dot)/db = (c - b) - (b - a), d(dot)/dc = b - a
+    g[ai*2]   += k * -vx;        g[ai*2+1]  += k * -vy
+    g[bi*2]   += k * (vx - ux);  g[bi*2+1]  += k * (vy - uy)
+    g[ci2*2]  += k * ux;         g[ci2*2+1] += k * uy
+  }
+  return e
+}
 
-    // t ∈ (0,1) ordering via dot product
-    const acx=x[ci2*2]-x[ai*2], acy=x[ci2*2+1]-x[ai*2+1]
-    const abx=x[bi*2]-x[ai*2], aby=x[bi*2+1]-x[ai*2+1]
-    const acSq = acx*acx + acy*acy
-    if (acSq < 1e-10) continue
-    const t = (abx*acx + aby*acy) / acSq
-
-    let dt = 0
-    if (t <= 0)      { e += w*t*t;       dt = 2*w*t }
-    else if (t >= 1) { e += w*(t-1)**2;  dt = 2*w*(t-1) }
-
-    if (dt !== 0) {
-      // d(t)/d(x) — chain rule
-      const invAcSq = 1 / acSq
-      g[bi*2]   += dt * acx * invAcSq
-      g[bi*2+1] += dt * acy * invAcSq
-      g[ai*2]   += dt * (-acx - abx + 2*t*acx) * invAcSq
-      g[ai*2+1] += dt * (-acy - aby + 2*t*acy) * invAcSq
-      g[ci2*2]  += dt * (abx - 2*t*acx) * invAcSq
-      g[ci2*2+1]+= dt * (aby - 2*t*acy) * invAcSq
-    }
+// Points that must differ: held at least minSep apart (on the gauge's scale, where the first two points
+// are 1 apart). Without it an auxiliary point could sit on the vertex it extends from, where the
+// angle it makes is no angle and any condition on it holds.
+function distinctGrad(pairs: [string, string][], x: Coords, g: Grad, cidx: CoordIdx, w = 1e3, minSep = 0.3): number {
+  let e = 0
+  for (const [p, q] of pairs) {
+    const i = cidx.get(p), j = cidx.get(q)
+    if (i === undefined || j === undefined) continue
+    const d = Math.sqrt(dist2(x, i, j))
+    if (d >= minSep) continue
+    // On the distance, not its square, so the push does not fade as the points close in.
+    const short = minSep - d
+    e += w * short * short
+    if (d < 1e-9) continue
+    const k = -2 * w * short / d
+    g[i*2]   += k * (x[i*2] - x[j*2]);     g[i*2+1] += k * (x[i*2+1] - x[j*2+1])
+    g[j*2]   += k * (x[j*2] - x[i*2]);     g[j*2+1] += k * (x[j*2+1] - x[i*2+1])
   }
   return e
 }
@@ -217,6 +230,7 @@ function computeGradient(x: Coords, model: ConstructionModel, pts: string[], cid
     + collinearGrad(model.lines, x, g, cidx)
     + lengthGrad(model.lengths, x, g, cidx)
     + betweenGrad(model.between, x, g, cidx)
+    + distinctGrad(model.distinct, x, g, cidx)
     + measureGrad(model.measures, x, g, cidx)
     + separationGrad(x, g, constrained)
   return [e, g]
@@ -282,6 +296,20 @@ function adam(
 
 // ── Public solver ─────────────────────────────────────────────────────
 
+/** Positions moved by the rotation, scaling and translation that put p0 at (0,0) and p1 at (1,0). */
+function toGauge(coords: Map<string, [number, number]>, p0: string, p1: string): Map<string, [number, number]> {
+  const z0 = coords.get(p0), z1 = coords.get(p1)
+  if (!z0 || !z1) return coords
+  const [dx, dy] = [z1[0] - z0[0], z1[1] - z0[1]]
+  const n = dx * dx + dy * dy
+  if (n < 1e-18) return coords
+  // (z - z0) / (z1 - z0), as complex numbers.
+  return new Map([...coords].map(([p, [x, y]]) => {
+    const [u, v] = [x - z0[0], y - z0[1]]
+    return [p, [(u * dx + v * dy) / n, (v * dx - u * dy) / n]]
+  }))
+}
+
 export function solve(
   model: ConstructionModel,
   maxRestarts = 12,
@@ -296,6 +324,11 @@ export function solve(
   const constrained = buildConstrainedPairs(model, cidx)
 
   let best: { x: Float64Array; energy: number } | null = null
+
+  // A warm start is first moved into the gauge's frame (the first two points at (0,0) and (1,0)) by a
+  // similarity, which keeps every fact that held: otherwise the gauge's stiff pull yanks it there in
+  // the first steps, and can throw points across the lines they are ordered on.
+  if (warmStart && !pin?.size) warmStart = toGauge(warmStart, pts[0], pts[1])
 
   // If we have warm-start coords for ALL points, try them first as restart 0
   const warmPts = warmStart ? pts.filter(p => warmStart.has(p)) : []
@@ -313,14 +346,22 @@ export function solve(
         x0[i*2+1] = wy
       }
     } else {
+      // Even restarts put the points round a circle in order (a convex figure, often the right
+      // start); odd ones scatter them, so that a figure whose answer is not convex in alphabetical
+      // order (a strip of triangles, whose second triangle can fold back onto the first) has a
+      // chance from somewhere else.
       const radius = 1.5 + r * 0.6
       const angleOffset = r * 0.37
       for (let i = 0; i < n; i++) {
-        const θ = (2 * Math.PI * i / n) + angleOffset + (random() - 0.5) * 0.4
-        x0[i*2]   = Math.cos(θ) * radius
-        x0[i*2+1] = Math.sin(θ) * radius
-        // Seed known points from warm start even in random restarts
-        if (warmStart?.has(pts[i])) {
+        const θ = r % 2 === 0
+          ? (2 * Math.PI * i / n) + angleOffset + (random() - 0.5) * 0.4
+          : 2 * Math.PI * random()
+        const ρ = r % 2 === 0 ? radius : radius * Math.sqrt(random())
+        x0[i*2]   = Math.cos(θ) * ρ
+        x0[i*2+1] = Math.sin(θ) * ρ
+        // While dragging, restarts stay near where the figure was; otherwise they are truly random,
+        // so that a warm start that leads nowhere does not decide every run.
+        if (pin?.size && warmStart?.has(pts[i])) {
           const [wx, wy] = warmStart.get(pts[i])!
           x0[i*2] = wx + (random()-0.5)*0.3
           x0[i*2+1] = wy + (random()-0.5)*0.3

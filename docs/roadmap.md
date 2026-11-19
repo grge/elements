@@ -146,6 +146,13 @@ would sit naturally beside the algebraic lens.
   segment between them meets the line; on the same side when both are opposite a third). The rest
   (Pasch; every point on one side, the other or the line) needs case splits, below. Meanwhile the
   drawing could offer side facts it sees in every sample as candidate hypotheses, never as proofs.
+  A third way round, for angles: **spreads** (`eq-spread`, already in the engine, set aside for
+  chapter 2), or angles between lines up to a straight angle (Chou, Gao and Zhang's "full angles").
+  Neither tells an angle from its supplement, which is exactly what makes I.29 side-free: a line
+  crossing two parallels makes equal spreads with both, whichever side is read. Much of chapter 3's
+  bookkeeping (alternate, corresponding, same-side angles, each with its crossing) would collapse
+  into one statement, at the price of not saying which of the two angles is meant. Worth trying on
+  chapter 3 before building side relations.
 - **Case splits**, so that facts true in every configuration need no `distinct` hypothesis, and for
   the parts of side reasoning that are not Horn.
 - One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
@@ -156,10 +163,23 @@ would sit naturally beside the algebraic lens.
 - ~~Say when the figure is solved, not constructed~~ (November 2026; design.md, *Constructed or
   solved*): solved points are pencilled asterisks, the steps are a key that names the facts no step
   constructs, and a plate at the foot of the figure says solved or not met.
-- **The solver fails on four right angles.** `right d a b`, `right a b c`, `right b c d`,
-  `right c d a` (and every figure tried with such a quadrilateral in it) leaves energy in the
-  hundreds: one angle off by about 2°. The page now says so (NOT MET). Equiangular triangles solve
-  to 1e-7. Suspect the energy terms for `right`'s auxiliary supplement points; not looked into.
+- ~~The solver fails on four right angles~~ (fixed November 2026). Two faults, both in the solver:
+  its order term penalised b's position along a-c as a fraction of a-c, which fades as c moves away,
+  so an end on the wrong side was sent off to infinity instead of across (each right angle's
+  supplement point ended beyond the wrong vertex, where the angle it copies is the same angle, and
+  trivially equal); and it had no term for `distinct`, so an extension point could sit on its
+  vertex. Now order is (b − a)·(c − b) ≥ 0, distinct points are held apart, and the page solves from
+  the construction's own attempt (every point it can place, on the right side of every order), moved
+  into the solver's frame by a similarity, then from truly random starts (not seeded near it), keeping
+  the best. A solved fact counts as met within 1e-3, above where the solver stops.
+- **The solver and points that fold back.** Still unsolved: a strip of equiangular triangles
+  (`abc`, `bcd`, `cde`) and a rectangle with an equiangular triangle on a side. Each has a degenerate
+  answer in which a point lands on another (the second triangle folded back onto the first, e onto
+  b); the solver's separation term keeps them apart but leaves the point stuck beside the other, and
+  descent never reaches the far side (from the true answer it holds at 1e-5). The page says NOT MET.
+  Worth trying: warm starts from several of the planner's attempts, which choose branches
+  differently (realise's sampler is seeded per plan, so this needs seeds), or keeping such pairs
+  apart by the planner's branch rather than by a barrier.
 - **Open: what a construction draws, and how a reader can tell.** A relation drawn as itself stops
   the drawing there, so the points its definition brings in are not drawn: `right a b c` draws
   Byrne's square, and its d (`between a b d`, the extension of ab) is placed by the planner, named in
