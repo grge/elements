@@ -219,7 +219,8 @@ If no configuration satisfies every fact, the figure is drawn by the **numerical
 (`solver.ts`, Adam gradient descent on an energy) instead, and the page says so: the facts the
 plan does not construct (`unconstructed`, those that fail in every sampled drawing), the point each
 is said to place, and whether the solved figure meets it (`solution` in `useWorkspace.ts`; how it
-looks: design.md, *Constructed or solved*).
+looks: design.md, *Constructed or solved*). The solver starts from the construction's own attempt,
+which places every point it can on the right side of every order, and then from random starts.
 
 **Distinct points.** A `distinct` fact rules out an intersection that would coincide with the given
 point ("the other intersection", as the regular hexagon needs) and is checked on every frame. Without

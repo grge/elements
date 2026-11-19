@@ -54,7 +54,7 @@ The plan as of November 2026, in order. The first milestone is **demo-ready**: s
 
 | Chapter | Needs first |
 |---------|-------------|
-| 3, direction | in progress: axioms, the postulate, I.31, parallelograms, rectangles and squares written (book.md, *3*); the midline waits on closure performance |
+| 3, direction | written but for the midline: axioms, the postulate, alternate, corresponding and same-side angles, I.31, parallelograms, rectangles and squares (book.md, *3*); the midline waits on closure performance |
 | 4, area | how to add quantities (book.md, *Open questions*) |
 | 5, circle | mostly content, on chapters 1–4 |
 | 6, ratio | equal ratios as an equivalence on pairs of segments |
