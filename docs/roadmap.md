@@ -48,6 +48,13 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      waits 56 s, nearly all of it in the equivalence walk (next item). One closure per page, kept
      and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
      than receiving them with every request.
+   - Semi-naive evaluation: tried and reverted (November 2026). Built over the union-find store
+     (facts and class members stamped, a full match after merges or new points, of which the
+     rectangle has five), every verdict the same, but no faster: the book 12% slower, *Beyond the
+     book* the same. The duplicate derivations (the rectangle's 58 000 for 1 335 facts) do not come
+     from re-matching old facts, which is all semi-naive saves, but from many different matches
+     deriving the same fact: symmetric images, and rules that overlap. Fewer duplicates would take
+     fewer, less overlapping rules, which is the book's business, or a cheaper derivation.
    - The evaluator, replaced once and measured: semi-naive over the union-find store (rebuilding after
      merges, as egglog does), indexes on argument positions and on class membership, a budget counted
      in facts added. Today 90% of derivations re-derive known facts, and a bound atom scans every fact
