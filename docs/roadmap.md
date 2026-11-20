@@ -28,8 +28,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    written. Non-degeneracy blocked nearly all of them; the convention that different names are
    different points is built (language.md, *Distinct points*), and what blocks them now is points a
    proof needs that no hypothesis names, then sides, then sums (four of them). Arithmetic is real but
-   not next. To decide: whether points not named (constructions as rules with existential heads,
-   back from *Not now*) comes before the store.
+   not next. Points not named are parked (November 2026, below, *Not now*): proofs that need them
+   wait, and the store comes next.
 3. **Pages that answer quickly, and the store built for theories.**
    - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
      matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.
@@ -63,6 +63,17 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
 composing plans per definition, a change of logic (below, *Open questions*).
+
+**Parked: proofs that need points no hypothesis names** (November 2026). The stress test's main wall
+after non-degeneracy: the midline's proof begins "through c draw the parallel to a-b", and forward
+chaining reasons only about the points it has. Sketched, not adopted: existence statements (`!
+parallel-through a b c f: distinct a b`, "there is an f"), whose head points not in the body are new,
+and a proof's construction named on the lemma (`? … by parallel-through a b c f, …`), each checked
+against an existence statement and added with fresh points before the usual check. Sound if the
+existence statements are true, which is Euclid's own gap (when do two circles meet?) and leans on
+sides and comparisons; they would start as marked axioms, perhaps later proven from a few postulates
+by the planner's Euclid's-moves check. With it, reusing proven lemmas as rules (Varignon and the
+centroid need the midline). Not added to the language for now.
 
 ## The book
 
