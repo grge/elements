@@ -117,6 +117,7 @@ construct with ruler and compass, including the circle of II.14.
 - **Above 18 points the search is greedy.** Pythagoras with both windmills and whole squares would be
   about 25.
 - Chapter 5 will want a locus for a right angle at a free vertex (on the circle on the hypotenuse).
+  The stress test wants it sooner (*Right angles*, below).
 
 ## The book
 
@@ -342,3 +343,30 @@ milliseconds. The closure that merges marks is the slowest thing on any page:
   meet. They never meet: two parallels to one line are one condition, not two.
 
 So with one sampler and that count fixed, every lemma in the book would have a witness.
+
+## Right angles (November 2026)
+
+Measured before building anything: which figures with right angles construct, and which the planner
+leaves to the solver. `right a b c` unfolds to an extension point d (`between a b d`) and
+`eq-angle a b c c b d`, so the only loci a right angle gives are an arm on the bisector of a-b-d, once
+d is placed. Its vertex is never placed by it.
+
+| Figure | Constructs |
+|---|---|
+| one right angle; two sharing an arm | yes |
+| rectangle, square (the book's) | yes |
+| foot of one altitude | yes, by building b-c from the foot |
+| right triangle, by its vertex or its hypotenuse | yes |
+| Thales (right angle on a diameter) | yes |
+| windmill with its right angle; two squares on a triangle | yes |
+| incircle touch points; perpendicular bisector by a right angle | yes |
+| Simson line with two feet | yes |
+| rectangle by three right angles | no: the fourth corner |
+| two altitudes and the orthocentre | no |
+| three altitudes, feet only | no |
+| Simson line with three feet | no |
+
+What fails is always a vertex that must come after both its arms: the foot of a perpendicular from a
+placed point to a placed line. One foot the planner dodges by order; two or more it cannot. A failing
+plan overcounts its freedom (Simson: 11 for 7), and the page solves the figure numerically and says so.
+

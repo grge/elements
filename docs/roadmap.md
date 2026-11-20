@@ -11,18 +11,20 @@ keep what was built and why).
 In order. Each is worth doing on its own, and each is measured with `scripts/bench.ts`. Done: figures
 as witnesses (November 2026; architecture.md, *The knowledge base*), which took the book's checks to a
 fifth of their time; branches chosen by backtracking, in pages and evidence alike (architecture.md,
-*Realising*).
+*Realising*); figures that read well (the same).
 
 1. **Clean up construction.** The premise, constructions as clauses that draw, holds; the mess is in
    how the planner treats what the clauses leave implicit.
-   - **Hidden helper points.** A definition's auxiliary points cost degrees of freedom and change the
-     construction order: `right`'s extension point is a slider that changes nothing visible, and must
-     be placed before the right angle can be used, so `triangle-to-rectangle` is built backwards from
-     the rectangle. A perpendicular locus for `right`; helper points that change nothing placed
-     without counting as freedom; and settling whether they are drawn (below).
-   - **Construction order.** Prefer the order the definition is written in: a construction's inputs
-     are the points it names first.
-   - **Figures that read well**: spread out, no slivers, points not crowded.
+   Not to clean up: the order a construction is built in (a definition is a conjunction, and imposes
+   none), or the freedom of a helper point (freedom on a point nobody named is freedom like any other).
+   - **A right angle placed at its vertex.** A right angle is reached only through its extension
+     point, so its vertex can never be placed last, after both arms: the foot of a perpendicular from
+     a placed point to a placed line. One foot the planner dodges, by building the line from the foot
+     (which is why `triangle-to-rectangle` is built from the rectangle); two or three it cannot. The
+     Simson line, three altitudes and the orthocentre do not construct, and are solved (review-notes.md,
+     *Right angles*). The stress test leans on exactly these. Read a right angle from the leaves (an
+     angle equal to the one beside it on a straight line), and give it loci: the vertex on the circle
+     on the arm points (Thales, never at an arm point), an arm on the perpendicular at the vertex.
    - **What a construction draws, and how a reader can tell.** A relation drawn as itself stops the
      drawing there, so `right a b c` draws Byrne's square and hides its d. The leading idea: unfold
      everything and draw bottom-up, each level taking a turn after its body has drawn, to add or
@@ -122,9 +124,8 @@ cannot be written honestly without them, and designed as a whole.
 - **The axioms taken for now.** Side-side-side, angle-side-angle, the shear, the median, I.29 with the
   postulate: each an axiom because its proof needs sides, cases or sums. For a reader they are fine
   when the book says so; as the logic grows, keep them in one list and pay them back where it can.
-- **Hidden points in lemmas** (the planner's side is *Next*, step 1). A definition's auxiliary
-  points cannot be named from outside, so a lemma about
-  one writes the definition out (the parallelogram, twice, to name where its diagonals cross). Wider
+- **Hidden points in lemmas.** A definition's auxiliary points cannot be named from outside, so a
+  lemma about one writes the definition out (the parallelogram, twice, to name where its diagonals cross). Wider
   signatures, or leave it.
 - **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
   object would read better and suit other geometries. Not needed yet.
