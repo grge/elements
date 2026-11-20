@@ -171,10 +171,11 @@ as a square while the planner reads its definition. Every element keeps the fact
 is how hovering a fact in the source brings its elements forward. A point only the planner's route uses
 is not drawn, as the route is not.
 
-Tried (November 2026): `right` draws its definition too (`drawsBody` in the relation table), a level
-deeper and so fainter: the extension point d on a-b continued past b, and the angle c-b-d squared as
-well, which is the definition (an angle equal to its own supplement) made visible. Under review as
-George reads through the book; the alternative is d shown only on request.
+Decided (November 2026): no point is hidden. A definition may keep its lower levels' marks to itself,
+but a point outside its head is part of what it says, so it is drawn. `right` draws its definition
+too (`drawsBody` in the relation table), a level deeper and so fainter: the extension point d on a-b
+continued past b, and the angle c-b-d squared as well, which is the definition (an angle equal to its
+own supplement) made visible. A test holds every page of the book to it.
 
 ### The planner's route: shown on touch
 

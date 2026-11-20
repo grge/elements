@@ -8,7 +8,8 @@ import { KnowledgeBase } from '../src/kb/inference'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan } from '../src/geometry/construction'
 import { relationOf } from '../src/geometry/relations'
-import { bookRules } from './book'
+import { bookRules, bookLemmas } from './book'
+import { drawFigure } from '../src/geometry/figure'
 import { parseRules } from '../src/language/parser'
 
 const kb = new KnowledgeBase(bookRules)
@@ -59,4 +60,21 @@ describe('the planner does not notice', () => {
       expect(fromConstraints.dof).toBe(fromDepicted.dof)
     })
   }
+})
+
+describe('no point is hidden', () => {
+  // A definition may keep its lower levels' marks to itself, but every point the figure places is
+  // drawn: a point outside a definition's head is part of what it says (right's d), not scaffolding.
+  it('draws every point the planner places, on every page of the book', () => {
+    const seen = new Set<string>()
+    for (const r of bookRules) {
+      const { name, args } = r.head
+      if (seen.has(name) || new Set(args).size !== args.length) continue
+      seen.add(name)
+      const x = extract(kb, [{ name, args: [...args] }])
+      const drawn = new Set(drawFigure(kb, x, bookLemmas)?.points ?? [])
+      const hidden = [...new Set(x.constraints.flatMap(f => f.args))].filter(p => !drawn.has(p))
+      expect({ page: name, hidden }).toEqual({ page: name, hidden: [] })
+    }
+  })
 })

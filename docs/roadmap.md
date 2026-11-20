@@ -15,12 +15,14 @@ fifth of their time; branches chosen by backtracking, in pages and evidence alik
 *From facts to a figure*). Not to clean up: the order a construction is built in (a definition is a
 conjunction, and imposes none), or the freedom of a helper point (freedom like any other).
 
-1. **What a construction draws, and how a reader can tell**, the last of cleaning up construction. A
-   relation drawn as itself stops the drawing there, so `right a b c` draws Byrne's square and hides
-   its d. The leading idea: unfold everything and draw bottom-up, each level taking a turn after its
-   body has drawn, to add or restyle (`right` turns two equal-angle arcs into a square), never to
-   delete. To settle: what a turn may do; who modifies a fact two definitions share; the clutter it
-   adds; a second hook on the relation table, with figure.ts composing.
+1. **What a construction draws, and how a reader can tell**, the last of cleaning up construction.
+   Decided (November 2026): no point is hidden. A definition may keep its lower levels' marks to
+   itself, but a point outside its head is part of what it says, and is drawn (`right` draws its
+   square and, fainter, its definition with d; a test holds every page to it). What remains is marks:
+   today's rules grew a case at a time (circles as circles, `right` as a square, supplements as arcs,
+   areas hatched), and one interface for them (each level taking a turn after its body has drawn, to
+   add or restyle, never delete; who restyles a fact two definitions share) waits for more cases:
+   the book's next chapters and the stress test supply them. Abstract then, not before.
 2. **A stress test of the design.** About a dozen theorems beyond Euclid's first books, chosen to probe
    the system rather than fill the book: Ceva, the centroid and circumcentre, the nine-point circle,
    the Simson line, a couple of easy olympiad problems, one hyperbolic statement. Write each as
