@@ -125,8 +125,8 @@ What it cannot do: case splits. Facts that need one can be stated with a `distin
 extracted and planned like any figure; about two dozen well-spread configurations are sampled, and the
 head, extracted too, is measured on each with the relation table's `holds`. The first sample in which
 every hypothesis holds with a margin (distinct points at least a thousandth of the figure apart, a
-triangle at least a thousandth of its square in area) is the witness. The sampler varies branches and
-slider directions when plain attempts find nothing, as the page's does (which also measures
+triangle at least a thousandth of its square in area) is the witness. The samples choose their branches
+by the same search as a page's (below). The relation table's `holds` also measures
 `eq-point`, a relation the figure can evaluate but not impose). The verdict (`geometry/verdict.ts`, above both
 the logic and the figures) combines the two: ✓ derived, with the hypotheses witnessed or searched to the
 end; ⊥ vacuous; ✗ not derived and refuted by a sampled figure (false); ? not derived, with the
@@ -231,7 +231,14 @@ is measured inside its allowed interval, so dragging can never break the order).
 
 **Realising** a plan samples its own parameters (seeded, so a figure is stable; reusing previous
 positions across edits unless that would make points coincide) and keeps the best-spread sample that
-satisfies every fact. No numerical solving is needed. **Executing** a plan with given parameters either
+satisfies every fact. For each sample, branches are chosen by backtracking (`search`): every choice
+nothing decides (which of two meeting points, which of a locus's two curves, which way a slider runs
+along a line unbounded both ways) takes its first way, and if a later step fails or a later fact does
+not hold, the latest choice at or before that step takes its next way. A choice is often decided only
+by a fact about a point placed later: that a windmill's squares stand outside its triangle shows only
+where their lines cross. The search is deterministic, and it serves pages, evidence and the facts the
+plan does not construct alike. While a figure is redrawn or dragged, the previous positions decide
+instead, so a branch never jumps. No numerical solving is needed. **Executing** a plan with given parameters either
 yields every point, or stops at the step that cannot be carried out (two circles that do not meet, an
 intersection on the wrong side) and says why; the drawing keeps everything before that step.
 

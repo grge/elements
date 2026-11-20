@@ -103,7 +103,8 @@ construct with ruler and compass, including the circle of II.14.
   is checked only where f-c and a-d cross, after both are placed. Every attempt took the slider
   forwards and the first meeting point, so all 400 failed alike, and the solver did no better. Now,
   after 40 attempts with nothing found, `realise` varies slider directions and branches too (a
-  stopgap: pages that construct at once are unchanged). The real fix is to let an order fact on a
+  stopgap: pages that construct at once are unchanged; replaced by a backtracking search over branches,
+  November 2026). The real fix is to let an order fact on a
   later point choose an earlier branch, or to search branches as the planner searches orders.
 - **Default figures are chosen at random**, seeded: the quadrilateral of `drop-corner` and the
   windmill come out lopsided. Nothing prefers a figure that reads well: spread out, no slivers,

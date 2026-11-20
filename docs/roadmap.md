@@ -10,7 +10,8 @@ keep what was built and why).
 
 In order. Each is worth doing on its own, and each is measured with `scripts/bench.ts`. Done: figures
 as witnesses (November 2026; architecture.md, *The knowledge base*), which took the book's checks to a
-fifth of their time.
+fifth of their time; branches chosen by backtracking, in pages and evidence alike (architecture.md,
+*Realising*).
 
 1. **Clean up construction.** The premise, constructions as clauses that draw, holds; the mess is in
    how the planner treats what the clauses leave implicit.
@@ -19,9 +20,6 @@ fifth of their time.
      be placed before the right angle can be used, so `triangle-to-rectangle` is built backwards from
      the rectangle. A perpendicular locus for `right`; helper points that change nothing placed
      without counting as freedom; and settling whether they are drawn (below).
-   - **Branch choices.** Search branches and slider directions systematically, and choose a branch as
-     soon as an order fact can decide it, rather than checking order facts only on later points (the
-     windmill said NOT MET because of this).
    - **Construction order.** Prefer the order the definition is written in: a construction's inputs
      are the points it names first.
    - **Figures that read well**: spread out, no slivers, points not crowded.

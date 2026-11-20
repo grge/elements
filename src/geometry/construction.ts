@@ -519,6 +519,11 @@ export interface Drawing {
   failure?: { step: number; point: string; reason: string }
   /** Facts that do not hold in this drawing. */
   violations: { step: number; what: string }[]
+  /**
+   * The choices nothing decided (no previous or desired position): at each, the step, how many ways
+   * there were and which was taken. A search backtracks over them (`search`).
+   */
+  decisions: { step: number; ways: number; took: number }[]
 }
 
 /** A locus in words, with points as they are shown (`d₁`). */
@@ -544,10 +549,11 @@ export interface ExecuteOptions {
   /** Previous positions: where the order facts leave a choice of intersection, take the nearest. */
   previous?: Map<string, Point>
   /**
-   * Where nothing says which branch to take (no previous or desired position), take one at random from
-   * this source, not the first: of two intersections, or of a locus's two curves.
+   * Where nothing says which branch to take (no previous or desired position), which way to take at
+   * each such choice in turn: of two intersections, of a locus's two curves, or which way a slider runs
+   * along a line unbounded both ways. Missing entries take the first way.
    */
-  branch?: () => number
+  branches?: readonly number[]
   /** Desired positions: choose parameters that put each point as near as possible to these. */
   targets?: Map<string, Point>
   /** Called with the parameters actually used (useful together with `targets`). */
@@ -557,6 +563,13 @@ export interface ExecuteOptions {
 export function execute(cp: ConstructionPlan, params: readonly number[], options: ExecuteOptions = {}): Drawing {
   const at = new Map<string, Point>()
   const violations: Drawing['violations'] = []
+  const decisions: Drawing['decisions'] = []
+  /** A choice nothing decided: record it, and take the way `branches` says (the first by default). */
+  const decide = (step: number, ways: number): number => {
+    const took = Math.min(options.branches?.[decisions.length] ?? 0, ways - 1)
+    decisions.push({ step, ways, took })
+    return took
+  }
   const used: number[] = []
   let pi = 0
   let scale = 1e-9
@@ -572,7 +585,7 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     let decided = new Set<Check>()   // order facts the construction itself guarantees
     const fail = (reason: string): Drawing => {
       options.onParams?.(used)
-      return { coords: at, failure: { step: k, point: x, reason }, violations }
+      return { coords: at, failure: { step: k, point: x, reason }, violations, decisions }
     }
 
     if (step.kind === 'free') {
@@ -584,9 +597,9 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       const curves = curvesOf(step.locus, at)
       if (!curves.length) return fail(`${describeLocus(step.locus)} is degenerate`)
       const near = target ?? options.previous?.get(x)
-      const curve = near && curves.length > 1
-        ? curves.reduce((best, c) => residual(near, c) < residual(near, best) ? c : best)
-        : options.branch && curves.length > 1 ? curves[Math.floor(options.branch() * curves.length)] : curves[0]
+      const curve = curves.length === 1 ? curves[0]
+        : near ? curves.reduce((best, c) => residual(near, c) < residual(near, best) ? c : best)
+        : curves[decide(k, curves.length)]
       if (curve.kind === 'line') {
         const found = lineDomain(x, curve, orders, at, tol())
         // A ray's point stays off its vertex: there it would make an angle with an arm of no length.
@@ -594,7 +607,11 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         const applied = found.applied
         if (domain[0] > domain[1] + 1e-12) return fail(`no point of ${describeLocus(step.locus)} satisfies its order`)
         decided = applied
-        const s = target ? sFromT(dot(sub(target, curve.p), curve.d) / dot(curve.d, curve.d), domain) : params[pi]
+        // On a line unbounded both ways, a slider may run either way from its defining point; which
+        // is a choice like a branch, unless a position decides it.
+        const either = !isFinite(domain[0]) && !isFinite(domain[1]) && !target && !options.previous?.get(x)
+        const s = target ? sFromT(dot(sub(target, curve.p), curve.d) / dot(curve.d, curve.d), domain)
+          : either && decide(k, 2) === 1 ? -params[pi] : params[pi]
         const t = tFromS(s, domain)
         pos = [curve.p[0] + t * curve.d[0], curve.p[1] + t * curve.d[1]]
         used.push(s)
@@ -639,7 +656,7 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
       }
       const near = target ?? options.previous?.get(x)
       pos = near ? choices.reduce((best, c) => dist(c, near) < dist(best, near) ? c : best)
-        : options.branch ? choices[Math.floor(options.branch() * choices.length)] : choices[0]
+        : choices.length > 1 ? choices[decide(k, choices.length)] : choices[0]
     }
 
     at.set(x, pos)
@@ -652,7 +669,41 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     }
   }
   options.onParams?.(used)
-  return { coords: at, violations }
+  return { coords: at, violations, decisions }
+}
+
+/** How far a drawing got: a failure at a later step, or fewer violations, is nearer to a figure. */
+const miss = (d: Drawing) => (d.failure ? 1e6 - d.failure.step * 1e3 : 0) + d.violations.length
+
+/** Most branch assignments tried for one set of parameters. */
+const MAX_TRIES = 64
+
+/**
+ * Carry out a plan, choosing branches by backtracking: take the first way at every choice nothing
+ * decides; if a later step fails or a later fact does not hold, go back to the latest choice made at or
+ * before that step that has a way left, take the next way, and carry on. A choice can be decided only
+ * by facts that mention points placed after it (that the squares of a windmill stand outside the
+ * triangle shows only where their lines cross), so the first way is a preference, not a commitment.
+ * Deterministic: the same parameters give the same figure. Returns the parameters as used (a slider
+ * that ran the other way has its sign flipped) with the drawing, the first that satisfies every fact,
+ * or else the one that got furthest.
+ */
+export function search(cp: ConstructionPlan, params: readonly number[]): { drawing: Drawing; params: number[] } {
+  let branches: number[] = []
+  let best: { drawing: Drawing; params: number[] } | null = null
+  for (let tries = 0; tries < MAX_TRIES; tries++) {
+    let used: number[] = []
+    const drawing = execute(cp, params, { branches, onParams: p => { used = p } })
+    if (!best || miss(drawing) < miss(best.drawing)) best = { drawing, params: used }
+    if (good(drawing)) return best
+    const failed = drawing.failure?.step ?? Math.min(...drawing.violations.map(v => v.step))
+    const ds = drawing.decisions
+    let i = ds.length - 1
+    while (i >= 0 && (ds[i].step > failed || ds[i].took + 1 >= ds[i].ways)) i--
+    if (i < 0) break
+    branches = [...ds.slice(0, i).map(d => d.took), ds[i].took + 1]
+  }
+  return best!
 }
 
 // ───────────────────────────── initial parameters ─────────────────────────────
@@ -701,14 +752,8 @@ export interface Realisation {
  * sample that satisfies every fact.
  */
 /** Random parameters for a plan, from a seeded generator (so a figure is stable). */
-/** Attempts at plain parameters before branches and slider directions are varied too. */
-const VARY_AFTER = 40
-
-/**
- * Parameters at random, seeded by the plan. `signed`: a slider on a line unbounded both ways may go
- * either way from its defining point, not only forwards.
- */
-function sampler(cp: ConstructionPlan, seed = 0, signed = false): () => number[] {
+/** Parameters at random, seeded by the plan. Which way a slider runs is a branch (`search`). */
+function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
   const random = rng(hash(JSON.stringify(cp.steps)) + seed)
   return () => {
     const out: number[] = []
@@ -718,8 +763,7 @@ function sampler(cp: ConstructionPlan, seed = 0, signed = false): () => number[]
         out.push(r * Math.cos(a), r * Math.sin(a))
       } else if (step.kind === 'on') {
         // Slider values: inside an interval, a little way along a ray, or near the defining points.
-        const s = 0.2 + 0.6 * random()
-        out.push(step.locus.kind === 'circle' ? 2 * Math.PI * random() : signed && random() < 0.5 ? -s : s)
+        out.push(step.locus.kind === 'circle' ? 2 * Math.PI * random() : 0.2 + 0.6 * random())
       }
     }
     return out
@@ -743,7 +787,7 @@ export function unconstructed(cp: ConstructionPlan, samples = 12): Unconstructed
   const sample = sampler(cp, 7)
   let failing: Set<string> | undefined
   for (let i = 0, seen = 0; i < samples * 4 && seen < samples; i++) {
-    const d = execute(cp, sample())
+    const d = search(cp, sample()).drawing
     if (d.failure) continue
     seen++
     const now = new Set(d.violations.map(v => v.what))
@@ -765,14 +809,10 @@ export function unconstructed(cp: ConstructionPlan, samples = 12): Unconstructed
  */
 export function configurations(cp: ConstructionPlan, n: number, attempts = 40 * n): Map<string, Point>[] {
   const sample = sampler(cp, 1)
-  // As realise does: if plain attempts find nothing, vary slider directions and branches too.
-  const varied = sampler(cp, 3, true)
-  const branch = rng(hash(JSON.stringify(cp.steps)) + 4)
   const out: Map<string, Point>[] = []
   for (let i = 0; i < attempts && out.length < n; i++) {
-    const vary = out.length === 0 && i >= VARY_AFTER
-    const d = execute(cp, vary ? varied() : sample(), vary ? { branch } : {})
-    if (good(d) && spread(d.coords) >= MIN_SPREAD) out.push(d.coords)
+    const { drawing } = search(cp, sample())
+    if (good(drawing) && spread(drawing.coords) >= MIN_SPREAD) out.push(drawing.coords)
   }
   return out
 }
@@ -794,17 +834,8 @@ export function realise(cp: ConstructionPlan, options: { previous?: Map<string, 
   let bestScore = -Infinity, found = 0
   // Of drawings that fail, the best is one carried out to the end that misses the fewest facts: the
   // solver starts from it (useWorkspace's solution), so it should place every point it can.
-  const miss = (d: Drawing) => (d.failure ? 1e6 - d.failure.step * 1e3 : 0) + d.violations.length
-  // A figure whose order facts are checked only after the choice they depend on (which side a square
-  // stands on, checked where its lines cross later) can fail every attempt the same way: a slider
-  // only ever forwards, an intersection always the first. If the first attempts find nothing, the
-  // rest vary both.
-  const varied = sampler(cp, 1, true)
-  const branch = rng(hash(JSON.stringify(cp.steps)) + 2)
   for (let i = 0; i < (options.attempts ?? 400) && found < 30; i++) {
-    const vary = found === 0 && i >= VARY_AFTER
-    const params = vary ? varied() : sample()
-    const drawing = execute(cp, params, vary ? { branch } : {})
+    const { drawing, params } = search(cp, sample())
     if (!good(drawing)) {
       if (!best || (!best.valid && miss(drawing) < miss(best.drawing))) best = { params, drawing, valid: false }
       continue
