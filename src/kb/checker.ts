@@ -21,12 +21,6 @@ export type CheckResult = 'verified' | 'vacuous' | 'not-provable' | 'out-of-budg
 
 const FALSE: GroundPredicate = { name: 'false', args: [] }
 
-/**
- * The search's work budget (saturate.ts `maxWork`), alongside the budget of derivations: about what
- * 200 000 derivations cost on the heaviest page before definitions were abbreviated (Euler's line,
- * some 40 seconds), so a lemma that runs out gives up when it used to.
- */
-const WORK_BUDGET = 4_000_000
 
 export interface CheckResponse {
   result: CheckResult
@@ -127,7 +121,7 @@ function runCheckPipeline(
   const unfolded = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
   const assumed = options.distinctNames ? nonDegeneracy(unfolded, goal) : []
   const frontier = [...unfolded, ...assumed]
-  const budget = { maxDerivations, maxWork: WORK_BUDGET }
+  const budget = { maxDerivations }
   const sat = saturate(kb, frontier, { goal, ...budget })
   const facts = sat.allFacts()
   const vacuous = (found: readonly GroundPredicate[]): CheckResponse => {

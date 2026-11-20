@@ -36,9 +36,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      budget of work beside the budget of derivations. Found on the way: an equivalence matched with
      none of its points bound walks every tuple of points, mentioned or not (the reflexive case); it
      is most of the time of the heaviest pages, and the evaluator below should not do it.
-   - Relevance: fire only rules that can reach the goal, `false` or a mark's query (the predicate
-     graph `mayDerive` already builds).
-   - The marks closure: `rectangle-to-square` waits 44 s for its marks. One closure per page, kept
+   - Relevance: measured and dropped (November 2026). After structure and abbreviations 51 rules
+     are live, every goal reaches 49 of them and `false` all 51: the book's relations are one web
+     (everything feeds equality and distinctness, which feed everything).
+   - The marks closure: now under the same budget of work as the checker (saturate.ts `MAX_WORK`),
+     all pages' closures 292 s to 228 s, Euler's line 98 s to 28 s; `rectangle-to-square` still
+     waits 56 s, nearly all of it in the equivalence walk (next item). One closure per page, kept
      and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
      than receiving them with every request.
    - The evaluator, replaced once and measured: semi-naive over the union-find store (rebuilding after

@@ -24,6 +24,13 @@ import { fingerprint, Lru } from './rules'
 const OBJECT = '__object__'
 const SEP = '\u0001'
 
+/**
+ * The default budget of work (`SaturateOptions.maxWork`), alongside the budget of derivations: about
+ * what 200 000 derivations cost on the heaviest pages before definitions were abbreviated, so a
+ * search that runs out gives up when it used to (the checker's, and the marks closure's).
+ */
+export const MAX_WORK = 4_000_000
+
 interface Binding { v: string; flex: boolean }
 type Subst = Map<string, Binding>
 
@@ -493,7 +500,7 @@ export class Saturation {
   private done(full = true): boolean {
     const goal = this.opts.goal
     if (goal && (full || !this.prep.defined.has(goal.name)) && this.holds(goal)) return true
-    if (this.derivations >= (this.opts.maxDerivations ?? 200_000) || this.work >= (this.opts.maxWork ?? Infinity)) { this.exhausted = true; return true }
+    if (this.derivations >= (this.opts.maxDerivations ?? 200_000) || this.work >= (this.opts.maxWork ?? MAX_WORK)) { this.exhausted = true; return true }
     return false
   }
 
