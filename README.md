@@ -8,7 +8,8 @@ ruler and compass, as a figure whose points you can drag.
 
 elements comes with a book, in progress, that will cover the content of Euclid's plane geometry in its
 own order, one chapter per kind of equality: length, angle, direction, area, ratio (see
-[docs/book.md](docs/book.md)). The page above is from chapter 1; chapter 2, angle, is under way. The construction
+[docs/book.md](docs/book.md)). The page above is from chapter 1; chapters 2 to 4 (angle, direction
+and area) are written too, as far as Pythagoras and squaring a figure. The construction
 
 ```txt
 vesica a b c d:
@@ -24,7 +25,7 @@ proves it from the chapter's axioms.
 ```bash
 npm install
 npm run dev       # http://localhost:5173
-npm test          # vitest, about 30 s
+npm test          # vitest, about 2½ minutes, most of it the book's lemmas
 npm run build     # type-check and build to dist/
 ```
 
@@ -89,4 +90,8 @@ docs/           documentation
 - [Language](docs/language.md): syntax and semantics, including how definitions are recognised.
 - [Architecture](docs/architecture.md): how checking and drawing work, and why.
 - [Design](docs/design.md): the visual design, what is built and what is planned.
-- [Roadmap](docs/roadmap.md): open problems and ideas; next up, showing when a figure is solved rather than constructed.
+- [North star](docs/north-star.md): where the core is going, from the November 2026 review. It
+  covers the principles, the target design and the path, with measurements
+  (`npx vite-node scripts/bench.ts` reproduces them).
+- [Roadmap](docs/roadmap.md): open problems and ideas.
+- [Review notes](docs/review-notes.md): what writing the book has shown about the engine.

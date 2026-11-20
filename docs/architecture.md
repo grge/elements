@@ -2,7 +2,7 @@
 
 How elements turns Horn clauses into checked lemmas and draggable ruler-and-compass figures, and why
 it is built this way. For the language itself see [language.md](language.md); for the visual design
-see [design.md](design.md).
+see [design.md](design.md). For where the core is going, see [north-star.md](north-star.md).
 
 ```
  the book (src/language/book/*.geo) · user clauses · the text on the page

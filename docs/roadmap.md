@@ -2,7 +2,9 @@
 
 Open problems and ideas, roughly in order of value within each section. See
 [architecture.md](architecture.md) for how things work now, and [review-notes.md](review-notes.md) for
-what writing the book has shown about the engine, gathered for the review sessions.
+what writing the book has shown about the engine, gathered for the review sessions. The direction now
+comes from [north-star.md](north-star.md), the review of November 2026, and its path orders the core
+work. Where an item below disagrees with it, the North Star wins until the item is rewritten.
 
 ## Principles
 
@@ -14,6 +16,12 @@ what writing the book has shown about the engine, gathered for the review sessio
   something it has proven from the rules.
 - **The figure never silently disagrees with the facts.** It either satisfies every fact or says
   which step fails and why.
+
+The review added four more (north-star.md, *Principles*):
+- follow the book's structure;
+- the logic proves, the figure witnesses;
+- primitives are the interface;
+- one evaluator, in stages.
 
 ## Towards basically done
 
@@ -119,15 +127,20 @@ would sit naturally beside the algebraic lens.
   rationals (two circles meet at a square root). Lemmas whose head introduces points of its own (some
   point exists such that…) get no evidence yet: they need a witness search.
 - **Proof traces**: why a ✓ holds, as a derivation tree.
-- **Use definitions in both directions during forward chaining** where no new objects are needed
-  (`eq-triangle a b c` ⇒ `circle a b c`), not only when unfolding hypotheses.
+- ~~**Use definitions in both directions during forward chaining**~~ where no new objects are needed
+  (`eq-triangle a b c` ⇒ `circle a b c`), not only when unfolding hypotheses. Superseded: definitions
+  become abbreviations, never rules of the closure, and defined goals become queries (north-star.md,
+  *The engine*).
 - **Lemma compilation**: add verified lemmas as rules. Safe for defined predicates already (a clause
-  that follows from the definition cannot change its meaning).
+  that follows from the definition cannot change its meaning). This is step 8 of the North Star's
+  path, once lemmas are checked in scopes.
 - **Show the recognised status** of each predicate in the UI: defined (by which clause) or open, and any
   recognised equivalence, substitution or symmetry.
 - **Replace the `__object__` bootstrap** the checker uses to introduce a lemma's head-only objects with
   an explicit initial universe.
-- **Performance for larger knowledge bases**: the reference closure is semi-naive with argument
+- **Performance for larger knowledge bases**, now planned as steps 2 to 6 of the North Star's path.
+  Witnesses replace the search for `false` first; that search is 80% of checking time. Then the
+  evaluator is replaced once. The history: the reference closure is semi-naive with argument
   indexes (November 2026); the same for
   `saturate.ts`. Lemmas with `distinct` facts run the closure to the end to rule out a contradiction,
   and chapter 2 made that dearer: its arm and supplement axioms hold for every third point, so each
@@ -235,13 +248,16 @@ would sit naturally beside the algebraic lens.
   reading by the model, its number of points, its drawing and its residual; extraction, the figure, the
   checks and numeric evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`) and the
   solver's energies (by the model's structure, not per relation). Then the table is a plug-in, a *model* of the theory (see
-  *Beyond*: three lenses, sibling books).
+  *Beyond*: three lenses, sibling books). This is step 7 of the North Star's path: the model table
+  holds primitives only, and depiction becomes a table of its own.
 - **Annotations from proven facts**: ticks and arcs come from stated and proven equalities (built
   November 2026, design.md *Marks*). Still to do: a user's lemmas travelling to other pages, and the
   lines a lemma is about (`bisect-angle`'s page proves b-d is the bisector, and now marks the two
   angles, but b-d is drawn only as their arms).
 - Step-by-step playback of a construction; undo for dragging.
-- Figures above 18 points use a greedy order; a bounded search would do better.
+- Figures above 18 points use a greedy order. At 19 points it already fails on a figure the search
+  builds (north-star.md, *What the review measured*). The answer is plans that compose by definition,
+  step 8 of the North Star's path; a bounded search would only move the cliff.
 
 ## Interface
 
@@ -262,6 +278,9 @@ up, and nothing calls for a rewrite. Worth doing when the code next changes near
 - **`PageView.vue` holds the whole page** (themes, layout, contents, the steps in words). Split it when
   step 4 above reshapes the page, not before.
 - **The worker gets every rule with every request** (also under *Logic*, performance).
+- **`kb/verdict.ts` imports from the editor and from geometry**: the editor's `EditorMark` type and
+  `Evidence`. A verdict weighs a proof against evidence, so it belongs above both (north-star.md,
+  step 1).
 
 ## Earlier proposals
 
