@@ -73,6 +73,7 @@
         :use-planner="usingConstruction"
         :solution="ws.solution.value"
         :veil="veil"
+        :floor="noticeFloor"
         :padding="48"
         :focus="figureFocus"
         :touch="stepHover"
@@ -114,7 +115,7 @@
 
       <footer class="foot">
         <!-- How the figure was drawn, when that needs saying: a plate, set like the masthead. -->
-        <div v-if="notice && !elementInfo?.text" class="notice" :class="notice.level" role="status">
+        <div v-if="notice && !elementInfo?.text" ref="noticeEl" class="notice" :class="notice.level" role="status">
           <span class="notice-tag"><span v-if="notice.level === 'solved'" class="notice-star" aria-hidden="true">✱</span>{{ notice.tag }}</span>
           <span class="notice-body">{{ notice.text }}</span>
         </div>
@@ -155,7 +156,7 @@
 import { settings, SETTING_CHOICES } from '../composables/useSettings'
 import type { Lemma } from '../language/parser'
 import { RELATIONS } from '../geometry/relations'
-import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
 import CodeEditor, { type EditorHover } from '../components/CodeEditor.vue'
@@ -218,6 +219,9 @@ function shuffleTheme() {
 const narrow = window.matchMedia('(max-width: 720px)')
 const textRef = ref<HTMLElement | null>(null)
 const veil = ref(0)
+// The notice plate over the figure's foot: the figure keeps its points above it.
+const noticeEl = ref<HTMLElement | null>(null)
+const noticeFloor = ref(0)
 const measure = () => { veil.value = narrow.matches ? 0 : textRef.value?.offsetWidth ?? 0 }
 let observer: ResizeObserver | null = null
 // ── the page's height: what is actually visible, so it shrinks when a phone's keyboard opens ──
@@ -523,6 +527,10 @@ const notice = computed<{ level: 'solved' | 'error'; tag: string; text: string }
   if (d.violations.length) return { level: 'error', tag: 'Not met', text: `Does not hold here: ${d.violations.map(v => v.what).join('; ')}` }
   return null
 })
+watch(notice, async n => {
+  await nextTick()
+  noticeFloor.value = n && noticeEl.value ? noticeEl.value.getBoundingClientRect().height + 16 : 0
+}, { immediate: true })
 const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
 </script>
 

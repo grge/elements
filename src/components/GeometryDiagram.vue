@@ -51,7 +51,7 @@
           <line v-if="r.kind === 'line'" class="route" :x1="r.x1" :y1="r.y1" :x2="r.x2" :y2="r.y2" />
           <circle v-else class="route" :cx="r.cx" :cy="r.cy" :r="r.r" />
         </template>
-        <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.x + 12" :y="p.y - 12">{{ p.label }}</text>
+        <text v-for="p in scene.points" :key="`t${p.name}`" class="label" :class="{ aux: p.aux, lit: lit(p.name), dim: dimPoint(p.name) }" :x="p.lx" :y="p.ly" text-anchor="middle" dominant-baseline="central">{{ p.label }}</text>
       </g>
 
       <!-- Wide invisible strokes over each element: hovering one says where it came from. -->
@@ -127,6 +127,8 @@ const props = defineProps<{
   solution?: Solution | null
   /** Width in px of the strip on the left where text lies over the figure. */
   veil?: number
+  /** Pixels at the foot kept clear of points (a notice over the figure's foot). */
+  floor?: number
   padding?: number
   /** Bring forward what these facts draw and these points (what is hovered in the source). */
   /** What to bring forward: elements made by `facts`, `points`, and mark members (`class:member`). */
@@ -192,7 +194,7 @@ function currentPadding() {
 }
 
 function fit(witness: WitnessModel) {
-  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.figure, veilAt.value)
+  return computeRenderTransform(witness, viewportWidth.value, viewportHeight.value, currentPadding(), props.figure, veilAt.value, props.floor ?? 0)
 }
 
 // ── how each point can be moved ──
@@ -418,7 +420,7 @@ watch([() => props.figure?.points.join(' '), () => props.usePlanner], () => {
   animatedTransform.value = null
 }, { immediate: true })
 
-watch([baseWitness, viewportWidth, viewportHeight, veilAt], () => {
+watch([baseWitness, viewportWidth, viewportHeight, veilAt, () => props.floor], () => {
   if (frozenTransform.value || !baseWitness.value) return
   animatedTransform.value = fit(baseWitness.value)
 }, { immediate: true })

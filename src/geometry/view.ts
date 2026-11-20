@@ -15,8 +15,9 @@ export interface RenderTransform {
 
 /**
  * Fit a figure into a viewport. Its points must lie in the region right of `insetLeft` (where text
- * may cover the left of the page); its whole circles must lie within the viewport, so geometry may
- * extend behind the text while the points stay clear of it. The largest scale satisfying both wins.
+ * may cover the left of the page) and above `insetBottom` (where a notice may cover its foot); its
+ * whole circles must lie within the viewport, so geometry may extend behind the text while the points
+ * stay clear of it. The largest scale satisfying both wins.
  */
 export function computeRenderTransform(
   witness: WitnessModel,
@@ -25,6 +26,7 @@ export function computeRenderTransform(
   padding = 40,
   figure?: Figure | null,
   insetLeft = 0,
+  insetBottom = 0,
 ): RenderTransform | null {
   // Fit what is drawn: points only the planner's route uses are not (scene.ts).
   const drawn = figure ? new Set([...figure.points, ...figure.marks.flatMap(m => m.members.flatMap(x => x.points))]) : null
@@ -43,13 +45,16 @@ export function computeRenderTransform(
     ay.push(c[1] - r, c[1] + r)
   }
   const [pMinX, pMaxX] = [Math.min(...px), Math.max(...px)]
+  const [pMinY, pMaxY] = [Math.min(...py), Math.max(...py)]
   const [aMinX, aMaxX] = [Math.min(...ax), Math.max(...ax)]
   const [aMinY, aMaxY] = [Math.min(...ay), Math.max(...ay)]
 
   const left = Math.min(insetLeft, width * 0.6) + padding  // where the points' region starts
   const right = width - padding
+  const top = padding, bottom = height - padding - Math.min(insetBottom, height * 0.4)  // and ends below
   const scale = Math.min(
     Math.max(40, right - left) / Math.max(pMaxX - pMinX, 1e-3),
+    Math.max(40, bottom - top) / Math.max(pMaxY - pMinY, 1e-3),
     Math.max(40, width - 2 * padding) / Math.max(aMaxX - aMinX, 1e-3),
     Math.max(40, height - 2 * padding) / Math.max(aMaxY - aMinY, 1e-3),
   )
@@ -59,7 +64,13 @@ export function computeRenderTransform(
   const hi = Math.min(right - pMaxX * scale, right - aMaxX * scale)
   const centred = (left + right) / 2 - ((pMinX + pMaxX) / 2) * scale
   const offsetX = lo <= hi ? Math.min(hi, Math.max(lo, centred)) : (lo + hi) / 2
-  const offsetY = height / 2 - ((aMinY + aMaxY) / 2) * scale
+  // Vertical offset: centre everything, as far as keeping the points above the inset allows.
+  const yLo = Math.max(top - pMinY * scale, padding - aMinY * scale)
+  const yHi = Math.min(bottom - pMaxY * scale, height - padding - aMaxY * scale)
+  const middle = height / 2 - ((aMinY + aMaxY) / 2) * scale
+  const offsetY = insetBottom > 0
+    ? (yLo <= yHi ? Math.min(yHi, Math.max(yLo, middle)) : Math.min(middle, bottom - pMaxY * scale))
+    : middle
   return { minX: 0, minY: 0, scale, offsetX, offsetY }
 }
 

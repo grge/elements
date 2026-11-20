@@ -27,7 +27,8 @@ export interface Scene {
   segments: number[][]
   /** Tick marks across segments marked equal, one per stroke; equal segments share a number of ticks. */
   ticks: number[][]
-  points: { name: string; x: number; y: number }[]
+  /** Points, each with where its label goes: in the widest gap between what is drawn at it. */
+  points: { name: string; x: number; y: number; lx: number; ly: number }[]
   /**
    * Marks drawn as paths: arcs at angles' vertices marking equal angles, as Byrne marks them (equal
    * angles share a number of concentric arcs), arcs of angles drawn as themselves (`supp`), Byrne's
@@ -150,6 +151,9 @@ export function buildScene(
 
   const arcs: Scene['arcs'] = []
   /** Arcs at b in angle a-b-c, n concentric ones; or a right angle's square. */
+  // Directions (screen angles) taken at each point by what is drawn there, for placing its label.
+  const taken = new Map<string, number[]>()
+  const claim = (p: string, dir: number) => { let t = taken.get(p); if (!t) taken.set(p, t = []); t.push(dir) }
   const angleAt = (na: string, nb: string, nc: string, n: number, kind: Scene['arcs'][number]['kind'], lv: number, facts: string[], mark: { mark: number; member: number } | null, through?: string) => {
     const [a, b, c] = [at(na), at(nb), at(nc)]
     if (!a || !b || !c) return
@@ -177,6 +181,11 @@ export function buildScene(
     }
     const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
     const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
+    // A mark in the angle claims the direction it points into: a label there would cover it.
+    let half = uc - ua
+    while (half <= -Math.PI) half += 2 * Math.PI
+    while (half > Math.PI) half -= 2 * Math.PI
+    claim(nb, ua + half / 2)
     if (kind === 'square') {
       const s = Math.min(tick * 1.6, 0.4 * Math.min(reachA, reachC))
       if (s < 2) return
@@ -300,11 +309,56 @@ export function buildScene(
   // Points the figure mentions. A point only the planner's route uses (an auxiliary point inside a
   // definition drawn as itself, such as right's) is not drawn: like the route, it is how, not what.
   const mentioned = new Set([...figure.points, ...figure.marks.flatMap(m => m.members.flatMap(x => x.points))])
-  const points = [...coords].filter(([name]) => mentioned.has(name)).map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
+  const placed = [...coords].filter(([name]) => mentioned.has(name)).map(([name, [x, y]]) => ({ name, x: tx(x), y: ty(y) }))
+  // What passes through each point: segments and lines along it (both ways where it lies partway
+  // along), circles along their tangent.
+  for (const p of placed) {
+    const along = (x1: number, y1: number, x2: number, y2: number, bounded: boolean) => {
+      const dx = x2 - x1, dy = y2 - y1, L = Math.hypot(dx, dy)
+      if (L < 1e-9) return
+      const t = ((p.x - x1) * dx + (p.y - y1) * dy) / (L * L)
+      if (Math.abs((p.x - x1) * dy - (p.y - y1) * dx) / L > 1.5) return
+      if (bounded && (t < -0.01 || t > 1.01)) return
+      const u = Math.atan2(dy, dx)
+      if (!bounded || t > 0.01) claim(p.name, u + Math.PI)
+      if (!bounded || t < 0.99) claim(p.name, u)
+    }
+    for (const sg of segments) along(sg[0], sg[1], sg[2], sg[3], true)
+    for (const ln of lines) along(ln[0], ln[1], ln[2], ln[3], false)
+    for (const [cx, cy, r] of circles) {
+      if (Math.abs(Math.hypot(p.x - cx, p.y - cy) - r) > 1.5) continue
+      const n = Math.atan2(p.y - cy, p.x - cx)
+      claim(p.name, n + Math.PI / 2); claim(p.name, n - Math.PI / 2)
+    }
+  }
+  const points = placed.map(p => {
+    const [ux, uy] = labelDirection(taken.get(p.name) ?? [])
+    return { ...p, lx: p.x + LABEL_OFFSET * ux, ly: p.y + LABEL_OFFSET * uy }
+  })
   return { lines, circles, segments, ticks, points, arcs, fills, route, meta }
 }
 
 /** Which elements of a scene to bring forward: those made by the given facts. */
+/** How far a label's centre sits from its point, in pixels. */
+const LABEL_OFFSET = 22
+
+/**
+ * The direction (a unit vector on screen) for a label: the middle of the widest gap between the
+ * directions taken at its point; up and to the right when nothing is drawn there.
+ */
+function labelDirection(dirs: readonly number[]): [number, number] {
+  if (!dirs.length) return [Math.SQRT1_2, -Math.SQRT1_2]
+  const norm = (a: number) => ((a % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+  const sorted = dirs.map(norm).sort((a, b) => a - b)
+  let best = 0, bestGap = -1
+  for (let i = 0; i < sorted.length; i++) {
+    const next = i + 1 < sorted.length ? sorted[i + 1] : sorted[0] + 2 * Math.PI
+    const gap = next - sorted[i]
+    if (gap > bestGap + 1e-9) { bestGap = gap; best = sorted[i] + gap / 2 }
+  }
+  return [Math.cos(best), Math.sin(best)]
+}
+
 export interface Emphasis { lines: Set<number>; circles: Set<number>; segments: Set<number>; arcs: Set<number>; fills: Set<number>; points: Set<string> }
 
 /**

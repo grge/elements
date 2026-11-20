@@ -59,8 +59,14 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      is its subject. Whether marks from elsewhere are off or faint is a working setting (the
      settings pane). Hovering a `?` line brings its marks forward: done (design.md, *Marks*).
    - A class that tiles a figure shown as what it is; Byrne fills a square where we hatch its half.
-   - Points under the notice: fitting the figure leaves no room for the plate at its foot.
-   - Equal angles alone draw no arcs (three equiangular triangles, in headless screenshots at least).
+   - Points under the notice: done (November 2026). The figure keeps its points above the plate
+     (`computeRenderTransform`'s `insetBottom`, measured from the notice); circles may pass behind.
+   - Labels: placed in the widest gap between what is drawn at their point, not up and to the right
+     of it. The rectangle's square at a was there all along, under its label.
+   - Equal angles alone draw no arcs: no longer seen (November 2026). Three equiangular triangles
+     draw their arcs; the note was likely marks waiting on a slow closure.
+   - Disconnected parts of a figure are placed independently and can overlap (three triangles typed
+     on the scratchpad). A layout question, not yet looked at.
 5. **Pay back what was done for speed.** Pythagoras with whole squares (five times the budget today);
    guards whose only reason was the join, each rechecked; I.43, the complements; the midline of
    chapter 3.
