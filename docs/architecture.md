@@ -96,9 +96,24 @@ checked) and fires every other rule normally, so it computes the same closure as
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
 
+**Definitions are abbreviations** in `saturate.ts` (November 2026): a defined predicate's facts are never
+stored. Its clauses (the definition and the theorems proven from it) do not fire; a rule that mentions
+one in its body would have it replaced by its definition, the definition's own points becoming new
+variables (no rule in the book does); and asking whether one holds (a lemma's claim, a mark's `right`)
+searches for an instance of its definition among the facts. The meaning is unchanged, only when the work
+is done: every verdict of the book, the regression lemmas and *Beyond the book* is the same. Stored facts
+fall ten to fifty times (the windmill's from 20 847 to 1 984); the book checks in three quarters of the
+time. The definitions analysis (`definitions.ts`) keeps every clause firing (`abbreviate: false`), since
+it decides what a definition is.
+
+The search has two budgets, whichever runs out first: derivations, and **work** (partial matches and
+tuples considered, `Saturation.work`), which is in proportion to time. Derivations alone stopped
+measuring anything once the cheap derivations of defined facts were gone: the same budget bought three
+times the search.
+
 The search ends with the goal derived, with the hypotheses contradictory (they derive the reserved
 `false`, which takes precedence), with the closure complete and no goal, or out of its budget of
-derivations. Because the search stops as soon as the goal is found, a derived goal still needs its
+derivations and of work (above). Because the search stops as soon as the goal is found, a derived goal still needs its
 hypotheses shown consistent: contradictory hypotheses can derive the goal too, and the lemma would then
 be vacuous. There are three ways, cheapest first:
 

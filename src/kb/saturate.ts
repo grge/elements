@@ -32,6 +32,18 @@ export interface SaturateOptions {
   goal?: GroundPredicate
   /** Budget on derivations, as a safety valve. When it runs out, `exhausted` is set. */
   maxDerivations?: number
+  /**
+   * Budget on work (`Saturation.work`: partial matches and tuples considered), which is in
+   * proportion to time, as derivations are not: with definitions abbreviated, the cheap derivations
+   * of defined facts no longer use up a budget of derivations, so it would buy far more search.
+   */
+  maxWork?: number
+  /**
+   * Read definitions as abbreviations (the default): a defined predicate's facts are never stored;
+   * asking whether one holds asks whether its definition does (`Prepared.defined`). False keeps every
+   * clause firing, for the definitions analysis, which decides what is a definition.
+   */
+  abbreviate?: boolean
 }
 
 export interface Prepared {
@@ -40,36 +52,81 @@ export interface Prepared {
   redundant: Rule[]
   axioms: Rule[]
   rules: Rule[]
+  /**
+   * Predicates read as abbreviations, with their definitions. Their clauses never fire (a defined
+   * fact only renames what its definition says, and storing it costs matching on every round); a
+   * rule that mentions one in its body has it replaced by its definition, the definition's own
+   * points becoming new variables; and whether one holds is asked of its definition (`holds`).
+   * The meaning is unchanged: only when the work is done.
+   */
+  defined: Map<string, Rule>
 }
 
 const preparedByKB = new WeakMap<KnowledgeBase, Prepared>()
 const preparedByRules = new Lru<Prepared>(16)
+const plainByKB = new WeakMap<KnowledgeBase, Prepared>()
+const plainByRules = new Lru<Prepared>(16)
+
+let freshVariable = 0
+
+/**
+ * Atoms with every defined predicate replaced by its definition, recursively (definitions are not
+ * recursive). The definition's head variables take the atom's arguments; its body-only variables
+ * become new variables (`?1`, which no name can be), so they are found by matching: some point such
+ * that…
+ */
+export function expandDefined(atoms: readonly Predicate[], defined: ReadonlyMap<string, Rule>): Predicate[] {
+  return atoms.flatMap(atom => {
+    const d = defined.get(atom.name)
+    if (!d || d.head.args.length !== atom.args.length) return [atom]
+    const sub = new Map(d.head.args.map((v, i) => [v, atom.args[i]]))
+    const body = d.body.map(b => ({
+      name: b.name,
+      args: b.args.map(v => sub.get(v) ?? (sub.set(v, `?${++freshVariable}`), sub.get(v)!)),
+    }))
+    return expandDefined(body, defined)
+  })
+}
 
 /** Recognise the structure of a knowledge base's rules and work out which rules it makes redundant. */
-export function prepare(kb: KnowledgeBase): Prepared {
-  const hit = preparedByKB.get(kb)
+export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
+  const [byKB, byRules] = abbreviate ? [preparedByKB, preparedByRules] : [plainByKB, plainByRules]
+  const hit = byKB.get(kb)
   if (hit) return hit
   const key = fingerprint(kb.allRules())
-  const shared = preparedByRules.get(key)
-  if (shared) { preparedByKB.set(kb, shared); return shared }
+  const shared = byRules.get(key)
+  if (shared) { byKB.set(kb, shared); return shared }
   const structure = analyseStructure(kb.allRules())
   const redundant = kb.allRules().filter(r => impliedByStructure(r, structure))
   const skip = new Set(redundant)
-  const live = kb.allRules().filter(r => !skip.has(r))
+  // Abbreviated: predicates with a definition, whose head is plain variables, other than the
+  // equality and recognised equivalences, which the store keeps in its own way.
+  const defined = new Map<string, Rule>()
+  if (abbreviate) {
+    for (const [name, status] of kb.definitions()) {
+      if (status.kind !== 'definition' || name === 'false' || name === structure.equality || structure.equivalences.has(name)) continue
+      if (new Set(status.clause.head.args).size !== status.clause.head.args.length) continue
+      defined.set(name, status.clause)
+    }
+  }
+  const live = kb.allRules()
+    .filter(r => !skip.has(r) && !defined.has(r.head.name))
+    .map(r => r.body.some(b => defined.has(b.name)) ? { ...r, body: expandDefined(r.body, defined) } : r)
   const out: Prepared = {
     structure,
     redundant,
     axioms: live.filter(r => r.body.length === 0),
     rules: live.filter(r => r.body.length > 0),
+    defined,
   }
-  preparedByKB.set(kb, out)
-  preparedByRules.set(key, out)
+  byKB.set(kb, out)
+  byRules.set(key, out)
   return out
 }
 
 /** Does the structure alone derive the rule's head from its body (on fresh constants)? */
 function impliedByStructure(rule: Rule, structure: Structure): boolean {
-  const sat = new Saturation({ structure, redundant: [], axioms: [], rules: [] })
+  const sat = new Saturation({ structure, redundant: [], axioms: [], rules: [], defined: new Map() })
   for (const b of rule.body) sat.assert({ name: b.name, args: b.args })
   sat.assert({ name: OBJECT, args: rule.head.args })
   return sat.holds({ name: rule.head.name, args: rule.head.args })
@@ -122,6 +179,8 @@ export class Saturation {
 
   private version = 0
   private derivations = 0
+  /** Partial matches considered: the search's work, deterministic and in proportion to its time. */
+  work = 0
   private lastRun = new Map<Rule, number>()
   exhausted = false
 
@@ -276,6 +335,7 @@ export class Saturation {
 
   holds(f: GroundPredicate): boolean {
     if (f.name === OBJECT) return f.args.every(a => this.names.has(a))
+    if (this.prep.defined.has(f.name)) return this.holdsDefined(f)
     if (f.name === this.eq && f.args.length === 2) return this.find(f.args[0]) === this.find(f.args[1])
     const e = this.st.equivalences.get(f.name)
     if (e && f.args.length === 2 * e.k) {
@@ -283,6 +343,17 @@ export class Saturation {
         === this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(e.k)))
     }
     return this.facts.has(this.factKey(f.name, this.canonArgs(f.name, f.args)))
+  }
+
+  /**
+   * Does a defined fact hold: is there an instance of its definition? Its arguments are bound, as
+   * if variables of those names had matched them (up to equality), and its definition's own points
+   * are searched for.
+   */
+  private holdsDefined(f: GroundPredicate): boolean {
+    const atoms = expandDefined([{ name: f.name, args: [...f.args] }], this.prep.defined)
+    const s: Subst = new Map(f.args.map(a => [a, { v: a, flex: true }]))
+    return !this.join(atoms, s).next().done
   }
 
   /** Stored relations, plus each object's equality with its representative. */
@@ -370,6 +441,7 @@ export class Saturation {
     const keys = new Set<string>([...this.classesOf(p).parent.keys()])
     for (const t of cartesian<string>(Array.from({ length: k }, () => pool))) keys.add(this.tupleKey(p, e, t))
     for (const key of keys) {
+      this.work++
       const root = this.tupleRoot(p, key)
       if (seen.has(root)) continue
       seen.add(root)
@@ -382,6 +454,7 @@ export class Saturation {
   }
 
   private *join(body: readonly Predicate[], s: Subst): Generator<Subst> {
+    this.work++
     if (body.length === 0) { yield s; return }
     // Greedy: match the atom with the largest share of already-bound arguments next.
     let best = 0, bestScore = -1
@@ -413,9 +486,14 @@ export class Saturation {
 
   // ───────────────────────── saturation ─────────────────────────
 
-  private done(): boolean {
-    if (this.opts.goal && this.holds(this.opts.goal)) return true
-    if (this.derivations >= (this.opts.maxDerivations ?? 200_000)) { this.exhausted = true; return true }
+  /**
+   * Is the search over: the goal found, or the budget spent? A defined goal is a search of its own
+   * (`holdsDefined`), so between rules, not after every fact, it is asked only when `full`.
+   */
+  private done(full = true): boolean {
+    const goal = this.opts.goal
+    if (goal && (full || !this.prep.defined.has(goal.name)) && this.holds(goal)) return true
+    if (this.derivations >= (this.opts.maxDerivations ?? 200_000) || this.work >= (this.opts.maxWork ?? Infinity)) { this.exhausted = true; return true }
     return false
   }
 
@@ -431,8 +509,9 @@ export class Saturation {
         const matches = [...this.join(rule.body, new Map())]
         for (const s of matches) {
           for (const h of this.heads(rule, s)) this.assert(h)
-          if (this.done()) return
+          if (this.done(false)) return
         }
+        if (this.done()) return
       }
       if (this.version === before) return
     }
@@ -444,7 +523,7 @@ export function saturate(
   seeds: readonly GroundPredicate[],
   opts: SaturateOptions = {},
 ): Saturation {
-  const sat = new Saturation(prepare(kb), opts)
+  const sat = new Saturation(prepare(kb, opts.abbreviate ?? true), opts)
   for (const f of seeds) sat.assert(f)
   sat.run()
   return sat

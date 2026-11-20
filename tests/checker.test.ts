@@ -22,7 +22,8 @@ describe('queried-clause checker', () => {
     const [lemma] = parseLemmas(`? foo a: bar b`)
     const result = checkLemma(lemma, kb)
     expect(result.result).toBe('verified')
-    expect(result.facts.some(f => f.name === 'foo' && f.args[0] === 'a')).toBe(true)
+    // `foo` is defined (a lone rule), so it is answered from its definition, not stored.
+    expect(result.facts.some(f => f.name === 'bar')).toBe(true)
   })
 
   it('checks a theorem-style queried clause via head-object introduction', () => {

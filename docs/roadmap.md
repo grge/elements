@@ -31,8 +31,11 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    not next. Points not named are parked (November 2026, below, *Not now*): proofs that need them
    wait, and the store comes next.
 3. **Pages that answer quickly, and the store built for theories.**
-   - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
-     matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.
+   - Definitions as abbreviations: done (November 2026; architecture.md). The same verdicts
+     everywhere, ten to fifty times fewer facts, the book in three quarters of the time. With it, a
+     budget of work beside the budget of derivations. Found on the way: an equivalence matched with
+     none of its points bound walks every tuple of points, mentioned or not (the reflexive case); it
+     is most of the time of the heaviest pages, and the evaluator below should not do it.
    - Relevance: fire only rules that can reach the goal, `false` or a mark's query (the predicate
      graph `mayDerive` already builds).
    - The marks closure: `rectangle-to-square` waits 44 s for its marks. One closure per page, kept

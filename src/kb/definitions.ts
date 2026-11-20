@@ -129,5 +129,5 @@ function follows(rule: Rule, kb: KnowledgeBase): boolean {
   const goal: GroundPredicate = { name: rule.head.name, args: rule.head.args }
   const hypotheses = rule.body.flatMap(b => unfold({ name: b.name, args: b.args }, kb, new Set(), { fresh }).frontier)
   const objects = rule.head.args.map(a => ({ name: '__object__', args: [a] }))
-  return saturate(kb, [...hypotheses, ...objects], { goal }).holds(goal)
+  return saturate(kb, [...hypotheses, ...objects], { goal, abbreviate: false }).holds(goal)
 }
