@@ -597,12 +597,22 @@ function lineDomain(x: string, curve: Extract<Curve, { kind: 'line' }>, orders: 
 
 /** Map a slider parameter s to a position t within [lo, hi] (s in [0,1] if bounded, s >= 0 if a ray). */
 /** A slider's position on its line. Only a line unbounded both ways reads the sign of s. */
+/**
+ * Where a slider's value puts its point along its line. An order bounds the slider at a point, which
+ * it must stay off (`between` is strict: the book's orders come with `distinct`): it stops a little
+ * short (ORDER_MARGIN), as a point on a ray stops off its vertex, so a drag past the bound leaves the
+ * point beside it, not on it.
+ */
 function tFromS(s: number, [lo, hi]: [number, number]): number {
-  if (isFinite(lo) && isFinite(hi)) return lo + Math.min(1, Math.abs(s)) * (hi - lo)
-  if (isFinite(lo)) return lo + Math.abs(s)
-  if (isFinite(hi)) return hi - Math.abs(s)
+  const m = ORDER_MARGIN
+  if (isFinite(lo) && isFinite(hi)) return lo + Math.min(1 - m, Math.max(m, Math.abs(s))) * (hi - lo)
+  if (isFinite(lo)) return lo + Math.max(m, Math.abs(s))
+  if (isFinite(hi)) return hi - Math.max(m, Math.abs(s))
   return s
 }
+
+/** How far short of a bounding point a slider stops: of the interval, or of the line's defining length. */
+const ORDER_MARGIN = 0.02
 
 function sFromT(t: number, [lo, hi]: [number, number]): number {
   if (isFinite(lo) && isFinite(hi)) return hi > lo ? Math.min(1, Math.max(0, (t - lo) / (hi - lo))) : 0

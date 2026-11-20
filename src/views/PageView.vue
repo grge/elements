@@ -345,8 +345,17 @@ const figureFocus = computed(() => {
   } catch { return null }
 })
 
-/** The point hovered in the figure, as the name the source uses for it. */
-const codeHighlight = computed(() => pointHover.value ? [pointHover.value.split('#')[0]] : [])
+/**
+ * The point hovered in the figure, as the name the source uses for it: the inverse of `pointOf`, so an
+ * auxiliary point lights its name only where that name is it (`d₁` is `d` in `transfer`, but not in
+ * `square`, whose `d` is a corner and whose `d₁` is inside its right angle).
+ */
+const codeHighlight = computed(() => {
+  const p = pointHover.value
+  if (!p) return []
+  const name = p.split('#')[0]
+  return pointOf(name) === p ? [name] : []
+})
 
 function openByName(name: string) {
   const entry = ws.predicates.value.find(p => p.name === name && p.namespace !== 'user')

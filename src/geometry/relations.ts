@@ -21,6 +21,10 @@
  *             (`distinct`): a lemma's hypothesis of it is met by two different names.
  *   mark      its drawing is a mark (a right angle's square, a supplement's arcs): like an equality's
  *             ticks it is drawn wherever it is proven, not only where it is written.
+ *   propertyOf for a mark on one block: the equivalence whose classes it is a property of, kept by
+ *             their equality (`right`, of `eq-angle`: an angle equal to a right angle is right). A
+ *             class of that equivalence the closure knows to have it is drawn with it; a class of
+ *             another (equal areas, also of three points) is not asked.
  *   holds     whether it holds at given positions; `tol` is a length on the figure's scale. A
  *             degenerate case (an angle with an arm of no length) counts as holding: nothing to measure.
  *   residual  for the numeric solver: how far an equation is from holding, 0 when it does.
@@ -72,6 +76,7 @@ export interface Relation {
   drawsBody?: boolean
   draw?(args: readonly string[], pen: Pen): void
   mark?: boolean
+  propertyOf?: string
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
@@ -210,7 +215,7 @@ const TABLE: Relation[] = [
     // drawn as Byrne draws it, a small square at the vertex, and its definition beneath.
     name: 'right', arity: 3, depicted: true, drawsBody: true,
     draw: ([a, b, c], pen) => pen.angle(a, b, c, 'square'),
-    mark: true,
+    mark: true, propertyOf: 'eq-angle',
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
   },
   {

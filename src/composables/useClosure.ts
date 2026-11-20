@@ -19,7 +19,7 @@ import { RELATIONS } from '../geometry/relations'
 import { assumedOf } from '../geometry/closure'
 
 /** Mark relations on one block (`right`, of an angle): asked of each class of marks. */
-const PROPERTIES = [...RELATIONS.values()].flatMap(r => r.mark && typeof r.arity === 'number' ? [{ name: r.name, arity: r.arity }] : [])
+const PROPERTIES = [...RELATIONS.values()].flatMap(r => r.mark && r.propertyOf ? [{ name: r.name, of: r.propertyOf }] : [])
 import type { ClosureRequest, ClosureResponse } from '../workers/closureWorker'
 
 export type Lane = 'page' | 'background'

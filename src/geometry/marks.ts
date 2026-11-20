@@ -192,9 +192,11 @@ export type ClosureQuery =
  * member of the other? And for each class, does its first member have one of `properties` (a mark
  * relation on one block, such as `right` on an angle)? A property of one member is a property of its
  * whole class only because properties asked are invariant under the class's equality: an angle equal
- * to a right angle is right (Euclid's fourth postulate, which the book states).
+ * to a right angle is right (Euclid's fourth postulate, which the book states). So a property is
+ * asked only of classes of the equivalence it belongs to (`of`): a triangle equal in area to one
+ * whose corners make a right angle need not make one.
  */
-export function closureQueries(classes: readonly MarkClass[], properties: readonly { name: string; arity: number }[] = []): ClosureQuery[] {
+export function closureQueries(classes: readonly MarkClass[], properties: readonly { name: string; of: string }[] = []): ClosureQuery[] {
   const out: ClosureQuery[] = []
   for (let i = 0; i < classes.length; i++) for (let j = i + 1; j < classes.length; j++) {
     const [a, b] = [classes[i], classes[j]]
@@ -202,7 +204,7 @@ export function closureQueries(classes: readonly MarkClass[], properties: readon
     out.push({ fact: { name: a.name, args: [...a.members[0].points, ...b.members[0].points] }, pair: [i, j] })
   }
   classes.forEach((c, i) => {
-    for (const p of properties) if (p.arity === c.k) out.push({ fact: { name: p.name, args: [...c.members[0].points] }, property: { cls: i, relation: p.name } })
+    for (const p of properties) if (p.of === c.name) out.push({ fact: { name: p.name, args: [...c.members[0].points] }, property: { cls: i, relation: p.name } })
   })
   return out
 }

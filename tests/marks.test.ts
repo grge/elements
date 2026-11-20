@@ -134,10 +134,22 @@ describe('right angles', () => {
   it('a class of equal angles the closure knows to be right is drawn as squares: drop-perpendicular', () => {
     const x = extract(kb, [{ name: 'drop-perpendicular', args: 'p e f m'.split(' ') }])
     const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
-    const queries = closureQueries(classes, [{ name: 'right', arity: 3 }])
+    const queries = closureQueries(classes, [{ name: 'right', of: 'eq-angle' }])
     const holds = closureAnswers(kb, [...x.constraints, ...x.outline], queries.map(q => q.fact), assumedOf([...new Set(x.constraints.flatMap(f => f.args))]))
     const merged = mergeByClosure(classes, queries, holds)
     expect(merged.filter(c => c.as === 'right').map(c => c.members.map(m => m.points.join('')).sort())).toEqual([['emp', 'fmp']])
+  })
+
+  it('a right angle is a property of angles, not of a class of equal areas: the square', () => {
+    // The square's equal halves, a-b-c among them, are a class of three points like an angle's; that
+    // a-b-c is a right angle says nothing of a-c-d or a-b-d.
+    const x = extract(kb, [{ name: 'square', args: 'a b c d'.split(' ') }])
+    const classes = markClasses(equalities(x.outline, x.depicted, bookLemmas, equivalences), equivalences)
+    const queries = closureQueries(classes, [{ name: 'right', of: 'eq-angle' }])
+    expect(queries.every(q => !('property' in q) || classes[q.property.cls].name === 'eq-angle')).toBe(true)
+    const holds = closureAnswers(kb, [...x.constraints, ...x.outline], queries.map(q => q.fact), assumedOf([...new Set(x.constraints.flatMap(f => f.args))]))
+    const merged = mergeByClosure(classes, queries, holds)
+    expect(merged.filter(c => c.as === 'right').map(c => c.name)).toEqual(['eq-angle'])
   })
 }, 60000)
 
