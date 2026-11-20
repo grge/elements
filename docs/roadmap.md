@@ -11,26 +11,16 @@ keep what was built and why).
 In order. Each is worth doing on its own, and each is measured with `scripts/bench.ts`. Done: figures
 as witnesses (November 2026; architecture.md, *The knowledge base*), which took the book's checks to a
 fifth of their time; branches chosen by backtracking, in pages and evidence alike (architecture.md,
-*Realising*); figures that read well (the same).
+*Realising*); figures that read well (the same); a right angle placed at its vertex (architecture.md,
+*From facts to a figure*). Not to clean up: the order a construction is built in (a definition is a
+conjunction, and imposes none), or the freedom of a helper point (freedom like any other).
 
-1. **Clean up construction.** The premise, constructions as clauses that draw, holds; the mess is in
-   how the planner treats what the clauses leave implicit.
-   Not to clean up: the order a construction is built in (a definition is a conjunction, and imposes
-   none), or the freedom of a helper point (freedom on a point nobody named is freedom like any other).
-   - **A right angle placed at its vertex.** A right angle is reached only through its extension
-     point, so its vertex can never be placed last, after both arms: the foot of a perpendicular from
-     a placed point to a placed line. One foot the planner dodges, by building the line from the foot
-     (which is why `triangle-to-rectangle` is built from the rectangle); two or three it cannot. The
-     Simson line, three altitudes and the orthocentre do not construct, and are solved (review-notes.md,
-     *Right angles*). The stress test leans on exactly these. Read a right angle from the leaves (an
-     angle equal to the one beside it on a straight line), and give it loci: the vertex on the circle
-     on the arm points (Thales, never at an arm point), an arm on the perpendicular at the vertex.
-   - **What a construction draws, and how a reader can tell.** A relation drawn as itself stops the
-     drawing there, so `right a b c` draws Byrne's square and hides its d. The leading idea: unfold
-     everything and draw bottom-up, each level taking a turn after its body has drawn, to add or
-     restyle (`right` turns two equal-angle arcs into a square), never to delete. To settle: what a
-     turn may do; who modifies a fact two definitions share; the clutter it adds; a second hook on the
-     relation table, with figure.ts composing.
+1. **What a construction draws, and how a reader can tell**, the last of cleaning up construction. A
+   relation drawn as itself stops the drawing there, so `right a b c` draws Byrne's square and hides
+   its d. The leading idea: unfold everything and draw bottom-up, each level taking a turn after its
+   body has drawn, to add or restyle (`right` turns two equal-angle arcs into a square), never to
+   delete. To settle: what a turn may do; who modifies a fact two definitions share; the clutter it
+   adds; a second hook on the relation table, with figure.ts composing.
 2. **A stress test of the design.** About a dozen theorems beyond Euclid's first books, chosen to probe
    the system rather than fill the book: Ceva, the centroid and circumcentre, the nine-point circle,
    the Simson line, a couple of easy olympiad problems, one hyperbolic statement. Write each as

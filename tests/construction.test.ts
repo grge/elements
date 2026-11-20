@@ -239,10 +239,12 @@ describe('facts a plan does not construct', () => {
     expect(unconstructed(cp).map(u => [u.point, describeFact(u.fact)])).toEqual([['c', 'eq-angle a b c b c a']])
   })
   it('prefers a named point to an auxiliary one', () => {
-    const cp = plan(buildModel(factsOf('right d a b\nright a b c\nright b c d\nright c d a')))
+    // A bisected angle whose halves are each a base angle: d is overdetermined, and so is the bisector's
+    // auxiliary point e₁; the fact about e₁ is said to place d.
+    const cp = plan(buildModel(factsOf('bisect-angle a b c d\neq-angle a b d b d a\neq-angle d b c b c d')))
     const u = unconstructed(cp)
     expect(u.length).toBe(2)
-    expect(new Set(u.map(x => x.point))).toEqual(new Set(['c']))
+    expect(new Set(u.map(x => x.point))).toEqual(new Set(['d']))
   })
   it('finds none in a figure the plan constructs', () => {
     expect(unconstructed(plan(buildModel(factsOf('eq-triangle a b c'))))).toEqual([])
@@ -356,5 +358,45 @@ describe('figures that read well', () => {
       expect(valid).toBe(true)
       expect(legibility(cp, drawing.coords)).toBeGreaterThan(0.09)
     }
+  })
+})
+
+describe('right angles', () => {
+  const constructs = (text: string) => {
+    const cp = plan(buildModel(factsOf(text)))
+    const r = realise(cp)
+    expect(r.valid).toBe(true)
+    expect(worstFact(cp.checks.map(c => c.fact), r.drawing.coords).residual).toBeLessThan(1e-7)
+    return cp
+  }
+
+  it('places a right angle\'s arm on the perpendicular at its vertex, its extension point after', () => {
+    const cp = constructs('right a b c')
+    expect(cp.steps.map(s => s.point)).toEqual(['a', 'b', 'c', 'd#1'])
+    expect(cp.steps[2]).toMatchObject({ kind: 'on', locus: { kind: 'perpendicular', at: 'b', to: 'a' } })
+  })
+
+  it('places a vertex after both arms on the circle on them (Thales): the foot of a perpendicular', () => {
+    // Three feet from one point: no order places every vertex before its arms.
+    const cp = constructs('triangle a b c\ncollinear b c d\nright a d b\ncollinear c a e\nright b e c\ncollinear a b f\nright c f a')
+    expect(cp.steps.some(s => s.kind === 'meet' && s.loci.some(l => l.kind === 'thales'))).toBe(true)
+    expect(cp.dof).toBe(6 + 3)   // the triangle, and each right angle's extension point
+  })
+
+  it('constructs the figures that need it: four right angles, the orthocentre, the Simson line', () => {
+    constructs('right d a b\nright a b c\nright b c d\nright c d a')
+    constructs('triangle a b c\nbetween b h c\nright a h b\nbetween a k c\nright b k a\nbetween a o h\nbetween b o k')
+    constructs('circle o a b\ncircle o a c\ncircle o a p\ntriangle a b c\ncollinear b c d\nright p d b\ncollinear c a e\nright p e c\ncollinear a b f\nright p f a')
+  })
+
+  it('takes two loci that a theorem makes one curve as one condition (Thales on a diameter)', () => {
+    const cp = constructs('circle o a c\nbetween a o c\ncircle o a b\ndistinct b a\ndistinct b c\nright a b c')
+    const b = cp.steps.find(s => s.point === 'b')!
+    expect(b.kind).toBe('on')
+  })
+
+  it('builds triangle-to-rectangle from the triangle', () => {
+    const cp = plan(buildModel(factsOf('triangle-to-rectangle a b c e f g'), ['a', 'b', 'c', 'e', 'f', 'g']))
+    expect(cp.steps.slice(0, 3).map(s => [s.point, s.kind])).toEqual([['a', 'free'], ['b', 'free'], ['c', 'free']])
   })
 })

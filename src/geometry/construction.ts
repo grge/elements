@@ -11,6 +11,9 @@
  *             (the compass carries a length: Euclid I.2 shows this is no stronger than the collapsing compass)
  *   bisector  perpendicular bisector of two placed points the new point is equidistant from
  *
+ * and from angles, parallels and areas (architecture.md, *From facts to a figure*), among them a right
+ * angle's: the perpendicular at its vertex, and the circle on its arms (Thales).
+ *
  * Every fact the figure states is a CHECK, evaluated on every frame by the relation table's `holds`. One
  * used to place a point holds by construction; one not used that keeps holding is a dependency (a
  * theorem), and one that fails is reported.
@@ -50,6 +53,12 @@ export interface ConstructionModel {
   distinct: [string, string][]
   /** Equal angles, supplements and equal spreads: some place a point by an angle locus; all are checked. */
   measures: { name: string; args: string[] }[]
+  /**
+   * Right angles, read from the equal angles: an angle equal to the one beside it on a straight line
+   * (`eq-angle a v s s v b` with v between a and b, which is how `right` unfolds). `arm` is the
+   * shared arm's point, `outer` the two points on the straight line either side of the vertex.
+   */
+  rights: { vertex: string; arm: string; outer: [string, string] }[]
   /** The facts read, each held to by the drawing (relations.ts `holds`). */
   facts: GroundPredicate[]
 }
@@ -97,6 +106,7 @@ export function buildModel(facts: readonly GroundPredicate[], written: readonly 
   const order = (pts: Iterable<string>) => [...pts].sort((x, y) => points.indexOf(x) - points.indexOf(y))
   return {
     points,
+    rights: rightAngles(measures, between),
     lines: mergeLines(groups).map(g => order(g.points)),
     lengths: segments.classes().filter(c => c.length >= 2).map(c => c.map(segmentEnds)),
     between,
@@ -104,6 +114,31 @@ export function buildModel(facts: readonly GroundPredicate[], written: readonly 
     measures,
     facts: read,
   }
+}
+
+/**
+ * The right angles among some equal angles: two angles at one vertex v sharing an arm v-s, whose
+ * other arms run either way along one straight line (v between their points). Together they make a
+ * straight angle, so each is right.
+ */
+function rightAngles(measures: ConstructionModel['measures'], between: ConstructionModel['between']): ConstructionModel['rights'] {
+  const out: ConstructionModel['rights'] = []
+  const straight = (a: string, v: string, b: string) =>
+    between.some(([x, y, z]) => y === v && ((x === a && z === b) || (x === b && z === a)))
+  for (const m of measures) {
+    if (m.name !== 'eq-angle') continue
+    const [t1, t2] = [m.args.slice(0, 3), m.args.slice(3)]
+    const v = t1[1]
+    if (t2[1] !== v) continue
+    const ends1 = [t1[0], t1[2]], ends2 = [t2[0], t2[2]]
+    const shared = ends1.filter(q => ends2.includes(q))
+    if (shared.length !== 1 || shared[0] === v) continue
+    const s = shared[0]
+    const a = ends1.find(q => q !== s)!, b = ends2.find(q => q !== s)!
+    if (a === b || a === v || b === v || !straight(a, v, b)) continue
+    out.push({ vertex: v, arm: s, outer: [a, b] })
+  }
+  return out
 }
 
 // ───────────────────────────── loci and plans ─────────────────────────────
@@ -123,6 +158,10 @@ export type Locus =
    * area of the triangle `area` (Euclid I.44 applies a given area to a given line).
    */
   | { kind: 'area'; base: [string, string]; area: [string, string, string] }
+  /** The circle on `ends` as diameter: where a right angle's vertex is, its arms through the ends (Thales). */
+  | { kind: 'thales'; ends: [string, string] }
+  /** The line through `at` perpendicular to the line from `at` to `to`. */
+  | { kind: 'perpendicular'; at: string; to: string }
 
 export type Step =
   | { kind: 'free'; point: string }
@@ -147,7 +186,7 @@ export interface ConstructionPlan {
 }
 
 /** Loci available to point p once the points in `placed` (in this order) are placed. */
-function lociFor(model: ConstructionModel, p: string, placed: readonly string[]): Locus[] {
+function lociFor(model: ConstructionModel, p: string, placed: readonly string[], banned?: ReadonlySet<string>): Locus[] {
   const isPlaced = new Set(placed)
   const rank = (q: string) => placed.indexOf(q)
   const out: Locus[] = []
@@ -179,6 +218,15 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
     const base = mine.filter(q => q !== p)
     if (base[0] === base[1]) continue
     out.push({ kind: 'area', base: [base[0], base[1]], area: [other[0], other[1], other[2]] })
+  }
+  // Right angles: the vertex on the circle on the arms' points (Thales), once both are placed; an arm
+  // on the perpendicular at the vertex, once the vertex and the other arm are. The equal angles they
+  // come from give a bisector too, once the straight line is placed, which is the same perpendicular.
+  for (const r of model.rights) {
+    const outer = r.outer.filter(q => isPlaced.has(q)).sort((x, y) => rank(x) - rank(y))[0]
+    if (p === r.vertex && isPlaced.has(r.arm) && outer) out.push({ kind: 'thales', ends: [r.arm, outer] })
+    else if (p === r.arm && isPlaced.has(r.vertex) && outer) out.push({ kind: 'perpendicular', at: r.vertex, to: outer })
+    else if (r.outer.includes(p) && isPlaced.has(r.vertex) && isPlaced.has(r.arm)) out.push({ kind: 'perpendicular', at: r.vertex, to: r.arm })
   }
   // Equal angles and supplements: a ray at a known angle from a placed vertex, or a bisector.
   for (const m of model.measures) {
@@ -229,6 +277,7 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
   // condition between the points, not two on p (Playfair).
   const kept: Locus[] = []
   for (const l of out) {
+    if (banned?.has(lociKey(p, l))) continue
     const through = pivots(l)
     if (through.length && kept.some(k => pivots(k).some(q => through.includes(q)))) continue
     if (kept.some(k => sameLocus(k, l))) continue
@@ -237,6 +286,8 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
   }
   return kept
 }
+
+const lociKey = (p: string, l: Locus) => `${p} ${JSON.stringify(l)}`
 
 function sameLocus(a: Locus, b: Locus): boolean {
   if (a.kind === 'bisector' && b.kind === 'bisector') return new Set([...a.of, ...b.of]).size === 2
@@ -249,6 +300,7 @@ function pivots(l: Locus): string[] {
     case 'line': return [...l.through]
     case 'parallel': return [l.through]
     case 'angle': case 'angle-bisector': return [l.vertex]
+    case 'perpendicular': return [l.at]
     default: return []
   }
 }
@@ -276,6 +328,44 @@ export interface PlanOptions {
  * A point with two loci available is placed at once: delaying it can never use more equations.
  */
 export function plan(model: ConstructionModel, options: PlanOptions = {}): ConstructionPlan {
+  // Two loci can be one curve because of a theorem the planner cannot see from the facts' shapes: a
+  // point on a circle about the midpoint of a-c, and the right angle it makes at a and c (Thales).
+  // Then they are one condition, not two. Found by carrying the plan out; that locus is set aside for
+  // that point and the order chosen again.
+  const banned = new Set<string>()
+  for (let i = 0; i <= model.points.length; i++) {
+    const cp = planOnce(model, options, banned)
+    const same = coincidentLocus(cp)
+    if (!same || banned.has(same)) return cp
+    banned.add(same)
+  }
+  return planOnce(model, options, banned)
+}
+
+/** Samples a plan is tried on for loci that coincide. */
+const COINCIDENCE_SAMPLES = 3
+
+/**
+ * The key of the second locus of a meet whose two loci are one curve in every sample that reaches it
+ * (they always are, so a theorem makes them one), or null.
+ */
+function coincidentLocus(cp: ConstructionPlan): string | null {
+  if (!cp.steps.some(s => s.kind === 'meet')) return null
+  const sample = sampler(cp, 11)
+  let found: string | null = null
+  for (let i = 0; i < COINCIDENCE_SAMPLES; i++) {
+    const f = execute(cp, sample()).failure
+    if (!f?.coincident) return null
+    const step = cp.steps[f.step]
+    if (step.kind !== 'meet') return null
+    const key = lociKey(step.point, step.loci[1])
+    if (found && found !== key) return null
+    found = key
+  }
+  return found
+}
+
+function planOnce(model: ConstructionModel, options: PlanOptions, banned: ReadonlySet<string>): ConstructionPlan {
   const pts = model.points
   const n = pts.length
   const forced = (options.free ?? []).filter(p => pts.includes(p))
@@ -285,7 +375,7 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
   const add = (a: Cost, b: Cost): Cost => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
   const less = (a: Cost, b: Cost) => a[0] !== b[0] ? a[0] < b[0] : a[1] !== b[1] ? a[1] < b[1] : a[2] < b[2]
   const stepCost = (p: string, placed: string[]): Cost => {
-    const dof = 2 - Math.min(2, lociFor(model, p, placed).length)
+    const dof = 2 - Math.min(2, lociFor(model, p, placed, banned).length)
     return [dof, isAuxiliary(p) ? dof : 0, dof > 0 ? index.get(p)! : 0]
   }
 
@@ -301,7 +391,7 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
       const mask = maskOf(placed)
       const hit = memo.get(mask)
       if (hit) return hit
-      const determined = remaining.find(p => lociFor(model, p, placed).length >= 2)
+      const determined = remaining.find(p => lociFor(model, p, placed, banned).length >= 2)
       const candidates = determined ? [determined] : remaining
       let result = { cost: [Infinity, Infinity, Infinity] as Cost, next: null as string | null }
       for (const p of candidates) {
@@ -328,7 +418,7 @@ export function plan(model: ConstructionModel, options: PlanOptions = {}): Const
   // their own: they come from the facts, and every fact is checked.
   const steps: Step[] = []
   order.forEach((p, k) => {
-    const loci = lociFor(model, p, order.slice(0, k))
+    const loci = lociFor(model, p, order.slice(0, k), banned)
     if (loci.length === 0) steps.push({ kind: 'free', point: p })
     else if (loci.length === 1) steps.push({ kind: 'on', point: p, locus: loci[0] })
     else steps.push({ kind: 'meet', point: p, loci: [loci[0], loci[1]] })
@@ -421,6 +511,15 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
     case 'circle': {
       const r = dist(g(locus.radius[0]), g(locus.radius[1]))
       return r < 1e-12 ? null : { kind: 'circle', c: g(locus.center), r }
+    }
+    case 'thales': {
+      const [a, b] = locus.ends.map(g)
+      const r = dist(a, b) / 2
+      return r < 1e-12 ? null : { kind: 'circle', c: [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], r }
+    }
+    case 'perpendicular': {
+      const v = g(locus.at), d = sub(g(locus.to), v)
+      return Math.hypot(...d) < 1e-12 ? null : { kind: 'line', p: v, d: [-d[1], d[0]] }
     }
   }
 }
@@ -517,7 +616,8 @@ function sFromT(t: number, [lo, hi]: [number, number]): number {
 export interface Drawing {
   coords: Map<string, Point>
   /** The construction cannot be carried out from here on (e.g. two circles do not meet). */
-  failure?: { step: number; point: string; reason: string }
+  /** Where it stopped, and why; `coincident` when the two loci of a meet were one curve. */
+  failure?: { step: number; point: string; reason: string; coincident?: boolean }
   /** Facts that do not hold in this drawing. */
   violations: { step: number; what: string }[]
   /**
@@ -538,6 +638,8 @@ export function describeLocus(l: Locus): string {
     case 'angle': return `the arm from ${displayName(l.vertex)} at ${l.supplement ? 'the supplement of ' : ''}angle ${n(l.angle)} to ${n([l.vertex, l.from])}`
     case 'angle-bisector': return `the ${l.outer ? 'outer ' : ''}bisector of angle ${n([l.arms[0], l.vertex, l.arms[1]])}`
     case 'area': return `a parallel to ${n(l.base)} at the height that gives the area of ${n(l.area)}`
+    case 'thales': return `the circle on ${n(l.ends)}`
+    case 'perpendicular': return `the perpendicular to ${n([l.at, l.to])} at ${n([l.at])}`
   }
 }
 
@@ -584,9 +686,9 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
     const target = options.targets?.get(x)
     let pos: Point | null = null
     let decided = new Set<Check>()   // order facts the construction itself guarantees
-    const fail = (reason: string): Drawing => {
+    const fail = (reason: string, coincident?: boolean): Drawing => {
       options.onParams?.(used)
-      return { coords: at, failure: { step: k, point: x, reason }, violations, decisions }
+      return { coords: at, failure: { step: k, point: x, reason, ...(coincident ? { coincident } : {}) }, violations, decisions }
     }
 
     if (step.kind === 'free') {
@@ -633,7 +735,7 @@ export function execute(cp: ConstructionPlan, params: readonly number[], options
         if (f === 'same') { same++; continue }
         found.push(...f.filter(c => onRay(c, u, tol()) && onRay(c, v, tol())))
       }
-      if (same === us.length * vs.length) return fail(`${step.loci.map(describeLocus).join(' and ')} coincide`)
+      if (same === us.length * vs.length) return fail(`${step.loci.map(describeLocus).join(' and ')} coincide`, true)
       if (found.length === 0) return fail(`${step.loci.map(describeLocus).join(' and ')} do not meet`)
       const ok = found.filter(c => {
         at.set(x, c)
@@ -860,8 +962,10 @@ function sampler(cp: ConstructionPlan, seed = 0): () => number[] {
         const r = Math.sqrt(random()), a = 2 * Math.PI * random()
         out.push(r * Math.cos(a), r * Math.sin(a))
       } else if (step.kind === 'on') {
-        // Slider values: inside an interval, a little way along a ray, or near the defining points.
-        out.push(step.locus.kind === 'circle' ? 2 * Math.PI * random() : 0.2 + 0.6 * random())
+        // Slider values: inside an interval, a little way along a ray, or near the defining points. A
+        // perpendicular is measured in the length of the arm it stands on, from half to three times it.
+        const k = step.locus.kind
+        out.push(k === 'circle' || k === 'thales' ? 2 * Math.PI * random() : k === 'perpendicular' ? 0.5 + 2.5 * random() : 0.2 + 0.6 * random())
       }
     }
     return out

@@ -185,7 +185,7 @@ while the point is touched. Hovering an element of the figure says where it came
 | step | degrees of freedom | |
 |------|-----|---|
 | free | 2 | an input |
-| on a locus | 1 | a slider along a line, a circle, a perpendicular bisector, a ray at a given angle, an angle's bisector, the parallel through a placed point, or a parallel at the height that makes an area |
+| on a locus | 1 | a slider along a line, a circle, a perpendicular bisector, a ray at a given angle, an angle's bisector, the parallel through a placed point, a parallel at the height that makes an area, a right angle's perpendicular, or the circle on a right angle's arms |
 | where two loci meet | 0 | an intersection, with a choice of branch |
 
 Loci are built from points already placed: the line through two points of a collinear group; a circle
@@ -215,6 +215,21 @@ two lines parallel to the side opposite it, one either side, at the height that 
 the other's area. Of the two the drawing keeps the one the point is on, as for a copied angle. With a
 shared base (`eq-area a b c a b d`) one of them is the parallel through c, which is the shear; in
 general it is Euclid's I.44, applying an area to a given line, done numerically.
+
+A right angle is read from the equal angles it unfolds to: two angles at one vertex sharing an arm,
+whose other arms run either way along a straight line through the vertex (`right a b c` is
+`between a b d` and `eq-angle a b c c b d`). It is one equation with two loci. An arm's point is on the
+perpendicular at the vertex once the vertex and the other arm are placed; the vertex is on the circle
+on the arms' points (Thales) once both are, which is how the foot of a perpendicular from a placed
+point to a placed line is found (the Simson line's three feet, the altitudes). The extension point d
+then comes after, anywhere on its line beyond the vertex. Nothing names `right`: a right angle written
+out by hand is read the same way. The loci are Euclidean, like the rest of the planner's.
+
+Two loci can be one curve because of a theorem the planner cannot see from the facts' shapes: a point
+on the circle about the midpoint of a-c makes a right angle at a and c, so its Thales circle is that
+circle. Planning carries the plan out on a few samples; if a meeting point's two loci coincide in
+every one, the second is set aside for that point and the order is chosen again, the right angle is
+checked rather than used, and holds on every frame (a dependency).
 
 The order of construction is chosen by an exact search, dynamic programming over the set of placed
 points, that uses as many of the figure's equations as possible (each one used removes a degree of

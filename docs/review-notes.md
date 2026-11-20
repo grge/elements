@@ -370,3 +370,8 @@ What fails is always a vertex that must come after both its arms: the foot of a 
 placed point to a placed line. One foot the planner dodges by order; two or more it cannot. A failing
 plan overcounts its freedom (Simson: 11 for 7), and the page solves the figure numerically and says so.
 
+Built (November 2026): a right angle is read from the equal angles it unfolds to, with two loci, the
+perpendicular at the vertex and the circle on the arms. Every figure above constructs, and
+`triangle-to-rectangle` is now built from its triangle. Thales on a diameter, where the new circle is
+the given one, is set aside as one condition (a theorem) by carrying the plan out.
+
