@@ -400,3 +400,22 @@ describe('right angles', () => {
     expect(cp.steps.slice(0, 3).map(s => [s.point, s.kind])).toEqual([['a', 'free'], ['b', 'free'], ['c', 'free']])
   })
 })
+
+describe('dragging after the construction is reversed', () => {
+  it('keeps the branches as drawn: the square from c, then d₁ pressed, stays where it was', () => {
+    // Pressing c (determined) re-plans with c free, so b is where two loci meet; the parameters do not
+    // say which of the two, the drawing does.
+    const model = buildModel(factsOf('square a b c d'), ['a', 'b', 'c', 'd'])
+    const first = realise(plan(model))
+    const alt = plan(model, { free: ['c'] })
+    const r = realise(alt, { previous: first.drawing.coords })
+    const drawn = execute(alt, r.params, { previous: r.drawing.coords }).coords
+    for (const p of ['a', 'b', 'c']) {
+      const [x, y] = drawn.get(p)!
+      expect(Math.hypot(x - first.drawing.coords.get(p)![0], y - first.drawing.coords.get(p)![1])).toBeLessThan(1e-9)
+    }
+    const at = drawn.get('d#1')!
+    const after = execute(alt, drag(alt, r.params, 'd#1', at, drawn), { previous: drawn }).coords.get('d#1')!
+    expect(Math.hypot(after[0] - at[0], after[1] - at[1])).toBeLessThan(1e-9)
+  })
+})

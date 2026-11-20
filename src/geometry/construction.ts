@@ -1097,8 +1097,14 @@ export function draggable(cp: ConstructionPlan, point: string): boolean {
   return !!step && step.kind !== 'meet'
 }
 
-/** New parameters after dragging `point` towards `world` (other parameters unchanged). */
-export function drag(cp: ConstructionPlan, params: readonly number[], point: string, world: Point): number[] {
+/**
+ * New parameters after dragging `point` towards `world` (other parameters unchanged). `previous`, the
+ * positions as drawn, decides the branches of the points before it: the parameters do not say which
+ * of two meeting points was taken, and taking the other would fit the dragged point to the wrong
+ * figure (a square re-planned from c has b where two loci meet; its mirror image across c-a puts a-b
+ * elsewhere, and d₁, fitted to that line, lands beside b).
+ */
+export function drag(cp: ConstructionPlan, params: readonly number[], point: string, world: Point, previous?: Map<string, Point>): number[] {
   const k = cp.steps.findIndex(s => s.point === point)
   if (k < 0 || cp.steps[k].kind === 'meet') return [...params]
   // Re-run the construction with the dragged point aimed at `world`; everything placed before it is
@@ -1106,7 +1112,7 @@ export function drag(cp: ConstructionPlan, params: readonly number[], point: str
   let next: number[] = []
   const targets = new Map<string, Point>([[point, world]])
   const offset = cp.steps.slice(0, k).reduce((s, st) => s + paramCount(st), 0)
-  execute(cp, params, { targets, onParams: p => { next = p } })
+  execute(cp, params, { targets, previous, onParams: p => { next = p } })
   const out = [...params]
   for (let i = 0; i < paramCount(cp.steps[k]); i++) if (next[offset + i] !== undefined) out[offset + i] = next[offset + i]
   return out

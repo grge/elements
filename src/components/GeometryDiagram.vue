@@ -352,7 +352,7 @@ function startInteraction(e: PointerEvent) {
       transform!,
     )
     if (planning.value) {
-      local.value = { ...local.value!, params: dragConstruction(local.value!.plan, local.value!.params, point!, world) }
+      local.value = { ...local.value!, params: dragConstruction(local.value!.plan, local.value!.params, point!, world, lastCoords) }
       return
     }
     const warmStart = new Map(witness!.coords)
