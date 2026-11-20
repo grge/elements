@@ -115,7 +115,7 @@ inequalities. Angles are the main thread; spreads close the chapter.
    drawn rather than proved.
 5. **Spreads.** Wildberger's spread between two lines, the angle up to its supplement, with the bridge
    from equal angles to equal spreads. Vertical and supplementary angles have equal spreads at once,
-   perpendicularity needs no choice of side, and the algebraic lens (roadmap, *Beyond*) will speak in
+   perpendicularity needs no choice of side, and the algebraic lens (roadmap, *The workbench*) will speak in
    spreads.
 
 Left for later: I.13–14 as sums (their supplement form is in 1), I.16–25 (inequalities), the hexagon
@@ -183,7 +183,7 @@ What it lacks is less a rule than room: a fourth rule, that a midpoint of distin
 from its ends, made the heavy lemmas of chapters 1 and 2 twice as slow (every new pair of distinct
 points on a line adds `parallel` facts, which the closure walks class by class), and with those
 facts given as hypotheses the midline is still over budget. Wanted first: lemma compilation (I.33
-as a rule), or a faster closure (roadmap, *Logic*, performance).
+as a rule), or a faster closure (roadmap, *Next*).
 
 **Definitions stay simple; lemmas state the sides they need** (decided November 2026). A rectangle is
 a parallelogram with a right angle, a square a parallelogram with a right angle and two equal sides
@@ -213,7 +213,7 @@ parallels by colour; arrows are the schoolbook convention, which reads in one co
 ### 4. Area  *(exists: `book/04-area.geo`)*
 
 Euclid never measures an area: he cuts figures into pieces and puts them together again. So the book
-does too, with triangles as the pieces, and no arithmetic (decided November 2026; see *Open questions*).
+does too, with triangles as the pieces, and no arithmetic (decided November 2026; see the roadmap's *Open questions*).
 
 1. **Axioms.** `eq-area a b c d e f`: an equivalence on triangles in any order of their corners, which
    the engine recognises as it is (the same machinery as equal angles). Congruent triangles have equal
@@ -278,25 +278,5 @@ circle.
 
 ## Open questions
 
-- **Adding quantities.** The angle sum, additivity of area and products of ratios all add things.
-  Horn clauses can do this through auxiliary constructions (as Euclid does), or a generic arithmetic
-  component could solve linear equations between quantities (as AlphaGeometry's algebraic reasoning
-  does). The latter is not geometry-specific, so it would not break the engine's generality, but it is
-  not an abbreviation for Horn clauses either. Decided for chapter 4 (November 2026): Euclid's way,
-  no arithmetic, sums as figures cut into parts. It carries the chapter to Pythagoras and stops at
-  II.14 and I.48, where two sums of one figure must be compared; with the angle sum (I.32) and chapter
-  6's ratios, that is the evidence for the decision. The common notions are now written three times,
-  for segments, angles and areas, in one shape (a point on a segment cuts a whole into parts), which
-  is the shape a recognised sum would have. See the review notes.
-- **What to prove and what to assume.** Hilbert-style axioms keep proofs short; Euclid's propositions
-  are more instructive. Likely: assume what Euclid proves by superposition, prove the rest.
-- **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
-  object would read better and suit projective or other geometries. Not needed yet.
-- **Comparisons of size**, for the triangle inequality and Euclid I.16–25.
-- **Angles or spreads, for chapter 2.** Wildberger's *spread* between two lines (in effect the squared
-  sine of the angle) does not tell an angle from its supplement. That sounds like a loss, but rays,
-  sides and orientation are exactly what Horn clauses handle worst: which side of a line a point is
-  on, supplementary angles, the case splits the engine cannot do. An `eq-spread` relation on pairs of
-  lines (four points) avoids most of that, and many of Euclid's results restate cleanly with it.
-  Options: `eq-angle` alone (Euclid's own, with sides to manage), `eq-spread` alone, or spreads first
-  and angles where orientation matters. Decide before writing chapter 2.
+The book's open questions (sums, cases, sides, the axioms taken for now, lines as objects,
+comparisons of size) are in the [roadmap](roadmap.md#open-questions), with the rest of what is open.

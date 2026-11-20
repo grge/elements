@@ -152,6 +152,5 @@ closure; see [architecture.md](architecture.md#the-knowledge-base).
 
 ## Not in the language
 
-Negation as failure, comparisons of size, arithmetic on quantities and case splits. Comparisons and
-adding quantities are open questions in [book.md](book.md#open-questions); case splits and the other
-logic work are on the [roadmap](roadmap.md#logic).
+Negation as failure, comparisons of size, arithmetic on quantities and case splits. Comparisons, adding
+quantities and case splits are open questions on the [roadmap](roadmap.md#open-questions).

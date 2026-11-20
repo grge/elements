@@ -1,11 +1,9 @@
 # Review notes
 
-What writing the book shows about the engine, collected for the review sessions to come: the logic,
-the planner, the book itself, and the drawing. Each note says what happened, with numbers where there
-are some, and what it suggests. Started with chapter 4 (November 2026); add to it as chapters come.
-The roadmap keeps the plan; this page keeps the evidence. The first review drew on it in November
-2026: [review-2026-11.md](review-2026-11.md) has its measurements, and [north-star.md](north-star.md)
-the direction.
+What writing the book shows about the engine: the logic, the planner, the book itself and the drawing.
+Each note says what happened, with numbers where there are some. The notes from chapter 4 come first,
+then the review of November 2026, which measured the whole core. Add to it as chapters come. What to do
+about it is in the [roadmap](roadmap.md).
 
 ## The logic: language, inference, performance
 
@@ -54,8 +52,8 @@ form. The language itself (predicates over points, definitions, lemmas) has not 
   evaluator, done properly, still cannot carry the book's figures. One probe so far: on the windmill
   figure, goal relevance alone cut the facts from 55,698 to 4,544, and the closure still did not
   finish, because of 1. Whether fixing 1 is enough is the first thing to measure. The review's
-  answer (review-2026-11.md) is to do 4 first, by another route: a figure of the hypotheses shows they
-  are consistent, and that search is 80% of checking time. Then the evaluator is replaced once.
+  answer (below) is to do 4 first, by another route: a figure of the hypotheses shows they are
+  consistent, and that search is 80% of checking time. Then the evaluator is replaced once.
 
 **Non-degeneracy is the main logical friction.** Forward chaining cannot argue by contradiction or by
 cases, so "a midpoint of distinct points is neither end", "k is off the line b-d" and "e is not a"
@@ -74,7 +72,7 @@ figure (sides, distinctness) as hypotheses to add, never as proof; or the algebr
 non-degeneracy conditions a statement needs. And an asymmetry to resolve: the marks closure assumes
 distinct names are distinct points (`closure.ts`), the checker does not.
 
-**Lemmas are not rules** (roadmap, *Lemma compilation*). Pythagoras's closure derives I.34 and the
+**Lemmas are not rules** (roadmap, *Not now*). Pythagoras's closure derives I.34 and the
 windmill's congruence again from axioms; so the book states the steps as lemmas (each light) and the
 theorem as one more (heavy).
 
@@ -169,3 +167,173 @@ cleared "Not drawn: triangle" from most pages.
   draw its figure as a whole (a square filled when its half is hatched, the diagonal then unneeded),
   and a page's statement could come first and its sub-constructions' marks recede. What it does not
   answer is which marks a page should show at all, which is the question above.
+
+## The November 2026 review
+
+A review of the whole core, made after chapter 4 with its own measurements (Node 22 on four CPUs, at
+commit 6c9913b; `npx vite-node scripts/bench.ts` reproduces them). Its diagnosis is below. Its
+proposals were weighed against what elements is for (README.md); those adopted are in the roadmap.
+
+### What holds up
+
+- **The language.** It has predicates over points, definitions recognised as if-and-only-if, and `?`
+  lemmas whose meaning is a least model (language.md). The strains below are in what the machinery does
+  with it.
+- **Structure by proof.** Every sameness so far (points, segments, angles, directions, areas) was
+  recognised as an equivalence from its own rules and implemented with union-find, with no engine
+  change. This is what makes the closure affordable. The plain reference engine, which is semi-naive
+  with argument indexes but has no structure, is 1.3 to 7 times slower than `saturate` on the five
+  lemmas tried. Structure stays, and the evaluator below is built on it.
+- **Unfolding.** One mechanism serves checking and drawing, with fresh names for a definition's
+  auxiliary points.
+- **The relation table** is the boundary between the logic and the figure, and every fact is checked
+  on every frame.
+- **The planner.** All 29 pages of defined predicates construct with ruler and compass. Planning takes
+  at most a third of a second, and realising tens of milliseconds.
+- **Numeric evidence and the five verdicts**, which make a ✓ something a reader can rely on.
+- **The book's plan**: one new sameness per chapter, and neutral geometry first.
+
+### Where the machinery flattens the book
+
+| The book already says | The machinery does instead | Measured |
+|---|---|---|
+| Chapters build on earlier ones, and chapters 1 and 2 hold without the parallel postulate | One flat set of rules for every check | Chapter 1's searches for `false` take 17.0 s with the whole book and 2.1 s with its own rules. "Holds in hyperbolic geometry" is checked by nothing |
+| A definition abbreviates its body | Its defining clause fires as a rule, recognising every construction the facts allow | The windmill's closure stores 22,456 facts with definitions and 3,622 without; all 64 verdicts are the same without them |
+| A proposition cites earlier ones | Every proof starts from the axioms | Pythagoras with whole squares needs five times the budget (above) |
+| A construction is a step in a larger one | The planner searches the orders of every point | Search time about doubles with each point (2.7 s at 18). At 19 the greedy fallback fails on a figure the search builds |
+| A figure of the hypotheses is a model of them | Consistency is looked for by a second full closure, from scratch | 80% of checking time; 12 lemmas' ✓ rest on that search running out of budget |
+| A page states one proposition | Marks come from a closure of everything on the page, for every member of every class | `rectangle-to-square` takes 43.9 s of closure for its marks, and draws 46 arcs, 27 ticks and 16 arrows |
+
+Four findings are not about flattening.
+
+- **The evaluator is naive.** This confirms causes 1 to 3 above, on the whole book. Of
+  4.96 million derivations, 9.9% add a fact. On the windmill's search for `false`, joins take 9.9 of
+  the 10.8 s over only three rounds. Each of side-angle-side's two rules takes 2 s for under 4,000
+  matches, about half a millisecond a match. That is most likely the cost of scanning where an index
+  would look up.
+- **Names have leaked into the geometry.**
+  - `lociFor` and `countEquations` in `construction.ts` switch on relation names.
+  - The relation table mixes the model (`read`, `holds`, `residual`) with the depiction (`depicted`,
+    `draw`). It holds `circle` and `right`, which are defined, only to draw them.
+- **Two samplers disagree.** Evidence samples with `configurations`, which never varies branches,
+  while pages use `realise`, which does. So the windmill's page constructs, but its two lemmas get no
+  sampled figure.
+- **Layers point the wrong way in one place.** `kb/verdict.ts` imports the editor's `EditorMark` from
+  `components/CodeEditor.vue` and `Evidence` from `geometry/`, so the logic depends on the interface.
+  A verdict weighs a proof against evidence, so it belongs above both.
+
+### What the review measured
+
+**The book as measured:**
+- four files and 136 rules: 105 axioms, and 31 clauses for defined predicates (definitions and the
+  theorems about them);
+- structure makes 56 of the 136 rules redundant;
+- 64 lemmas.
+
+**How it was measured:** Node 22 on four CPUs, November 2026, at commit 6c9913b. Times vary by about a
+tenth between runs; counts do not. `scripts/bench.ts` reproduces the checking table and the pages.
+The other figures come from one-off probes, each described where it appears.
+
+**Checking.** The real checker takes 134.7 s and proves all 64 lemmas. The phases come from the
+benchmark (131.6 s in all). The benchmark always runs the search for `false` after a proof, whereas
+the checker skips it when `false` is unreachable. That is why chapter 1's columns add up to more than
+its checker time.
+
+| Chapter | Lemmas | Checker | Goal | Search for `false` | Out of budget |
+|---|---|---|---|---|---|
+| 1, length | 23 | 13.7 s | 0.2 s | 17.0 s | 2: `march`'s order |
+| 2, angle | 14 | 7.9 s | 2.1 s | 5.7 s | 0 |
+| 3, direction | 17 | 53.5 s | 10.0 s | 40.9 s | 5: I.28's first converse, two of the rectangle, two of the square |
+| 4, area | 10 | 59.6 s | 13.9 s | 41.7 s | 5: I.35, both windmill lemmas, f-b-c as half the square, the triangle to a rectangle |
+| all | 64 | 134.7 s | 26.2 s | 105.4 s | 12 |
+
+The heaviest lemmas, as goal phase plus search for `false`:
+
+| Lemma | Goal | Search for `false` |
+|---|---|---|
+| the windmill's `eq-area a b d f b c` | 5.9 s | 9.6 s |
+| the windmill's `eq-area a b f l b d` | 5.7 s | 9.5 s |
+| the rectangle's diagonals | 4.1 s | 7.1 s |
+| the rectangle's angle | 0.65 s | 6.7 s |
+| I.35 | 0.65 s | 6.3 s |
+
+There were 4,964,030 derivations in all, of which 489,873 (9.9%) added a fact.
+
+**Scopes** (`--scoped`). 119.6 s in all, and all 64 lemmas still proved.
+- Chapter 1's searches for `false` take 2.1 s instead of 17.0 s, and `march`'s two no longer run out
+  of budget.
+- Chapters 3 and 4 take about the same, since they use nearly every rule anyway.
+
+**The windmill's search for `false`, rule by rule.**
+- It took 10.8 s and ran out of budget in its third round.
+- It stored 22,456 facts.
+- It walked an equivalence's classes with the block not fully bound 3,457 times.
+- Joins took 9.9 s.
+
+| Rule | Time | Matches |
+|---|---|---|
+| side-angle-side, its third side | 2,155 ms | 3,884 |
+| side-angle-side, its angle | 2,042 ms | 3,892 |
+| angle-side-angle | 1,134 ms | 534 |
+| angles taken away | 810 ms | 5,466 |
+| angles added | 721 ms | 5,078 |
+| supplements: substitution | 381 ms | 155,360 |
+| the definition of a line-line intersection | 378 ms | 35,040 |
+| a common supplement | 300 ms | 88,704 |
+
+**Definitions as abbreviations.** The probe removed the clauses for defined predicates from the
+closure, except `false`'s, and answered defined goals by matching their unfolding.
+- All 64 verdicts agree.
+- Stored facts fall sharply. In the heaviest closures they fall 3 to 6 times: the windmill's from
+  22,456 to 3,622, and the rectangle's from 14,897 to 4,766. In others the fall is far greater: the
+  hexagon's from 11,129 to 109, and `vesica`'s from 3,413 to 59. At the median the fall is 27 times.
+- Time for the full closures falls only from 108.3 s to 96.6 s.
+
+**Structure against semi-naive.** The reference `forwardClosure` (semi-naive with argument indexes)
+against `saturate` (naive, with structure), in the goal phase:
+
+| Lemma | `saturate` | reference |
+|---|---|---|
+| the equilateral triangle's angles | 18 ms | 23 ms |
+| `bisect-angle` | 107 ms | 570 ms |
+| the midpoint, constructed | 503 ms | 1,183 ms |
+| the parallelogram's opposite sides | 194 ms | 1,399 ms |
+| the parallelogram's halves | 91 ms | 584 ms |
+
+**Pages** (`pages`). All 29 defined predicates construct, and none falls back to the solver. Planning
+takes at most a third of a second (`rectangle-to-square`, 13 points), and realising tens of
+milliseconds. The closure that merges marks is the slowest thing on any page:
+
+| Page | Marks closure |
+|---|---|
+| `rectangle-to-square` | 43.9 s |
+| `windmill` | 12.3 s |
+| `triangle-to-rectangle` | 7.7 s |
+| `compass-midpoint` | 4.2 s |
+| `cut` | 4.2 s |
+| `square` | 4.1 s |
+| `march` | 3.9 s |
+
+**The planner's growth.** The probe added to a page until it passed 18 points.
+
+| Figure | Points | Plan | |
+|---|---|---|---|
+| `windmill` | 10 | 36 ms | constructed |
+| `windmill` and the square on a-b | 13 | 198 ms | constructed |
+| `windmill` and both squares | 16 | 770 ms | constructed |
+| `rectangle-to-square` and four equilateral triangles | 17 | 1,654 ms | constructed |
+| … and a fifth | 18 | 2,736 ms | constructed |
+| … and a sixth, planned greedily | 19 | 3 ms | not constructed: two equations unused |
+
+**Witnesses.** Evidence finds sampled figures of the hypotheses for 59 of the 64 lemmas, in at most
+57 ms each. The other five:
+
+- **I.11's `right a c d`.** Its hypotheses construct, in 24 of 24 samples. Evidence stops only because
+  the claim brings in a point of its own.
+- **I.33, and both windmill lemmas.** `realise` constructs them. `configurations` finds nothing,
+  because it never varies branches.
+- **Playfair's `collinear c d e: parallel a b c d, parallel a b c e`.** Neither sampler draws it. The
+  plan takes a, b, d and e as inputs, and places c where the parallels to a-b through d and through e
+  meet. They never meet: two parallels to one line are one condition, not two.
+
+So with one sampler and that count fixed, every lemma in the book would have a witness.

@@ -2,7 +2,7 @@
 
 How elements turns Horn clauses into checked lemmas and draggable ruler-and-compass figures, and why
 it is built this way. For the language itself see [language.md](language.md); for the visual design
-see [design.md](design.md). For where the core is going, see [north-star.md](north-star.md).
+see [design.md](design.md). For what it is for and where it is going, see the [README](../README.md) and the [roadmap](roadmap.md).
 
 ```
  the book (src/language/book/*.geo) · user clauses · the text on the page
@@ -274,7 +274,7 @@ not needed at the current size), SMT solvers (powerful but heavy and opaque), an
 Avigad, Dean and Mumma's system E (a formal account of Euclid that reads order facts from the diagram; a
 good reference for how `between` and distinctness should eventually work). Algebraic provers (Wu's
 method, Gröbner bases) are planned not as the engine but as a third lens on a geometry's model,
-beside the construction and the numbers; see the [roadmap](roadmap.md#beyond).
+beside the construction and the numbers; see the [roadmap](roadmap.md#the-workbench).
 
 ## Tests
 

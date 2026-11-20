@@ -1,288 +1,211 @@
 # Roadmap
 
-Open problems and ideas, roughly in order of value within each section. See
-[architecture.md](architecture.md) for how things work now, and [review-notes.md](review-notes.md) for
-what writing the book has shown about the engine, gathered for the review sessions. The direction comes
-from [north-star.md](north-star.md); the [November 2026 review](review-2026-11.md) holds the
-measurements behind it. Where an item below disagrees with the North Star, the North Star wins until
-the item is rewritten.
+What to work on, decided by what elements is for and the principles in the [README](../README.md).
+*Next* is the plan, in order; the rest is everything else that is open, by area. The evidence behind
+the plan is in [review-notes.md](review-notes.md); how things work now is in
+[architecture.md](architecture.md). Done items leave this page (git history, design.md and book.md
+keep what was built and why).
 
-## Principles
+## Next
 
-- **Keep the engine general.** No geometry in the inference engine; geometry lives in `.geo` files and
-  in the drawing layer. Extending to other geometries should mean new rules and a new drawing layer.
-- **Prefer conventions over syntax.** When something seems to need new syntax, look first for a
-  convention the engine can recognise and verify, and make the recognised status visible.
-- **The rules are the meaning.** Anything the engine builds in (union-find, canonical forms) must be
-  something it has proven from the rules.
-- **The figure never silently disagrees with the facts.** It either satisfies every fact or says
-  which step fails and why.
+In order. Each is worth doing on its own, and each is measured with `scripts/bench.ts`.
 
-North-star.md adds how to decide: the page is the product, the clauses are prose, every page is
-honest, dependencies come from the content, the workbench must not cost the book, and big changes to
-the logic need a reader-visible reason.
+1. **Figures as witnesses.** A figure of the hypotheses shows they are consistent, so the second
+   closure that searches for `false` (four fifths of checking time) runs only when no figure is
+   found. Evidence already finds a figure for 59 of 64 lemmas in milliseconds.
+   - One sampler for pages and evidence. `configurations` never varies branches, so the windmill's
+     page constructs but its lemmas get no sampled figure; `realise` varies them only at random after
+     40 failures. Search branches and slider directions systematically, and choose a branch as soon as
+     an order fact can decide it.
+   - Count two parallels to one line as one condition, not two, so Playfair's hypotheses draw.
+   - A witness needs every hypothesis to hold with a real margin (`distinct`, `triangle` well clear of
+     degenerate), not the drawing's 1e-7. A solved figure is a weaker witness, and the verdict says so.
+   - Check every derived fact against the figure: one that fails means an axiom is wrong or a bug (!).
+   - The tests still run the full search for `false`, so a wrong axiom still shows (the unguarded I.29
+     of chapter 3 is the regression case).
+2. **Pages that answer quickly.**
+   - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
+     matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.
+   - Relevance: fire only rules that can reach the goal, `false` or a mark's query (the predicate
+     graph `mayDerive` already builds).
+   - The marks closure: `rectangle-to-square` waits 44 s for its marks. One closure per page, kept
+     and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
+     than receiving them with every request.
+   - Then, if pages still wait, the evaluator itself, replaced once and measured: semi-naive over the
+     union-find store (rebuilding after merges, as egglog does), indexes on argument positions and on
+     class membership, a budget counted in facts added. Today 90% of derivations re-derive known
+     facts, and a bound atom scans every fact of its predicate.
+3. **What a page shows.**
+   - Marks chosen by the page's statement first, its sub-constructions receding. Today marks are
+     global: every member of every class, from every lemma about anything on the page, so a
+     parallelogram is hatched all over and chapter 3's pages carry chapter 4's marks.
+   - A class that tiles a figure shown as what it is; Byrne fills a square where we hatch its half.
+   - Figures that read well: spread out, no slivers, the construction in its natural order. A
+     perpendicular locus for `right`, so its extension point stops costing a degree of freedom and
+     `triangle-to-rectangle` is no longer built backwards from the rectangle.
+   - What a construction draws, and how a reader can tell. A relation drawn as itself stops the
+     drawing there, so `right a b c` draws Byrne's square and hides its d. The leading idea: unfold
+     everything and draw bottom-up, each level taking a turn after its body has drawn, to add or
+     restyle (`right` turns two equal-angle arcs into a square), never to delete. To settle: what a
+     turn may do; who modifies a fact two definitions share; the clutter it adds; a second hook on the
+     relation table, with figure.ts composing.
+   - Points under the notice: fitting the figure leaves no room for the plate at its foot.
+   - Equal angles alone draw no arcs (three equiangular triangles, in headless screenshots at least).
+4. **Pay back what was done for speed.** Pythagoras with whole squares (five times the budget today);
+   guards whose only reason was the join, each rechecked; I.43, the complements; the midline of
+   chapter 3.
+5. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
+   axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
+   proof that leans on `parallel` being an equivalence leans on I.30.
+6. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
+   an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
-## Towards basically done
+**Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
+composing plans per definition, a change of logic (below, *Open questions*).
 
-The plan as of November 2026, in order. The first milestone is **demo-ready**: steps 1 to 3.
+## The book
 
-1. **Correctness.** Done in November 2026: a predicate's page draws its signature, ticks are as
-   bold as Byrne's and mark circles' radii too, the solver switch is gone, and the figure draws
-   the construction it used, in layers by depth (see *Construction and drawing*).
-2. **A careful pass over everything.** Done in November 2026: dead code removed, language.md
-   rewritten, the two March proposals folded into this page, the book's comments brought up to date.
-   The structural findings are under *Code structure* below.
-3. **The editor.** Done in November 2026: prose comments, hanging indents, no breaks inside names,
-   reasons for ✗ and ⊥ and syntax errors shown under their lines, unknown names marked, completion
-   with argument fields, Enter and Tab that know the layout (see design.md, *Source*).
-   The tether between source and figure followed (see design.md, *As built*).
-4. **Honest verdicts.** Done in November 2026: numeric evidence on sampled figures, and five verdicts
-   (✓ proven, ✗ false, ? not proven with the reason, ⊥ vacuous, ! alarm; see architecture.md). Next
-   under *Logic*: show a ✗'s counterexample figure.
-5. **Chapter 2, angle.** The engine and drawing support for both candidates is in (November 2026):
-   `eq-angle` on angle triples and Wildberger's `eq-spread` on pairs of lines, recognised as
-   equivalences, measured in checks, the solver and numeric evidence, with Byrne's arcs for equal
-   angles (`tests/fixtures/angles.geo`: the isosceles triangle in both, all lemmas well under a
-   second). Content decided: angles as the thread, spreads to close (book.md, *Chapter 2*). Written so
-   far: the axioms (with `triangle`, three points not on a line, which angle-side-angle needs: on a
-   line it derived false equal lengths), the triangle theorems, the five constructions (I.9–12,
-   I.23) and chapter 1's debts (the midpoint proven; reflection; the perpendicular bisector case by
-   case). Angles now construct (rays at a given angle, bisectors), so `eq-angle`, `supp` and `right` figures drag
-   smoothly instead of falling back to the solver. Spreads are set aside for now (November 2026), in
-   favour of chapter 3 (see *Beyond*); case splits, which the circumcentre waits on, too.
-6. **More than one page, and a more playful layout**, in the same aesthetic: a front page, an
-   explainer (the language, unfolding, the planner and the checker, each shown with live figures) and
-   help. Sketched before built, once two chapters show what it lays out; [the Plates
-   concept](plates-concept/REDESIGN_CONCEPT.md) is a starting point, and design.md's entry page is the
-   earlier idea.
+The chapters and what they wait on (book.md has each chapter's plan and notes):
 
-## Beyond
-
-**The rest of the book.** Each chapter after 2 waits on a decision or a piece of drawing:
-
-| Chapter | Needs first |
-|---------|-------------|
-| 3, direction | written but for the midline: axioms, the postulate, alternate, corresponding and same-side angles, I.31, parallelograms, rectangles and squares (book.md, *3*); the midline waits on closure performance |
-| 4, area | written, Euclid's way without sums (November 2026): equal area of triangles, parallelograms and triangles, Pythagoras in split form, squaring a quadrilateral and a triangle; II.14's proof and I.48 wait for sums (book.md, *4*) |
-| 5, circle | mostly content, on chapters 1–4 |
-| 6, ratio | equal ratios as an equivalence on pairs of segments |
+| Chapter | State |
+|---|---|
+| 1, length | written |
+| 2, angle | written; spreads set aside |
+| 3, direction | written but for the midline (*Next*, 4) |
+| 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
+| 5, circle | mostly content on chapters 1–4; the circumcentre waits on cases |
+| 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
 | 7, regular figures | content, on all the above |
 
-**Three lenses on one theory.** The Horn clauses are the theory. A geometry gives it *models*, and
-each model can be looked at in more than one way:
+### Open questions
+
+The big ones change the logic, so they follow the README's last principle: taken up when a chapter
+cannot be written honestly without them, and designed as a whole.
+
+- **Sums.** The angle sum (I.32), additivity of area (II.14, I.48) and products of ratios all add.
+  Chapter 4 went Euclid's way, sums as figures cut into parts, and stopped where two sums of one figure
+  must be compared. The common notions are now written three times (segments, angles, areas) in one
+  shape, which is the shape of a relation the engine could recognise as additive, proven from its rules
+  as equivalences are and solved by linear arithmetic over its classes. The alternative is Horn
+  clauses through auxiliary constructions, as Euclid does. A hyperbolic area chapter (area as angle
+  defect) needs sums too.
+- **Cases.** Horn clauses cannot split cases, and the least-model meaning depends on that. Waiting on
+  them: the circumcentre; the shear and the median, axioms because Euclid's proofs split on where the
+  apexes fall; every trivial case a `distinct` hypothesis excludes. Either stay with Horn clauses and
+  state cases as lemmas joined by a covering one, or extend to coherent logic (disjunctions and
+  existentials in heads, as provers such as ArgoCLP use), at the price of a lemma's meaning no longer
+  being one least model. The one fork that changes what a lemma means.
+- **Sides of a line.** The figure knows which side a point is on; the logic does not, so every proof
+  across a line is told by a crossing point in its hypotheses. Options:
+  - `same-side` and `opposite-side` with their own axioms, as `between` has, following the
+    diagrammatic consequences of Avigad, Dean and Mumma's system E (2009). Tarski defines the same two
+    relations by exactly our crossing. Much is Horn; Pasch and "one side, the other or the line" need
+    cases. "The same side" is a sameness with two classes, so it could be a chapter's sameness.
+  - Spreads (`eq-spread`, in the engine, set aside for chapter 2) or full angles (Chou, Gao and
+    Zhang): neither tells an angle from its supplement, which makes I.29 side-free and would collapse
+    chapter 3's alternate, corresponding and same-side bookkeeping into one statement. Worth trying
+    on chapter 3 first.
+  - Meanwhile the figure could offer the side facts it shows as candidate hypotheses, never as proof.
+- **The axioms taken for now.** Side-side-side, angle-side-angle, the shear, the median, I.29 with the
+  postulate: each an axiom because its proof needs sides, cases or sums. For a reader they are fine
+  when the book says so; as the logic grows, keep them in one list and pay them back where it can.
+- **Hidden points.** A definition's auxiliary points cannot be named from outside, so a lemma about
+  one writes the definition out (the parallelogram, twice, to name where its diagonals cross). Wider
+  signatures, or leave it.
+- **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
+  object would read better and suit other geometries. Not needed yet.
+- **Comparisons of size**, for the triangle inequality and Euclid I.16–25.
+
+## The workbench
+
+**Three lenses on one theory.** The Horn clauses are the theory; a geometry gives it models, each seen
+three ways:
 
 - **constructive**: loci, intersections, ruler and compass (the planner and the figure);
-- **numeric**: residuals on sampled configurations (the solver, the checks, and numeric evidence for
-  honest verdicts);
-- **algebraic**: the same facts as polynomial equations, decided by Gröbner bases or Wu's method
-  (Chou proved hundreds of Euclidean theorems this way). It proves what forward chaining cannot
-  (facts that need case splits), and its non-degeneracy conditions ("provided a ≠ b") are exactly the
-  `distinct` hypotheses the book already writes, so the two lenses can check each other.
-  Wildberger's rational trigonometry gives this lens its natural vocabulary: quadrance (squared
-  distance) and spread (squared sine of the angle between lines) make every relation polynomial,
-  over any field. JavaScript has no mature Gröbner library; small systems can be done by hand, larger
-  ones through a WebAssembly build of a computer algebra system (giac has one).
+- **numeric**: residuals on sampled configurations (the solver, the checks, evidence and witnesses);
+- **algebraic**: the same facts as polynomials, decided by Gröbner bases or Wu's method (Chou proved
+  hundreds of Euclidean theorems this way). It proves what forward chaining cannot (facts needing case
+  splits), and its non-degeneracy conditions ("provided a ≠ b") are the `distinct` hypotheses the book
+  already writes. Rational trigonometry (quadrance, spread) makes every relation polynomial. A lemma
+  `? H: B` is ideal membership; unfolding a definition's auxiliary points is elimination. It covers
+  only the equality fragment (order is not algebraic), and proves generic truth over the complex
+  numbers. What it would add, in order of value: an oracle while writing chapters (✗ as "true provided
+  a ≠ b" versus "false"); a cross-check of `distinct` hypotheses; loci as curves, conics included; why
+  a figure has no construction (a cubic in Wu's form, angle trisection); discovery of coincidences,
+  certified. First step, before building anything: translate chapter 1's lemmas without `between`
+  into polynomials, run Wu and Gröbner offline (sympy), and compare their conditions with the book's
+  `distinct` hypotheses. JavaScript has no mature Gröbner library; giac has a WebAssembly build.
 
-  The correspondence is close: a conjunction of atoms is a polynomial system and its solutions, a
-  lemma `? H: B` is ideal membership (does H vanish wherever B does?), and unfolding a definition's
-  auxiliary points is elimination. Where it stops: order (`between`, sides) is not algebraic, so the
-  lens covers the equality fragment (common notion 2 is false without order); and algebra proves
-  *generic* truth over the complex numbers, with non-degeneracy conditions, where the Horn clauses
-  reason exactly. What it would add, in order of value:
-  - **An oracle while writing chapters**: when a Horn check gives ✗, "true provided a ≠ b; a step or
-    an axiom is missing" versus "false". Beyond numeric evidence, it adds certainty and the
-    conditions.
-  - **A cross-check of `distinct` hypotheses** against the conditions algebra demands: which are
-    needed, which are missing.
-  - **Loci as curves**: eliminate all but one point's coordinates as another slides, and draw the curve
-    it traces (conics included), which the planner cannot.
-  - **Why a figure has no construction**: in Wu's triangular form, every step of degree at most 2 is
-    a ruler-and-compass step; a cubic says why (angle trisection) instead of a silent fall back to the
-    solver.
-  - **Discovery**: coincidences found by sampling (equal segments, collinear or concyclic points),
-    certified algebraically, offered as candidate lemmas.
+**Sibling books.** Chapters 1 and 2 use no parallel postulate, so a **hyperbolic** book in the Poincaré
+disk can share them and fork at the postulate: the same propositions, the same ✓ (*Next*, 5, makes
+that checked). Its lines are arcs meeting the boundary at right angles and its circles Euclidean
+circles with shifted centres, so every intersection is one the planner already makes. A **spherical**
+book needs its own axioms from chapter 1 (antipodal points share many lines; `between` changes). A
+**rational trigonometry** book would sit beside the algebraic lens.
 
-  First step, before building anything: translate chapter 1's lemmas without `between` into
-  polynomials, run Wu's method and Gröbner bases offline (sympy), and measure how many prove, how
-  fast, and how their non-degeneracy conditions compare with the book's `distinct` hypotheses.
-
-The engine stays free of geometry: a model is a plug-in that interprets the drawable relations three
-ways (as loci, as residuals, as polynomials). Building that boundary (*Construction and drawing*,
-below) is the first step for every item here.
-
-**Sibling books.** Chapters 1 and 2 use no parallel postulate, so a **hyperbolic** book, drawn in the
-Poincaré disk, can share them unchanged and fork at chapter 3: the same propositions, the same ✓, in
-both worlds. Its lines are arcs meeting the boundary at right angles and its circles are Euclidean
-circles with a shifted centre, so every intersection is one the planner already makes. A **spherical**
-book is harder (antipodal points share many lines, and `between` changes), so it needs its own axioms
-from chapter 1. A **rational trigonometry** book, quadrance and spread instead of length and angle,
-would sit naturally beside the algebraic lens.
+**The geometry as a plug-in.** The relation table (`relations.ts`) is the boundary between logic and
+figure: each relation's reading, drawing and residual. Still outside it: loci and condition counts
+(`lociFor` and `countEquations` switch on relation names) and the solver's energies. The review of
+November 2026 proposes that the table hold primitives only (how to test, construct and sample each),
+and that depiction (how each written relation draws, defined or not) become a second table. That is
+the first step for every item in this section; do it when a lens or a sibling book is taken up.
 
 ## Logic
 
-- **Show a ✗'s counterexample**: clicking the mark draws the figure that breaks the lemma, with the
-  failing fact marked. Exact checks where a sample is rational: in quadrances (squared distances)
-  every drawable relation is polynomial, though points the compass places generally leave the
-  rationals (two circles meet at a square root). Lemmas whose head introduces points of its own (some
-  point exists such that…) get no evidence yet: they need a witness search.
+- **Show a ✗'s counterexample**: clicking the mark draws the figure that breaks the lemma, the failing
+  fact marked. Lemmas whose head introduces points of their own get no evidence yet: they need a
+  witness search.
 - **Proof traces**: why a ✓ holds, as a derivation tree.
-- ~~**Use definitions in both directions during forward chaining**~~ where no new objects are needed
-  (`eq-triangle a b c` ⇒ `circle a b c`), not only when unfolding hypotheses. Superseded: definitions
-  become abbreviations, never rules of the closure, and defined goals become queries (review-2026-11.md, *The engine*).
-- **Lemma compilation**: add verified lemmas as rules. Safe for defined predicates already (a clause
-  that follows from the definition cannot change its meaning). Not planned now (north-star.md).
-- **Show the recognised status** of each predicate in the UI: defined (by which clause) or open, and any
+- **Show the recognised status** of each predicate: defined (by which clause) or open, and any
   recognised equivalence, substitution or symmetry.
-- **Replace the `__object__` bootstrap** the checker uses to introduce a lemma's head-only objects with
-  an explicit initial universe.
-- **Performance for larger knowledge bases**, now steps 1 and 2 of north-star.md, *What follows now*.
-  Witnesses replace the search for `false` first; that search is 80% of checking time. Then the
-  evaluator is replaced once. The history: the reference closure is semi-naive with argument
-  indexes (November 2026); the same for
-  `saturate.ts`. Lemmas with `distinct` facts run the closure to the end to rule out a contradiction,
-  and chapter 2 made that dearer: its arm and supplement axioms hold for every third point, so each
-  `between` fact spawns angle facts for all points (`march`'s order lemmas went from 0.4 s to 3.6 s,
-  `hexagon`'s take 2.6 s). Chapter 3 adds to it: `parallel` is an equivalence whose classes hold every
-  pair of distinct points on a line, and a rule whose first atom is unbound walks every class pair by
-  pair, again whenever anything changes (saturate is not semi-naive). A rule that a midpoint differs
-  from its ends doubled `drop-perpendicular` (1.6 s to 3.1 s) and was left out; reordering rule bodies
-  did not help (the greedy join already chooses). Worth trying: stop that closure once no rule can still reach `false`; keep a knowledge-base snapshot in the worker instead of re-sending rules per request.
-  Chapter 4 made this the main limit (review-notes.md has the measurements): the book's checks went
-  from 38 s to 86 s, Pythagoras with whole squares needs five times the budget (65 s), and most
-  derivations re-derive known facts. The benchmark for this work: Pythagoras with whole squares, and
-  the lemmas of chapters 1 to 3 back to their old times.
-- **Sides of a line, in the logic.** The drawing knows which side of a line a point is on; the logic
-  does not, so every proof across a line (I.29, rectangles, corresponding angles) is told by a
-  crossing point in its hypotheses (book.md, *3*). Long term: `same-side` and `opposite-side` as
-  relations with their own axioms, as `between` has. Much of it is Horn (two points opposite a third
-  are on the same side; a crossing makes opposite sides), the shape of the diagrammatic consequences
-  in Avigad, Dean and Mumma's system E (2009), which is the model to read first. Tarski's axioms
-  define the same two relations by exactly our crossing (two points are on opposite sides when the
-  segment between them meets the line; on the same side when both are opposite a third). The rest
-  (Pasch; every point on one side, the other or the line) needs case splits, below. Meanwhile the
-  drawing could offer side facts it sees in every sample as candidate hypotheses, never as proofs.
-  A third way round, for angles: **spreads** (`eq-spread`, already in the engine, set aside for
-  chapter 2), or angles between lines up to a straight angle (Chou, Gao and Zhang's "full angles").
-  Neither tells an angle from its supplement, which is exactly what makes I.29 side-free: a line
-  crossing two parallels makes equal spreads with both, whichever side is read. Much of chapter 3's
-  bookkeeping (alternate, corresponding, same-side angles, each with its crossing) would collapse
-  into one statement, at the price of not saying which of the two angles is meant. Worth trying on
-  chapter 3 before building side relations.
-- **Case splits**, so that facts true in every configuration need no `distinct` hypothesis, and for
-  the parts of side reasoning that are not Horn.
-- One arity per predicate name is what the parser enforces today. `foo/1` beside `foo/2` would need
-  a reason first.
+- **Replace the `__object__` bootstrap** the checker uses for a lemma's head-only objects with an
+  explicit initial universe.
+- One arity per predicate name is what the parser enforces. `foo/1` beside `foo/2` needs a reason
+  first.
 
 ## Construction and drawing
 
-- ~~Say when the figure is solved, not constructed~~ (November 2026; design.md, *Constructed or
-  solved*): solved points are pencilled asterisks, the steps are a key that names the facts no step
-  constructs, and a plate at the foot of the figure says solved or not met.
-- ~~The solver fails on four right angles~~ (fixed November 2026). Two faults, both in the solver:
-  its order term penalised b's position along a-c as a fraction of a-c, which fades as c moves away,
-  so an end on the wrong side was sent off to infinity instead of across (each right angle's
-  supplement point ended beyond the wrong vertex, where the angle it copies is the same angle, and
-  trivially equal); and it had no term for `distinct`, so an extension point could sit on its
-  vertex. Now order is (b − a)·(c − b) ≥ 0, distinct points are held apart, and the page solves from
-  the construction's own attempt (every point it can place, on the right side of every order), moved
-  into the solver's frame by a similarity, then from truly random starts (not seeded near it), keeping
-  the best. A solved fact counts as met within 1e-3, above where the solver stops.
-- **The solver and points that fold back.** Still unsolved: a strip of equiangular triangles
-  (`abc`, `bcd`, `cde`) and a rectangle with an equiangular triangle on a side. Each has a degenerate
-  answer in which a point lands on another (the second triangle folded back onto the first, e onto
-  b); the solver's separation term keeps them apart but leaves the point stuck beside the other, and
-  descent never reaches the far side (from the true answer it holds at 1e-5). The page says NOT MET.
-  Worth trying: warm starts from several of the planner's attempts, which choose branches
-  differently (realise now varies branches and slider directions once 40 plain attempts have found
-  nothing, for the windmill: review-notes.md, *The construction planner*), or keeping such pairs
-  apart by the planner's branch rather than by a barrier.
-- **Open: what a construction draws, and how a reader can tell.** A relation drawn as itself stops
-  the drawing there, so the points its definition brings in are not drawn: `right a b c` draws
-  Byrne's square, and its d (`between a b d`, the extension of ab) is placed by the planner, named in
-  the steps, and nowhere in the figure; `circle2 a b: circle a b c` draws its c₁ because `circle2`
-  has no drawing of its own. Which relations draw as themselves is invisible on the page. The
-  leading idea, not decided: **unfold everything and draw bottom-up**, each level of the unfolding
-  taking a turn after its body has drawn, to add to it or modify it (`right`'s turn turns the two
-  equal-angle arcs of its body into a square; `circle`'s draws the circle through its equal radii).
-  Then nothing the planner uses is hidden, and a relation is special only by what its turn does,
-  which the page could say (see *Logic*, recognised status). To settle first:
-  1. what a turn may do: add, replace marks its body drew, restyle; never delete outright, so every
-     fact keeps a visible trace (does `circle` keep its radii's ticks?);
-  2. facts two definitions share: who modifies them, in what order (innermost first?);
-  3. clutter: only `circle`, `right` and `supp` stop the unfolding today, so they are what changes
-     (a rectangle gains four faint stubs);
-  4. where it lives: a second hook on the relation table that sees what the body drew; figure.ts
-     composes, and extraction no longer decides where to stop.
-- **A perpendicular locus.** `right` is read through its definition, whose extension point is a
-  slider and must be placed before the right angle can be used; so `triangle-to-rectangle` is built
-  backwards, from the rectangle (review-notes.md, *The construction planner*).
-- **Points under the notice**: fitting the figure leaves no room for the plate at its foot, so a
-  low point can sit under it (Scratch's three equiangular triangles: e). For the design review.
-- **Equal angles alone draw no arcs**: a figure of only `eq-angle` facts (three equiangular
-  triangles) shows its points and nothing through them, in headless screenshots at least; possibly
-  the marks waiting on the closure worker. Check in a browser.
-- ~~The figure's rule~~ (built November 2026; design.md, *The figure: what it draws and why*).
-- **Plan from what the book proves** (deferred, November 2026: the engine should change on the
-  evidence of more chapters, and perhaps other geometries, first): before planning, ask the forward
-  closure (the worker that merges marks) which facts in the planner's vocabulary the page implies,
-  equal segments between its points, right angles, collinear points, and add them to the model as
-  constraints; every fact is still checked. A figure drawn by the solver becomes a construction when
-  the answer arrives (remembered across visits). Its reach grows with the book: the equiangular
-  triangle is constructible today if `triangle a b c` is written (the closure derives `eq-triangle`);
-  four equal angles in a quadrilateral make a rectangle only with the parallel postulate (in hyperbolic
-  geometry they are less than right), so that figure becomes constructible when the parallels chapter
-  proves I.32 and its consequences, and is a test that it does.
-- ~~Draw the construction actually used~~ (November 2026): every element is drawn thinner and fainter
-  the more deeply nested the definition it comes from; the planner's own loci are shown on touch.
-  Next, from the March 2026 progressive rendering
-  proposal: let the reader choose how many levels to show, and weight elements by role as well as
-  depth (a construction's key properties, such as its equal sides, in front of its guide circles).
+- **The solver and points that fold back.** A strip of equiangular triangles, and a rectangle with an
+  equiangular triangle on a side, have degenerate answers in which a point lands on another; the
+  separation term leaves it stuck beside the other, and the page says NOT MET. Worth trying: warm
+  starts from several sampler attempts (which choose branches differently), or keeping such pairs
+  apart by branch rather than by a barrier.
+- **Plan from what the book proves**: before planning, ask the closure which facts in the planner's
+  vocabulary the page implies (equal segments, right angles, collinear points) and use them as
+  constraints, every fact still checked. A solved figure then becomes a construction (four equal
+  angles make a rectangle, once the parallels chapter proves it).
+- **Hybrid figures**: construct what can be, and solve only the rest numerically.
+- **Figures above 18 points** are planned greedily, and at 19 that already fails on a figure the
+  search builds. A bounded search would only move the cliff; planning per definition would remove it
+  (*Not now*).
 - **Continuity near tangencies**: nearest-branch tracking can jump; consider complex tracing.
 - **Order facts on circles** restrict sliders to arcs (today they are only checked).
-- **Hybrid figures**: construct what can be constructed and solve only the remaining part numerically,
-  instead of falling back to the solver for the whole figure.
-- **A drawing-layer boundary**: the relation table (`relations.ts`, November 2026) holds each relation's
-  reading by the model, its number of points, its drawing and its residual; extraction, the figure, the
-  checks and numeric evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`) and the
-  solver's energies (by the model's structure, not per relation). Then the table is a plug-in, a *model* of the theory (see
-  *Beyond*: three lenses, sibling books). The November 2026 review proposes that the model
-  table hold primitives only, and that depiction become a table of its own.
-- **Annotations from proven facts**: ticks and arcs come from stated and proven equalities (built
-  November 2026, design.md *Marks*). Still to do: a user's lemmas travelling to other pages, and the
-  lines a lemma is about (`bisect-angle`'s page proves b-d is the bisector, and now marks the two
-  angles, but b-d is drawn only as their arms).
+- **Annotations from proven facts**: a user's lemmas travelling to other pages; the lines a lemma is
+  about (`bisect-angle` proves b-d is the bisector, but b-d is drawn only as the angles' arms).
+- **Depth**: let the reader choose how many levels to show, and weight elements by role as well as
+  depth (a construction's key properties in front of its guide circles).
 - Step-by-step playback of a construction; undo for dragging.
-- Figures above 18 points use a greedy order. At 19 points it already fails on a figure the search
-  builds (review-2026-11.md, *What the review measured*). The review proposes plans that compose by
-  definition; not planned now (north-star.md). A bounded search would only move the cliff.
 
 ## Interface
 
-The tether between source and figure is built (November 2026; see design.md, *As built*). See
-[design.md](design.md#designed-not-yet-built) for the designed-but-not-built pieces: reading and editing modes, text that makes room for the figure, a better index,
-predicate views with lemma layers, the boffin panel and an entry page. Smaller items:
+See [design.md](design.md#designed-not-yet-built) for what is designed but not built: reading and
+editing modes, text that makes room for the figure, a better index, predicate views with lemma
+layers, the boffin panel and an entry page.
 
+- **More than one page, and a more playful layout**, in the same aesthetic: a front page, an explainer
+  (the language, unfolding, the planner and the checker, each with live figures) and help. Sketch
+  first; [the Plates concept](plates-concept/REDESIGN_CONCEPT.md) is a starting point.
 - Save the scratchpad to the library in one step.
-- Hovering a predicate name shows its arguments and doc comment; add its provenance and status
-  (defined by which clause, or open; recognised structure).
+- Hovering a predicate name shows its arguments and doc comment; add its provenance and recognised
+  status.
 - Inline proof marks in reading mode.
 
 ## Code structure
 
-From the November 2026 review. The layering (language → kb → geometry → composables → views) holds
-up, and nothing calls for a rewrite. Worth doing when the code next changes nearby:
+The layering (language → kb → geometry → composables → views) holds up. Worth doing when the code next
+changes nearby:
 
+- **`kb/verdict.ts` imports from the editor and from geometry** (`EditorMark`, `Evidence`). A verdict
+  weighs a proof against evidence, so it belongs above both; move it with *Next*, 1.
 - **`PageView.vue` holds the whole page** (themes, layout, contents, the steps in words). Split it when
-  step 4 above reshapes the page, not before.
-- **The worker gets every rule with every request** (also under *Logic*, performance).
-- **`kb/verdict.ts` imports from the editor and from geometry**: the editor's `EditorMark` type and
-  `Evidence`. A verdict weighs a proof against evidence, so it belongs above both (review-2026-11.md,
-  step 1).
-
-## Earlier proposals
-
-Two proposals from March 2026, folded into this page and removed (`git show d2efd7a:docs/proposals/`
-has them): *progressive rendering* (above, under *Construction and drawing*) and *embedded lemmas*,
-which attached a construction's properties to its definition with `?` lines in the body. The page
-already shows each predicate with the lemmas about it, by convention rather than syntax, which was
-most of that proposal's point.
+  the page is reshaped, not before.
