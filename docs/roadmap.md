@@ -52,6 +52,10 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      least image, were recomputed every time the same tuple was matched, the largest single cost
      left. The same verdicts; the book's checks 19 s to 11.5 s, *Beyond the book*'s 140 s to 81 s,
      the test suite under 90 s. The profile is now flat: matching itself.
+   - The different-names convention as a theory in the store (`distinct` answered from the
+     names, not a fact per pair): tried and reverted (November 2026). The same verdicts, no
+     faster. The convention's cost is not its facts but the guarded rules it lets fire, real
+     derivations: the price of proving more.
    - Semi-naive evaluation: tried and reverted (November 2026). Built over the union-find store
      (facts and class members stamped, a full match after merges or new points, of which the
      rectangle has five), every verdict the same, but no faster: the book 12% slower, *Beyond the
