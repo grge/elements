@@ -224,11 +224,14 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[])
   // counts.
   // The same locus twice (a perpendicular bisector from equal lengths and from equal base angles)
   // is one condition too.
+  // Two parallels to one line, through two placed points, never meet (or are one line): they are one
+  // condition between the points, not two on p (Playfair).
   const kept: Locus[] = []
   for (const l of out) {
     const through = pivots(l)
     if (through.length && kept.some(k => pivots(k).some(q => through.includes(q)))) continue
     if (kept.some(k => sameLocus(k, l))) continue
+    if (l.kind === 'parallel' && kept.some(k => k.kind === 'parallel' && new Set([...k.to, ...l.to]).size === 2)) continue
     kept.push(l)
   }
   return kept
@@ -698,6 +701,9 @@ export interface Realisation {
  * sample that satisfies every fact.
  */
 /** Random parameters for a plan, from a seeded generator (so a figure is stable). */
+/** Attempts at plain parameters before branches and slider directions are varied too. */
+const VARY_AFTER = 40
+
 /**
  * Parameters at random, seeded by the plan. `signed`: a slider on a line unbounded both ways may go
  * either way from its defining point, not only forwards.
@@ -759,16 +765,17 @@ export function unconstructed(cp: ConstructionPlan, samples = 12): Unconstructed
  */
 export function configurations(cp: ConstructionPlan, n: number, attempts = 40 * n): Map<string, Point>[] {
   const sample = sampler(cp, 1)
+  // As realise does: if plain attempts find nothing, vary slider directions and branches too.
+  const varied = sampler(cp, 3, true)
+  const branch = rng(hash(JSON.stringify(cp.steps)) + 4)
   const out: Map<string, Point>[] = []
   for (let i = 0; i < attempts && out.length < n; i++) {
-    const d = execute(cp, sample())
+    const vary = out.length === 0 && i >= VARY_AFTER
+    const d = execute(cp, vary ? varied() : sample(), vary ? { branch } : {})
     if (good(d) && spread(d.coords) >= MIN_SPREAD) out.push(d.coords)
   }
   return out
 }
-
-/** Attempts at plain parameters before branches and slider directions are varied too. */
-const VARY_AFTER = 40
 
 export function realise(cp: ConstructionPlan, options: { previous?: Map<string, Point>; attempts?: number } = {}): Realisation {
   const counts = cp.steps.map(paramCount)

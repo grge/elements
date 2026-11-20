@@ -23,18 +23,15 @@ import {
 import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { autocompletion, snippetCompletion, type Completion, type CompletionContext } from '@codemirror/autocomplete'
 import { Compartment } from '@codemirror/state'
+import type { VerdictType } from '../geometry/verdict'
 
 export interface EditorMark {
   /** 0-based line of the `?`. */
   line: number
   /** 0-based last line of the lemma, if it spans several. */
   endLine?: number
-  /**
-   * verified ✓ proven; vacuous ⊥ the hypotheses contradict each other; false ✗ a sampled figure
-   * refutes it; unproven ? not derived (the reason says whether it held in every sampled figure);
-   * alarm ! proven, yet a sampled figure refutes it; unknown … being checked.
-   */
-  type: 'verified' | 'vacuous' | 'false' | 'unproven' | 'alarm' | 'unknown'
+  /** What the check found (geometry/verdict.ts). */
+  type: VerdictType
   message: string
 }
 

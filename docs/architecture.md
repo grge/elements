@@ -98,10 +98,24 @@ agree on every small lemma.
 
 The search ends with the goal derived, with the hypotheses contradictory (they derive the reserved
 `false`, which takes precedence), with the closure complete and no goal, or out of its budget of
-derivations. Because the search stops as soon as
-the goal is found, a successful check is carried on to the end to rule out a contradiction, but only
-when `false` is derivable at all from the kinds of facts involved (a cheap test at the level of
-predicate names).
+derivations. Because the search stops as soon as the goal is found, a derived goal still needs its
+hypotheses shown consistent: contradictory hypotheses can derive the goal too, and the lemma would then
+be vacuous. There are three ways, cheapest first:
+
+- `false` cannot be derived at all from the kinds of facts involved (a test at the level of predicate
+  names);
+- a **witness**: a figure in which every hypothesis holds (numeric evidence, below, finds one in
+  milliseconds). Hypotheses true together in the plane cannot be contradictory, as long as the axioms
+  are true of the plane. The checker takes this as an answer from its caller (`CheckOptions.consistent`),
+  so the logic knows nothing of figures;
+- otherwise the closure is carried on to the end, looking for `false`. If that runs out of budget the
+  check says so (`unshown`: follows, but the hypotheses could not be shown consistent), not ✓.
+
+Before witnesses (November 2026) every derived lemma took the third way, which was four fifths of
+checking time, and twelve of the book's ✓ rested on that search running out of budget. Now every book
+lemma has a witness, and the book's checks take a fifth of the time (`scripts/bench.ts --witness`). The
+tests still run the full search, so a false axiom still shows, and they check that every fact the
+closure derives about a lemma's points holds in its witness.
 
 What it cannot do: case splits. Facts that need one can be stated with a `distinct` hypothesis instead
 (the order of marched points holds once the first step is non-zero), and are on the
@@ -109,9 +123,13 @@ What it cannot do: case splits. Facts that need one can be stated with a `distin
 
 **Numeric evidence** (`geometry/evidence.ts`) weighs every lemma against figures. Its hypotheses are
 extracted and planned like any figure; about two dozen well-spread configurations are sampled, and the
-head, extracted too, is measured on each with the relation table's `holds` (which also measures
-`eq-point`, a relation the figure can evaluate but not impose). The verdict (`kb/verdict.ts`) combines the
-two: ✓ derived; ⊥ vacuous; ✗ not derived and refuted by a sampled figure (false); ? not derived, with the
+head, extracted too, is measured on each with the relation table's `holds`. The first sample in which
+every hypothesis holds with a margin (distinct points at least a thousandth of the figure apart, a
+triangle at least a thousandth of its square in area) is the witness. The sampler varies branches and
+slider directions when plain attempts find nothing, as the page's does (which also measures
+`eq-point`, a relation the figure can evaluate but not impose). The verdict (`geometry/verdict.ts`, above both
+the logic and the figures) combines the two: ✓ derived, with the hypotheses witnessed or searched to the
+end; ⊥ vacuous; ✗ not derived and refuted by a sampled figure (false); ? not derived, with the
 reason saying whether it held in every sample (probably true), whether the search ran out of budget,
 or why there were no figures to test (a hypothesis that cannot be drawn, such as `eq-point`); ! derived
 yet refuted by a sample, an alarm for a false axiom or a bug. The drawing takes distinct names for

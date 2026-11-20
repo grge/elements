@@ -11,7 +11,7 @@ import { buildRuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
 import { checkGroundQuery, checkLemma } from '../kb/checker'
 import { numericEvidence, type Evidence } from '../geometry/evidence'
-import { verdict, type Verdict } from '../kb/verdict'
+import { verdict, type Verdict } from '../geometry/verdict'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 interface VerifyRequest {
@@ -40,9 +40,11 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
       try {
         let v: Verdict
         if (item.kind === 'lemma') {
-          const check = checkLemma(item.lemma, runtime.kb)
+          // Evidence first: its figures also witness that the hypotheses are consistent, which spares the
+          // checker its search for a contradiction.
           let ev: Evidence | null = null
           try { ev = numericEvidence(item.lemma, runtime.kb) } catch { ev = null }
+          const check = checkLemma(item.lemma, runtime.kb, undefined, { consistent: () => !!ev?.witness, strict: true })
           v = verdict(check, ev)
         } else {
           v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)

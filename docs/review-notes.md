@@ -220,7 +220,8 @@ Four findings are not about flattening.
   sampled figure.
 - **Layers point the wrong way in one place.** `kb/verdict.ts` imports the editor's `EditorMark` from
   `components/CodeEditor.vue` and `Evidence` from `geometry/`, so the logic depends on the interface.
-  A verdict weighs a proof against evidence, so it belongs above both.
+  A verdict weighs a proof against evidence, so it belongs above both. (Fixed with witnesses: it is
+  now `geometry/verdict.ts`, and the editor takes its type from there.)
 
 ### What the review measured
 

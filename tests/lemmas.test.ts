@@ -1,11 +1,18 @@
 /**
- * Every lemma in the book must be provable. Every regression lemma (tests/fixtures/regression.geo)
- * must be provable too, except the ones listed below as expected to fail.
+ * Every lemma in the book must be provable, as the app checks it: derived, with a witness, a figure in
+ * which every hypothesis holds (geometry/evidence.ts). Here the search for a contradiction still runs
+ * in full, so a false axiom still shows even though the app no longer searches; and every fact the
+ * closure derives about the lemma's points must hold in the witness.
+ *
+ * Every regression lemma (tests/fixtures/regression.geo) must be provable too, except the ones listed
+ * below as expected to fail.
  */
 
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
 import { checkLemma } from '../src/kb/checker'
+import { numericEvidence } from '../src/geometry/evidence'
+import { holds, relationOf } from '../src/geometry/relations'
 import type { Lemma } from '../src/language/parser'
 import { bookLemmas, bookRules, regressionLemmas } from './book'
 
@@ -38,7 +45,19 @@ const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
 
 describe('the book', () => {
   for (const lemma of bookLemmas) {
-    it(`✓ ? ${show(lemma)}`, async () => { await yieldToRunner(); expect(provable(lemma)).toBe(true) }, 30000)
+    it(`✓ ? ${show(lemma)}`, async () => {
+      await yieldToRunner()
+      // Derived, and no contradiction found by the full search (which may run out of budget).
+      const check = checkLemma(lemma, kb, undefined, { strict: true })
+      expect(['verified', 'unshown']).toContain(check.result)
+      // A witness, as the app requires instead of the search.
+      const { witness } = numericEvidence(lemma, kb)
+      expect(witness, 'no figure of the hypotheses').toBeTruthy()
+      // What the closure derived about the lemma's own points holds in the witness: otherwise an axiom
+      // is false, or there is a bug.
+      const failing = check.facts.filter(f => relationOf(f) && f.args.every(a => !a.includes('#') && witness!.has(a)) && !holds(f, witness!))
+      expect(failing.map(f => `${f.name} ${f.args.join(' ')}`)).toEqual([])
+    }, 30000)
   }
 })
 

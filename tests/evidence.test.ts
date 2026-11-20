@@ -7,8 +7,8 @@
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
 import { checkLemma } from '../src/kb/checker'
-import { numericEvidence } from '../src/geometry/evidence'
-import { verdict } from '../src/kb/verdict'
+import { numericEvidence, isWitness } from '../src/geometry/evidence'
+import { verdict } from '../src/geometry/verdict'
 import { parseLemmas, type Lemma } from '../src/language/parser'
 import { bookLemmas, bookRules } from './book'
 
@@ -71,5 +71,35 @@ describe('verdicts', () => {
   })
   it('a lemma whose hypotheses cannot be drawn gets no evidence', () => {
     expect(numericEvidence(lemma('eq-point b a: eq-point a b'), kb).kind).toBe('none')
+  })
+})
+
+describe('witnesses', () => {
+  it('every book lemma has one: a figure in which all its hypotheses hold', () => {
+    const missing = bookLemmas.filter(l => !numericEvidence(l, kb).witness).map(show)
+    expect(missing).toEqual([])
+  })
+
+  it('Playfair draws: two parallels to one line through two points are one condition, not two', () => {
+    expect(numericEvidence(lemma('collinear c d e: parallel a b c d, parallel a b c e'), kb).witness).toBeTruthy()
+  })
+
+  it('a figure that only just scrapes through witnesses nothing', () => {
+    const at = (ps: Record<string, [number, number]>) => new Map(Object.entries(ps))
+    const distinct = [{ name: 'distinct', args: ['a', 'b'] }]
+    expect(isWitness(distinct, at({ a: [0, 0], b: [1, 0], c: [0, 1] }))).toBe(true)
+    expect(isWitness(distinct, at({ a: [0, 0], b: [1e-6, 0], c: [0, 1] }))).toBe(false)
+    const triangle = [{ name: 'triangle', args: ['a', 'b', 'c'] }]
+    expect(isWitness(triangle, at({ a: [0, 0], b: [1, 0], c: [0.5, 1] }))).toBe(true)
+    expect(isWitness(triangle, at({ a: [0, 0], b: [1, 0], c: [0.5, 1e-6] }))).toBe(false)
+  })
+
+  it('a witness spares the checker its search for a contradiction; without one, a search out of budget is not a ✓', () => {
+    const l = lemma('eq-area a b c c d a: parallelogram a b c d')
+    expect(checkLemma(l, kb, undefined, { consistent: () => true }).witnessed).toBe(true)
+    // A budget too small to finish the search for `false`, but enough to find the goal.
+    const small = checkLemma(l, kb, 10_000, { strict: true })
+    expect(small.result).toBe('unshown')
+    expect(verdict(small, null).type).toBe('unproven')
   })
 })

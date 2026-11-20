@@ -1,14 +1,16 @@
 /**
  * The engine's benchmark, the baseline for the roadmap's engine work (measurements in docs/review-notes.md).
  *
- *   npx vite-node scripts/bench.ts [--scoped] [--only=text] [--json]   checking: every book lemma
+ *   npx vite-node scripts/bench.ts [--scoped] [--witness] [--only=text] [--json]   checking: every book lemma
  *   npx vite-node scripts/bench.ts pages                               drawing: every defined predicate's page
  *
  * Checking runs each lemma as the checker does (unfold the hypotheses, saturate until the goal), then,
  * if it is proved, saturates again from the start looking for `false`, the second phase of a check.
  * (The checker skips that phase when `false` cannot be reached from the hypotheses' kinds of facts at
  * all; here it always runs, which makes chapter 1 a few seconds dearer than the checker.) Derivations
- * are counted in all, and those that added a fact. `--scoped` checks each chapter with its own rules
+ * are counted in all, and those that added a fact. `--witness` checks as the app does: a figure of the
+ * hypotheses (evidence.ts) shows them consistent, and the search for `false` runs only without one.
+ * `--scoped` checks each chapter with its own rules
  * and the earlier chapters' only. `--json` prints a line per lemma.
  *
  * Pages plans and realises each defined predicate's signature as its page does, and times the closure
@@ -28,6 +30,7 @@ import { drawFigure } from '../src/geometry/figure'
 import { closureQueries } from '../src/geometry/marks'
 import { closureAnswers, assumedOf } from '../src/geometry/closure'
 import { RELATIONS } from '../src/geometry/relations'
+import { numericEvidence } from '../src/geometry/evidence'
 
 const bookDir = resolve(__dirname, '../src/language/book')
 const files = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
@@ -61,7 +64,7 @@ function saturateFrom(kb: KnowledgeBase, frontier: GroundPredicate[], goal: Grou
 
 function checking() {
   const all = rulesTo(files.length - 1)
-  const rows: { chapter: number; goalMs: number; falseMs: number; exhausted: boolean; derived: number; added: number; proved: boolean }[] = []
+  const rows: { chapter: number; goalMs: number; falseMs: number; witnessMs: number; witnessed: boolean; exhausted: boolean; derived: number; added: number; proved: boolean }[] = []
   files.forEach((file, chapter) => {
     const kb = new KnowledgeBase(flag('--scoped') ? rulesTo(chapter) : all)
     prepare(kb) // the structure analysis, once per knowledge base, outside the timings
@@ -75,9 +78,12 @@ function checking() {
         ...headOnly.map(a => ({ name: '__object__', args: [a] })), // as the checker introduces them
       ]
       const goal = saturateFrom(kb, frontier, { name: lemma.head.name, args: lemma.head.args })
-      const contra = goal.holds ? saturateFrom(kb, frontier, FALSE) : null
+      const t = performance.now()
+      const witnessed = flag('--witness') && goal.holds && !!numericEvidence(lemma, kb).witness
+      const witnessMs = flag('--witness') && goal.holds ? performance.now() - t : 0
+      const contra = goal.holds && !witnessed ? saturateFrom(kb, frontier, FALSE) : null
       const row = {
-        chapter: chapter + 1, goalMs: goal.ms, falseMs: contra?.ms ?? 0, exhausted: contra?.exhausted ?? false,
+        chapter: chapter + 1, goalMs: goal.ms, falseMs: contra?.ms ?? 0, witnessMs, witnessed, exhausted: contra?.exhausted ?? false,
         derived: goal.derived + (contra?.derived ?? 0), added: goal.added + (contra?.added ?? 0), proved: goal.holds,
       }
       rows.push(row)
@@ -85,10 +91,11 @@ function checking() {
     }
   })
   console.log(`${flag('--scoped') ? 'each chapter with its own and earlier rules' : 'the whole book for every lemma'}`)
-  console.log('chapter  lemmas  proved  goal      false     out of budget')
+  console.log('chapter  lemmas  proved  goal      witness   witnessed  false     out of budget')
   const line = (label: string, rs: typeof rows) => console.log(
     `${label.padEnd(9)}${String(rs.length).padStart(6)}${String(rs.filter(r => r.proved).length).padStart(8)}  ` +
-    `${s(rs.reduce((t, r) => t + r.goalMs, 0)).padEnd(10)}${s(rs.reduce((t, r) => t + r.falseMs, 0)).padEnd(10)}${rs.filter(r => r.exhausted).length}`)
+    `${s(rs.reduce((t, r) => t + r.goalMs, 0)).padEnd(10)}${s(rs.reduce((t, r) => t + r.witnessMs, 0)).padEnd(10)}` +
+    `${String(rs.filter(r => r.witnessed).length).padEnd(11)}${s(rs.reduce((t, r) => t + r.falseMs, 0)).padEnd(10)}${rs.filter(r => r.exhausted).length}`)
   files.forEach((_, i) => line(String(i + 1), rows.filter(r => r.chapter === i + 1)))
   line('all', rows)
   const d = rows.reduce((t, r) => t + r.derived, 0), a = rows.reduce((t, r) => t + r.added, 0)
