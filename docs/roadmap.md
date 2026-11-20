@@ -245,8 +245,8 @@ would sit naturally beside the algebraic lens.
   reading by the model, its number of points, its drawing and its residual; extraction, the figure, the
   checks and numeric evidence ask it. Still to join it: loci (in `construction.ts`'s `lociFor`) and the
   solver's energies (by the model's structure, not per relation). Then the table is a plug-in, a *model* of the theory (see
-  *Beyond*: three lenses, sibling books). The November 2026 review proposes a model table
-  holds primitives only, and depiction becomes a table of its own.
+  *Beyond*: three lenses, sibling books). The November 2026 review proposes that the model
+  table hold primitives only, and that depiction become a table of its own.
 - **Annotations from proven facts**: ticks and arcs come from stated and proven equalities (built
   November 2026, design.md *Marks*). Still to do: a user's lemmas travelling to other pages, and the
   lines a lemma is about (`bisect-angle`'s page proves b-d is the bisector, and now marks the two
