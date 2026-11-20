@@ -139,7 +139,31 @@ function impliedByStructure(rule: Rule, structure: Structure): boolean {
   return sat.holds({ name: rule.head.name, args: rule.head.args })
 }
 
+/**
+ * A tuple's images under a group, memoised per group: the same tuples are matched over and over, and
+ * computing their images was the largest single cost of a search. The images are shared: callers
+ * must not change them.
+ */
+const orbits = new WeakMap<number[][], Map<string, string[][]>>()
+
 function orbit(group: number[][], args: readonly string[]): string[][] {
+  return orbitByKey(group, args.join(SEP), args)
+}
+
+/** The orbit of the tuple whose key (its points joined) is `key`. */
+function orbitByKey(group: number[][], key: string, args?: readonly string[]): string[][] {
+  let memo = orbits.get(group)
+  if (!memo) orbits.set(group, memo = new Map())
+  let out = memo.get(key)
+  if (!out) {
+    out = orbitOf(group, args ?? key.split(SEP))
+    if (memo.size > 200_000) memo.clear()
+    memo.set(key, out)
+  }
+  return out
+}
+
+function orbitOf(group: number[][], args: readonly string[]): string[][] {
   const seen = new Set<string>()
   const out: string[][] = []
   for (const perm of group) {
@@ -150,7 +174,23 @@ function orbit(group: number[][], args: readonly string[]): string[][] {
   return out
 }
 
+/** The least image of a tuple under a group (its canonical form), memoised as orbits are. */
+const minima = new WeakMap<number[][], Map<string, string[]>>()
+
 function orbitMin(group: number[][], args: readonly string[]): string[] {
+  let memo = minima.get(group)
+  if (!memo) minima.set(group, memo = new Map())
+  const key = args.join(SEP)
+  let out = memo.get(key)
+  if (!out) {
+    out = orbitMinOf(group, args)
+    if (memo.size > 200_000) memo.clear()
+    memo.set(key, out)
+  }
+  return [...out]
+}
+
+function orbitMinOf(group: number[][], args: readonly string[]): string[] {
   let best: string[] = [...args]
   let bestKey = best.join(SEP)
   for (const perm of group) {
@@ -420,7 +460,7 @@ export class Saturation {
 
   private *matchEquivalence(p: string, e: Equivalence, args: readonly string[], s: Subst, mask: boolean[]): Generator<Subst> {
     const k = e.k
-    const imagesOf = (key: string) => orbit(e.blockGroup, key.split(SEP))
+    const imagesOf = (key: string) => orbitByKey(e.blockGroup, key)
     const classMembers = (root: string) => this.classesOf(p).members.get(root) ?? [root]
     // A block can be looked up directly when all its variables are bound and their values are exact.
     const lookup = (vars: readonly string[]) => {

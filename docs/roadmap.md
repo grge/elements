@@ -48,6 +48,10 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      waits 56 s, nearly all of it in the equivalence walk (next item). One closure per page, kept
      and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
      than receiving them with every request.
+   - Orbits and canonical forms memoised (November 2026): a tuple's images under its group, and its
+     least image, were recomputed every time the same tuple was matched, the largest single cost
+     left. The same verdicts; the book's checks 19 s to 11.5 s, *Beyond the book*'s 140 s to 81 s,
+     the test suite under 90 s. The profile is now flat: matching itself.
    - Semi-naive evaluation: tried and reverted (November 2026). Built over the union-find store
      (facts and class members stamped, a full match after merges or new points, of which the
      rectangle has five), every verdict the same, but no faster: the book 12% slower, *Beyond the
