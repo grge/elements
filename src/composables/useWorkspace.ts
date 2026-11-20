@@ -135,12 +135,14 @@ export function useWorkspace() {
   /** The page's items, as last parsed (none while it does not parse). */
   const items = computed<TopLevel[]>(() => 'items' in parsed.value ? parsed.value.items : [])
 
+  const pageKey = () => `${mode.value}:${selectedNamespace.value}:${selectedPred.value}`
+
   // While the text does not parse (a line half typed), the page keeps its last figure.
   let lastGood: { page: string; runtime: RuntimeState | null } | null = null
 
   const runtime = computed<RuntimeState | null>(() => {
     if (!kb.value) return null
-    const page = `${mode.value}:${selectedNamespace.value}:${selectedPred.value}`
+    const page = pageKey()
     if ('error' in parsed.value) return lastGood?.page === page ? lastGood.runtime : null
     const rt = buildRuntime(parsed.value.items)
     lastGood = { page, runtime: rt }
@@ -214,10 +216,14 @@ export function useWorkspace() {
     return marksNow(rt.kb, extraction.value, f).figure
   })
 
-  // Positions from the last drawing: re-planning after an edit keeps points where they were.
+  // Positions from the last drawing: re-planning after an edit keeps points where they were. Only on
+  // the same page: another page's points are another figure's, and a page opens on its own figure
+  // (the one its thumbnail shows), not one shaped by the page read before it.
   let lastCoords: Map<string, Point> | undefined
+  let coordsPage = ''
   const construction = shallowRef<ConstructionState | null>(null)
   watch(facts, fs => {
+    if (pageKey() !== coordsPage) { lastCoords = undefined; coordsPage = pageKey() }
     if (fs.length === 0) { construction.value = null; return }
     try {
       const model = buildModel(fs, runtime.value?.configuration.allFacts().flatMap(f => f.args) ?? [])

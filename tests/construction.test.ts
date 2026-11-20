@@ -4,7 +4,7 @@ import { bookRules, fixtureRules } from './book'
 import { KnowledgeBase, type GroundPredicate } from '../src/kb/inference'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
-import { buildModel, plan, realise, execute, drag, paramCount, unconstructed, describeFact, type Point, type ConstructionPlan } from '../src/geometry/construction'
+import { buildModel, plan, realise, execute, drag, paramCount, unconstructed, describeFact, legibility, type Point, type ConstructionPlan } from '../src/geometry/construction'
 import { RELATIONS } from '../src/geometry/relations'
 
 // The book plus Euclid I.2 and I.3 (tests/fixtures/constructions.geo), good stress tests for the planner.
@@ -318,5 +318,43 @@ describe('branches the order facts decide only later', () => {
     const r = realise(cp)
     expect(r.valid).toBe(true)
     expect(execute(cp, r.params, { previous: r.drawing.coords }).violations).toEqual([])
+  })
+})
+
+describe('figures that read well', () => {
+  const triangle = plan(buildModel(factsOf('triangle a b c')))
+  const fig = (ps: Record<string, Point>) => new Map(Object.entries(ps))
+
+  it('scores a sliver, crowded points or a special-looking figure below a plain one', () => {
+    const plain = legibility(triangle, fig({ a: [0, 0], b: [1, 0], c: [0.3, 0.8] }))
+    expect(legibility(triangle, fig({ a: [0, 0], b: [1, 0], c: [0.5, 0.03] }))).toBeLessThan(plain)   // a sliver
+    expect(legibility(triangle, fig({ a: [0, 0], b: [1, 0], c: [0.97, 0.3] }))).toBeLessThan(plain)   // c crowds b
+    expect(legibility(triangle, fig({ a: [0, 0], b: [1, 0], c: [0.5, 0.85] }))).toBeLessThan(plain)   // nearly equilateral
+    expect(legibility(triangle, fig({ a: [0, 0], b: [1, 0], c: [0.02, 0.7] }))).toBeLessThan(plain)   // nearly right
+  })
+
+  it('does not count what holds: a midpoint on its segment, or an equality the figure states', () => {
+    const midpoint = plan(buildModel(factsOf('midpoint m a b')))
+    expect(legibility(midpoint, fig({ a: [0, 0], b: [2, 0], m: [1, 0] }))).toBeCloseTo(0.5, 9)
+  })
+
+  it("draws a triangle as any triangle: not isosceles, not right-angled", () => {
+    const { drawing, valid } = realise(triangle)
+    expect(valid).toBe(true)
+    const at = (p: string) => drawing.coords.get(p)!
+    const sides = [['a', 'b'], ['b', 'c'], ['c', 'a']].map(([p, q]) => Math.hypot(at(p)[0] - at(q)[0], at(p)[1] - at(q)[1])).sort((x, y) => x - y)
+    expect(sides[1] / sides[0]).toBeGreaterThan(1.05)
+    expect(sides[2] / sides[1]).toBeGreaterThan(1.05)
+    expect(Math.abs(sides[2] ** 2 - sides[0] ** 2 - sides[1] ** 2) / sides[2] ** 2).toBeGreaterThan(0.1)
+  })
+
+  it('polishes the sampled figure: the chapter 4 constructions read better than their best sample', () => {
+    // Below this, points crowd or a triangle is a sliver at the size the page draws them.
+    for (const text of ['drop-corner a b c d e', 'triangle-to-rectangle a b c e f g', 'windmill a b c f d l x y']) {
+      const cp = plan(buildModel(factsOf(text), text.split(' ').slice(1)))
+      const { drawing, valid } = realise(cp)
+      expect(valid).toBe(true)
+      expect(legibility(cp, drawing.coords)).toBeGreaterThan(0.09)
+    }
   })
 })

@@ -230,8 +230,14 @@ is measured inside its allowed interval, so dragging can never break the order).
 "the other intersection".
 
 **Realising** a plan samples its own parameters (seeded, so a figure is stable; reusing previous
-positions across edits unless that would make points coincide) and keeps the best-spread sample that
-satisfies every fact. For each sample, branches are chosen by backtracking (`search`): every choice
+positions across edits on the same page, unless that would make points coincide, but never another
+page's) and keeps the sample that satisfies every fact and reads best, then improves it by a short
+local search (`polish`: move every parameter a little, keep a move that still satisfies every fact and
+reads better). How well a figure reads (`legibility`) is its worst near-miss: two named points close
+together, a named point close to a segment, line or circle drawn through others that it is not on (a
+sliver triangle is one of these), or two drawn lines nearly but not exactly equal, parallel or
+perpendicular, which would suggest a relation the figure does not have. What is drawn comes from the
+relation table's `draw`, as for the figure itself. For each sample, branches are chosen by backtracking (`search`): every choice
 nothing decides (which of two meeting points, which of a locus's two curves, which way a slider runs
 along a line unbounded both ways) takes its first way, and if a later step fails or a later fact does
 not hold, the latest choice at or before that step takes its next way. A choice is often decided only

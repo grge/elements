@@ -20,7 +20,8 @@
  * The order of construction is chosen by an exact search (dynamic programming over the set of placed
  * points) that maximises the number of equations used, then prefers named points over auxiliary ones as
  * free inputs, and earlier-mentioned points as inputs. Initial parameters are sampled (seeded, so the
- * figure is stable) and the best-spread valid sample is kept; no numerical solver is involved.
+ * figure is stable), the valid sample that reads best (`legibility`) is kept and then improved by a
+ * short local search; no numerical solver is involved.
  *
  * Background: constructive constraint solving by loci intersection (e.g. Gao & Chou, "Solving geometric
  * constraint systems I/II", 1998); detecting dependencies on witness configurations (Michelucci &
@@ -739,6 +740,103 @@ function spread(coords: Map<string, Point>): number {
   return diam > 0 ? min / diam : 0
 }
 
+/** What a figure draws through its points, from the relation table's `draw` (figure.ts draws the same). */
+interface Drawn { segments: [string, string][]; lines: string[][]; circles: { center: string; through: string[] }[] }
+
+function drawnBy(cp: ConstructionPlan): Drawn {
+  const out: Drawn = { segments: [], lines: [], circles: [] }
+  for (const { fact } of cp.checks) relationOf(fact)?.draw?.(fact.args, {
+    line: ps => { out.lines.push([...ps]) },
+    segment: (a, c) => { out.segments.push([a, c]) },
+    circle: (o, ps) => { out.circles.push({ center: o, through: [...ps] }) },
+    angle: (a, b, c) => { out.segments.push([b, a], [b, c]) },
+    supplement: () => {},
+    sameLength: () => {},
+  })
+  return out
+}
+
+function toSegment(p: Point, a: Point, b: Point): number {
+  const ab = sub(b, a), L = dot(ab, ab)
+  const t = L > 0 ? Math.max(0, Math.min(1, dot(sub(p, a), ab) / L)) : 0
+  return dist(p, [a[0] + t * ab[0], a[1] + t * ab[1]])
+}
+
+function toLine(p: Point, a: Point, b: Point): number {
+  const L = dist(a, b)
+  return L > 0 ? Math.abs(cross(sub(b, a), sub(p, a))) / L : dist(p, a)
+}
+
+/**
+ * How well a drawing reads: its worst near-miss. Relative to its size (the distance across its named
+ * points), the nearest that two named points come, or that a named point comes to a segment, line or
+ * circle drawn through others without being on it: a figure scores low when points crowd, a triangle
+ * is a sliver (a corner close to the opposite side), or a point looks as if it lay on a line or circle
+ * it is not on (one that is on it, to rounding, is not near it). And how nearly two drawn lines are
+ * equal, parallel or perpendicular without being so: a figure scores low when it looks special, which
+ * suggests a relation that is not there. Auxiliary points are not drawn, so they do not count. A line
+ * runs across the page, so a point near it reads less as on it than one near a segment; it counts at
+ * half weight.
+ */
+/** Closer than this (relative to the figure's size), a point is on what it is near. */
+const ON = 1e-9
+/** How a near-equality (a ratio's logarithm, an angle in radians) trades against crowding. */
+const GENERIC = 2
+
+export function legibility(cp: ConstructionPlan, coords: Map<string, Point>, why?: (what: string, score: number) => void): number {
+  const named = [...coords.keys()].filter(p => !isAuxiliary(p))
+  if (named.length < 2) return 1
+  const pairs: [string, number][] = []
+  for (let i = 0; i < named.length; i++) for (let j = i + 1; j < named.length; j++)
+    pairs.push([`${named[i]} near ${named[j]}`, dist(coords.get(named[i])!, coords.get(named[j])!)])
+  const diam = Math.max(...pairs.map(([, d]) => d))
+  if (diam === 0) return 0
+  let worst = Infinity
+  const drawn = drawnBy(cp)
+  const shown = (ps: readonly string[]) => ps.every(p => coords.has(p) && !isAuxiliary(p))
+  const at = (p: string) => coords.get(p)!
+  // Distances count relative to the figure's size; ratios and angles count as they are, at a weight
+  // (GENERIC) that trades them against crowding.
+  const near = (d: number, what = '') => { if (d > ON * diam) { worst = Math.min(worst, d / diam); why?.(what, d / diam) } }
+  const apart = (x: number, what = '') => { if (x > ON) { worst = Math.min(worst, GENERIC * x); why?.(what, GENERIC * x) } }
+  for (const [what, d] of pairs) near(d, what)
+  for (const p of named) {
+    const q = at(p)
+    for (const [a, b] of drawn.segments) {
+      if (p === a || p === b || !shown([a, b])) continue
+      near(toSegment(q, at(a), at(b)), `${p} near ${a}${b}`)
+    }
+    for (const line of drawn.lines) {
+      if (line.includes(p) || !shown(line)) continue
+      near(2 * toLine(q, at(line[0]), at(line[line.length - 1])), `${p} near line ${line.join('')}`)
+    }
+    for (const { center, through } of drawn.circles) {
+      if (p === center || through.includes(p) || !shown([center, ...through])) continue
+      near(Math.abs(dist(q, at(center)) - dist(at(through[0]), at(center))), `${p} near circle ${center}`)
+    }
+  }
+  // A figure should look like any figure of its facts, not a special one: two finite straight lines
+  // nearly but not exactly equal, or nearly but not exactly parallel or perpendicular, suggest a
+  // relation that is not there (Euclid's triangle should not look isosceles or right-angled).
+  // A line's length is the page's business, so only finite straight lines compare in length.
+  const pieces = [
+    ...drawn.segments.map(([a, b]) => ({ a, b, finite: true })),
+    ...drawn.lines.map(l => ({ a: l[0], b: l[l.length - 1], finite: false })),
+  ].filter(({ a, b }) => shown([a, b]))
+  for (let i = 0; i < pieces.length; i++) for (let j = i + 1; j < pieces.length; j++) {
+    const s = pieces[i], t = pieces[j]
+    const u = sub(at(s.b), at(s.a)), v = sub(at(t.b), at(t.a))
+    const lu = Math.hypot(...u), lv = Math.hypot(...v)
+    if (lu === 0 || lv === 0) continue
+    const turn = Math.atan2(Math.abs(cross(u, v)), Math.abs(dot(u, v)))   // 0 to π/2
+    const pair = `${s.a}${s.b} and ${t.a}${t.b}`
+    if (s.finite && t.finite) apart(Math.abs(Math.log(lu / lv)), `${pair} nearly equal`)
+    apart(turn, `${pair} nearly parallel`)
+    apart(Math.PI / 2 - turn, `${pair} nearly perpendicular`)
+  }
+  return worst
+}
+
 export interface Realisation {
   params: number[]
   drawing: Drawing
@@ -841,12 +939,37 @@ export function realise(cp: ConstructionPlan, options: { previous?: Map<string, 
       continue
     }
     found++
-    const score = spread(drawing.coords)
+    const score = legibility(cp, drawing.coords)
     if (score > bestScore) { bestScore = score; best = { params, drawing, valid: true } }
   }
+  if (best?.valid) return polish(cp, best, bestScore)
   if (best) return best
   const params = sample()
   return { params, drawing: execute(cp, params), valid: false }
+}
+
+/** Steps of `polish`, and how far its first steps move a parameter. */
+const POLISH_STEPS = 120
+const POLISH_REACH = 0.25
+
+/**
+ * Improve a valid figure by local search: move every parameter a little at random, keep the move
+ * if the figure still satisfies every fact and reads better (`legibility`), and take smaller
+ * steps as it goes. Seeded, so the figure is stable. Sampling finds a good region; this finds the
+ * good figure in it, where more samples would only find a slightly better region.
+ */
+function polish(cp: ConstructionPlan, start: Realisation, score: number): Realisation {
+  const random = rng(hash(JSON.stringify(cp.steps)) + 3)
+  let best = start
+  for (let i = 0; i < POLISH_STEPS; i++) {
+    const reach = POLISH_REACH * (1 - i / POLISH_STEPS) + 0.01
+    const tried = best.params.map(x => x + reach * (random() + random() + random() - 1.5))
+    const { drawing, params } = search(cp, tried)
+    if (!good(drawing)) continue
+    const s = legibility(cp, drawing.coords)
+    if (s > score) { score = s; best = { params, drawing, valid: true } }
+  }
+  return best
 }
 
 // ───────────────────────────── dragging ─────────────────────────────

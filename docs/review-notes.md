@@ -108,7 +108,10 @@ construct with ruler and compass, including the circle of II.14.
   later point choose an earlier branch, or to search branches as the planner searches orders.
 - **Default figures are chosen at random**, seeded: the quadrilateral of `drop-corner` and the
   windmill come out lopsided. Nothing prefers a figure that reads well: spread out, no slivers,
-  points not crowded.
+  points not crowded. (Done, November 2026: figures are scored by their worst near-miss, crowding or
+  an accidental near-equality, and the best sample is polished. A page also no longer inherits the
+  positions of the page read before it, which had made the parallelogram a rhombus when reached
+  from an equilateral triangle.)
 - **Loci live in `construction.ts`, by relation name**, not in the relation table (roadmap): seven
   kinds now.
 - **Above 18 points the search is greedy.** Pythagoras with both windmills and whole squares would be
