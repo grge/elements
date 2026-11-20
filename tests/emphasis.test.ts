@@ -46,3 +46,17 @@ describe('emphasis', () => {
     expect(scene.meta.ticks.every(i => i >= 0 && i < scene.segments.length)).toBe(true)
   })
 })
+
+describe("a lemma's marks", () => {
+  it('brings forward the marks of the members it names, and nothing made by facts', () => {
+    // Two pairs of equal segments, stated: two classes of ticks.
+    const scene = sceneOf('eq-lines a b c d\neq-lines p q r s')
+    const ticked = scene.meta.segments.flatMap((s, i) => s.mark ? [{ i, key: `${s.mark.mark}:${s.mark.member}` }] : [])
+    expect(ticked.length).toBe(4)
+    const first = ticked[0].key.split(':')[0]
+    const members = new Set(ticked.filter(t => t.key.startsWith(`${first}:`)).map(t => t.key))
+    const em = emphasise(scene, [], [], members)
+    expect(em.segments.size).toBe(2)
+    expect(em.lines.size + em.circles.size).toBe(0)
+  })
+})

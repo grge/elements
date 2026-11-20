@@ -59,7 +59,13 @@ const props = defineProps<{
 }>()
 
 /** What the pointer is over: a name, or a whole atom (when over its predicate). */
-export type EditorHover = { kind: 'name'; name: string } | { kind: 'atom'; name: string; args: string[] } | null
+/**
+ * What is under the pointer in the source, with the line it is on (0-based): a name, an atom (a
+ * predicate with its arguments), or only the line (between tokens, on the `?`, on a verdict).
+ */
+export type EditorHover =
+  | ({ line: number } & ({ kind: 'name'; name: string } | { kind: 'atom'; name: string; args: string[] } | { kind: 'line' }))
+  | null
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
@@ -334,9 +340,14 @@ let lastHover = ''
 function hoverAt(view: EditorView, x: number, y: number) {
   const pos = view.posAtCoords({ x, y }, false)
   const hit = pos === null ? null : tokenAt(view.state, pos)
-  const target: EditorHover = !hit ? null
-    : hit.token.pred && hit.atom ? { kind: 'atom', name: hit.atom.name, args: hit.atom.args }
-    : { kind: 'name', name: hit.token.text }
+  // The line under the pointer, if the pointer is on the text's height at all.
+  const block = view.lineBlockAtHeight(y - view.documentTop)
+  const onText = y >= view.documentTop + block.top && y <= view.documentTop + block.bottom
+  const line = onText ? view.state.doc.lineAt(block.from).number - 1 : -1
+  const target: EditorHover = line < 0 ? null
+    : !hit ? { kind: 'line', line }
+    : hit.token.pred && hit.atom ? { kind: 'atom', name: hit.atom.name, args: hit.atom.args, line }
+    : { kind: 'name', name: hit.token.text, line }
   const key = JSON.stringify(target)
   if (key !== lastHover) { lastHover = key; emit('hover', target) }
 }

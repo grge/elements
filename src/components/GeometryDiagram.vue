@@ -129,7 +129,8 @@ const props = defineProps<{
   veil?: number
   padding?: number
   /** Bring forward what these facts draw and these points (what is hovered in the source). */
-  focus?: { facts: GroundPredicate[]; points: string[] } | null
+  /** What to bring forward: elements made by `facts`, `points`, and mark members (`class:member`). */
+  focus?: { facts: GroundPredicate[]; points: string[]; marks?: string[] } | null
   /** A point touched from outside the figure (a construction step hovered): its route is shown. */
   touch?: string | null
 }>()
@@ -243,18 +244,20 @@ function weight(level: number | undefined) {
 
 /** What the focus brings forward; everything else recedes. */
 const emphasis = computed<Emphasis | null>(() =>
-  props.focus && scene.value ? emphasise(scene.value, props.focus.facts, props.focus.points) : null)
+  props.focus && scene.value ? emphasise(scene.value, props.focus.facts, props.focus.points, new Set(props.focus.marks ?? [])) : null)
 
 /** How an element is drawn: its level, and whether the focus brings it forward or lets it recede. */
 function look(level: number | undefined, kind: 'lines' | 'circles' | 'segments' | 'arcs' | 'fills', i: number) {
   const base = weight(level)
   const em = emphasis.value
-  if (!em || !props.focus?.facts.length) return base   // a name alone lights its point, nothing else
+  if (!em || !focusing.value) return base   // a name alone lights its point, nothing else
   if (em[kind].has(i)) return { strokeWidth: `calc(var(--dg-stroke, 3) * 1.25)`, opacity: '1' }
   return { ...(base ?? {}), opacity: '0.18' }
 }
 const lit = (name: string) => !!emphasis.value?.points.has(name)
-const dimPoint = (name: string) => !!emphasis.value && !!props.focus?.facts.length && !emphasis.value.points.has(name)
+/** Does the focus pick out elements (facts or marks), not only points? Then the rest recedes. */
+const focusing = computed(() => !!props.focus?.facts.length || !!props.focus?.marks?.length)
+const dimPoint = (name: string) => !!emphasis.value && focusing.value && !emphasis.value.points.has(name)
 
 function hoverElement(el: ElementRef | null) {
   emit('hover-element', el ? { facts: el.facts, mark: el.mark } : null)

@@ -56,7 +56,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    - Marks chosen by the page's statement first, its sub-constructions receding: done (November
      2026; design.md, *Marks*). A proven mark is drawn only if its relation is in play on the page;
      the depth that makes sub-constructions recede was already there. The windmill stays busy: area
-     is its subject. Next: what hovering a `?` line brings forward, so a mark left off can be shown.
+     is its subject. Whether marks from elsewhere are off or faint is a working setting (the
+     settings pane). Hovering a `?` line brings its marks forward: done (design.md, *Marks*).
    - A class that tiles a figure shown as what it is; Byrne fills a square where we hatch its half.
    - Points under the notice: fitting the figure leaves no room for the plate at its foot.
    - Equal angles alone draw no arcs (three equiangular triangles, in headless screenshots at least).

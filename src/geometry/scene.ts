@@ -307,16 +307,23 @@ export function buildScene(
 /** Which elements of a scene to bring forward: those made by the given facts. */
 export interface Emphasis { lines: Set<number>; circles: Set<number>; segments: Set<number>; arcs: Set<number>; fills: Set<number>; points: Set<string> }
 
-export function emphasise(scene: Scene, facts: readonly GroundPredicate[], points: Iterable<string>): Emphasis {
+/**
+ * What a focus brings forward: elements made by these facts, and marks of these members (keys
+ * `class:member`, marks.ts indices: a lemma's marks).
+ */
+export function emphasise(scene: Scene, facts: readonly GroundPredicate[], points: Iterable<string>, marks: ReadonlySet<string> = new Set()): Emphasis {
   const keys = new Set(facts.map(factKey))
   const hit = (fs: readonly string[]) => fs.some(k => keys.has(k))
   const which = (xs: readonly string[][]) => new Set(xs.flatMap((fs, i) => hit(fs) ? [i] : []))
+  const marked = (m: { mark: number; member: number } | null) => !!m && marks.has(`${m.mark}:${m.member}`)
+  const either = (xs: readonly { facts: string[]; mark: { mark: number; member: number } | null }[]) =>
+    new Set(xs.flatMap((x, i) => hit(x.facts) || marked(x.mark) ? [i] : []))
   return {
     lines: which(scene.meta.lines),
     circles: which(scene.meta.circles),
-    segments: which(scene.meta.segments.map(s => s.facts)),
-    arcs: which(scene.meta.arcs.map(a => a.facts)),
-    fills: which(scene.meta.fills.map(f => f.facts)),
+    segments: either(scene.meta.segments),
+    arcs: either(scene.meta.arcs),
+    fills: either(scene.meta.fills),
     points: new Set([...points, ...facts.flatMap(f => f.args)]),
   }
 }

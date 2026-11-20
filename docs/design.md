@@ -208,6 +208,11 @@ thumbnails follow the same rule, with the book's `?` lines for their predicate. 
 elsewhere are left off or drawn faint (two levels deeper) is a working setting while the design
 settles (the settings pane in the masthead, `useSettings.ts`); off by default.
 
+Hovering a `?` line, anywhere but on a point's name (which still lights its point), brings its lemma
+forward and lets the rest recede: the marks its proof put on the figure, and the marks of the blocks
+its claim names, whoever proved them (a lemma whose hypotheses name points the figure lacks, such as
+the rectangle's, marks nothing itself), with their points and what the claim draws.
+
 The drawing infers no equality of its own. On `eq-triangle`'s page the three sides are ticked because
 its two lemmas are ✓, and wherever `eq-triangle` is used, on the scratchpad or inside I.2, the book's
 lemmas travel with it and tick its sides there too. A user's own construction draws only its circles

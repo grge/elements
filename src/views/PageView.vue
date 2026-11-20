@@ -153,6 +153,8 @@
 
 <script setup lang="ts">
 import { settings, SETTING_CHOICES } from '../composables/useSettings'
+import type { Lemma } from '../language/parser'
+import { RELATIONS } from '../geometry/relations'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
@@ -342,6 +344,64 @@ function pointOf(name: string): string | null {
   return coords.has(name) ? name : coords.has(`${name}#1`) ? `${name}#1` : null
 }
 
+/** The lemma whose `?` line (or a line it continues on) is this source line, 0-based. */
+function lemmaAtLine(line: number): Lemma | null {
+  const parsed = ws.items.value
+  for (const i of parsed) {
+    if (i.kind !== 'lemma' || !i.sourceRef) continue
+    if (line >= i.sourceRef.startLine - 1 && line <= (i.sourceRef.endLine ?? i.sourceRef.startLine) - 1) return i.lemma
+  }
+  return null
+}
+
+const lemmaKey = (l: Lemma) => JSON.stringify([l.head, l.hypotheses])
+
+/**
+ * What a lemma's line brings forward: the marks its proof put on the figure (each member it joined
+ * to another, by class and member), their points, and what its claim draws (a line for `collinear`).
+ */
+function lemmaFocus(lemma: Lemma): { facts: GroundPredicate[]; points: string[]; marks: string[] } | null {
+  const figure = ws.figure.value, rt = ws.runtime.value
+  if (!figure) return null
+  const key = lemmaKey(lemma)
+  const marks: string[] = []
+  const points = new Set<string>()
+  figure.marks.forEach((cls, ci) => {
+    for (const e of cls.edges) {
+      if (e.source.kind !== 'proven' || lemmaKey(e.source.lemma) !== key) continue
+      for (const mi of [e.from, e.to]) {
+        marks.push(`${ci}:${mi}`)
+        cls.members[mi].points.forEach(p => points.add(p))
+      }
+    }
+  })
+  // Its claim, read with the page's names, where its points are the figure's (a lemma about the
+  // page's own construction): the marks of the blocks it says are equal, whoever proved them (a
+  // lemma whose hypotheses name points the figure lacks marks nothing itself), and what it draws.
+  let facts: GroundPredicate[] = []
+  const args = lemma.head.args.map(a => pointOf(a))
+  if (args.every(a => a !== null)) {
+    figure.marks.forEach((cls, ci) => {
+      if (cls.name !== lemma.head.name || args.length !== 2 * cls.k) return
+      const blocks = [args.slice(0, cls.k), args.slice(cls.k)] as string[][]
+      // A member is a block up to its symmetries: an angle by its vertex and its arms either way, any
+      // other block by its points.
+      const angle = RELATIONS.get(cls.name)?.classMark?.as === 'arcs'
+      const same = (m: string[], b: string[]) => angle
+        ? m[1] === b[1] && new Set([m[0], m[2], b[0], b[2]]).size === 2
+        : m.length === b.length && b.every(p => m.includes(p))
+      cls.members.forEach((m, mi) => {
+        if (blocks.some(b => same(m.points, b))) { marks.push(`${ci}:${mi}`); m.points.forEach(p => points.add(p)) }
+      })
+    })
+  }
+  if (rt && args.every(a => a !== null)) {
+    try { facts = extract(rt.kb, [{ name: lemma.head.name, args: args as string[] }]).outline } catch { facts = [] }
+    args.forEach(a => points.add(a!))
+  }
+  return marks.length || facts.length ? { facts, points: [...points], marks } : null
+}
+
 /** What the figure brings forward: the hovered name's point, or everything the hovered atom draws. */
 const figureFocus = computed(() => {
   if (stepHover.value) return { facts: [], points: [stepHover.value] }
@@ -362,6 +422,10 @@ const figureFocus = computed(() => {
     const p = pointOf(h.name)
     return p ? { facts: [], points: [p] } : null
   }
+  // A `?` line, anywhere but on a point's name: what its lemma marks on the figure.
+  const lemma = lemmaAtLine(h.line)
+  if (lemma) return lemmaFocus(lemma)
+  if (h.kind === 'line') return null
   // The page's own predicate with its signature is the whole figure: nothing to single out.
   if (ws.mode.value === 'predicate' && h.name === ws.selectedPred.value) return null
   const rt = ws.runtime.value
