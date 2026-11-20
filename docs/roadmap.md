@@ -137,7 +137,19 @@ cannot be written honestly without them, and designed as a whole.
   relations' own pages fail, rightly. To settle:
   - What is given. Euclid's problems say ("on a given straight line"); a definition does not.
     `midpoint m a b` passes only because the planner takes m and a as given and doubles a-m to b;
-    that is not I.10. Which points a page gives would have to be said, or read from its signature.
+    that is not I.10. Givens are the points that take up the figure's freedom (all of it, no more; a
+    point on a given line takes one degree), and `plan(model, { free, euclid: true })` already
+    answers for a given set. A pass means the clauses spell out a construction from those givens; a
+    fail only that they do not (whether one exists at all is algebra, not the planner's question).
+    Different givens are different problems (an angle's trisector from the angle is impossible, the
+    angle from its trisector easy). Ideas:
+    - Try every set of givens and report which work ("from a and b, a construction; from a and m, a
+      doubling"): a few hundred plans for the windmill, well under a second.
+    - Let a reader choose the givens in the figure by locking points: the dual of what dragging a
+      determined point already does (it re-plans with that point free).
+    - Let the book say them, as Euclid's enunciations do: a line in a page's doc comment such as
+      `# given a b`, read and handed to the planner. It is part of the problem's statement, read by
+      the reader as prose, not a hint to the engine.
   - How the page says it: a mark on the page and in the contents, perhaps the steps list read as
     Euclid's construction when it is one.
   - Whether the book should then write more constructions where it now states relations (drop-corner
