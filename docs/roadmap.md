@@ -145,8 +145,7 @@ cannot be written honestly without them, and designed as a whole.
     angle from its trisector easy). Ideas:
     - Try every set of givens and report which work ("from a and b, a construction; from a and m, a
       doubling"): a few hundred plans for the windmill, well under a second.
-    - Let a reader choose the givens in the figure by locking points: the dual of what dragging a
-      determined point already does (it re-plans with that point free).
+    - Let a reader choose the givens in the figure (*Interface*, givens the reader chooses).
     - Let the book say them, as Euclid's enunciations do: a line in a page's doc comment such as
       `# given a b`, read and handed to the planner. It is part of the problem's statement, read by
       the reader as prose, not a hint to the engine.
@@ -231,6 +230,25 @@ See [design.md](design.md#designed-not-yet-built) for what is designed but not b
 editing modes, text that makes room for the figure, a better index, predicate views with lemma
 layers, the boffin panel and an entry page.
 
+- **Givens the reader chooses.** Which points are inputs is today a side effect of dragging, and an
+  incomplete one. Pressing a point the construction determines re-plans with that one point free,
+  forgetting any earlier choice; a point on a locus can only slide, never become an input; and
+  nothing on the page records what was chosen. Instead, a page keeps a set of givens, and its plan is
+  `plan(model, { free: givens })`: every given an input, the rest ordered by the planner.
+  - Empty on load (the planner chooses, as now), or seeded by the page's `# given` line (*The book*,
+    which pages are Euclid's constructions).
+  - Making a point given works for every kind, by the test determined points already use: re-plan
+    with it free and accept only if no fact is lost, some other point giving up the freedom (in
+    `circle a b c`, c given makes b the slider). A given that over-determines the figure (a, b and m
+    of a midpoint) is refused, and the point's title says why.
+  - Givens accumulate until released, with one control to reset to the planner's choice.
+  - The figure marks given points, apart from free, sliding and fixed ones. The steps list is the
+    current plan's route, and can carry the Euclid's-moves check: "from a and c: a construction", or
+    drawn with help.
+  - The gesture, since dragging a sliding point already slides it: double-click (double-tap)
+    toggles given (works on touch, leaves dragging alone); or shift-drag moves a point freely,
+    making it given (direct, but nothing on touch); or dragging a sliding point well off its locus
+    tears it free (playful, but surprising). Leaning to double-click.
 - **More than one page, and a more playful layout**, in the same aesthetic: a front page, an explainer
   (the language, unfolding, the planner and the checker, each with live figures) and help. Sketch
   first; [the Plates concept](plates-concept/REDESIGN_CONCEPT.md) is a starting point.
