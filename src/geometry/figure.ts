@@ -55,6 +55,9 @@ export interface Figure {
  * while a page whose lemma concludes equal areas draws its hatching. Marks of sub-constructions are
  * kept, drawn at their depth (fainter). Without a statement, every lemma marks (as before).
  */
+/** How many levels deeper (so fainter) a mark from elsewhere is drawn, when such marks are shown. */
+const ASIDE = 2
+
 export function lemmasInPlay(x: Extraction, lemmas: readonly Lemma[], statement?: readonly Lemma[]): readonly Lemma[] {
   if (!statement) return lemmas
   const inPlay = new Set([...x.outline.map(f => f.name), ...statement.map(l => l.head.name)])
@@ -65,14 +68,28 @@ export function lemmasInPlay(x: Extraction, lemmas: readonly Lemma[], statement?
  * The figure of an extraction, with its marks: equalities it states, and those that `lemmas` (✓
  * ones only) prove about the constructions it uses.
  */
-export function drawFigure(kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[], statement?: readonly Lemma[]): Figure | null {
+export function drawFigure(
+  kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[], statement?: readonly Lemma[], aside: 'off' | 'faint' = 'off',
+): Figure | null {
   const { equivalences } = analyseStructure(kb.allRules())
-  lemmas = lemmasInPlay(x, lemmas, statement)
+  // Lemmas about what the page does not talk about: left off, or drawn faint (ASIDE levels deeper).
+  const inPlay = lemmasInPlay(x, lemmas, statement)
+  const set = new Set(inPlay)
+  const others = aside === 'faint' ? lemmas.filter(l => !set.has(l)) : []
+  lemmas = inPlay
   // Facts whose drawing is a mark are drawn wherever a lemma proves them, unless already written.
   const written = new Set(x.depicted.map(factKey))
-  const proven = provenMarks(x.outline, lemmas, name => !!RELATIONS.get(name)?.mark && !equivalences.has(name))
-    .filter(p => !written.has(factKey(p.fact)))
-  const figure = figureOf([...x.depicted, ...proven.map(p => p.fact)], markClasses(equalities(x.outline, x.depicted, lemmas, equivalences), equivalences))
+  const isMark = (name: string) => !!RELATIONS.get(name)?.mark && !equivalences.has(name)
+  const deeper = <T extends { depth: number }>(e: T): T => ({ ...e, depth: e.depth + ASIDE })
+  const proven = [
+    ...provenMarks(x.outline, lemmas, isMark),
+    ...provenMarks(x.outline, others, isMark).map(p => ({ ...p, fact: deeper(p.fact) })),
+  ].filter(p => !written.has(factKey(p.fact)))
+  const known = [
+    ...equalities(x.outline, x.depicted, lemmas, equivalences),
+    ...equalities(x.outline, [], others, equivalences).map(deeper),
+  ]
+  const figure = figureOf([...x.depicted, ...proven.map(p => p.fact)], markClasses(known, equivalences))
   for (const p of proven) figure?.provenBy.set(factKey(p.fact), p.facts)
   // A proven mark is made by the constructions its lemma matched: they are sources too.
   for (const f of x.outline) if (!figure?.sources.has(factKey(f))) figure?.sources.set(factKey(f), f)

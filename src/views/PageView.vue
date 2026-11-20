@@ -1,5 +1,5 @@
 <template>
-  <div class="page" :class="{ short }" :style="[themeStyle, heightStyle]" @keydown.esc="contentsOpen = false">
+  <div class="page" :class="{ short }" :style="[themeStyle, heightStyle]" @keydown.esc="contentsOpen = false; settingsOpen = false">
     <header class="masthead">
       <button class="wordmark" @click="contentsOpen = !contentsOpen" :aria-expanded="contentsOpen">
         Elements
@@ -28,6 +28,11 @@
           @click="toggleShuffle"
         >shuffle</button>
       </div>
+      <button
+        class="quiet settings-toggle" :class="{ on: settingsOpen }" :aria-expanded="settingsOpen"
+        title="Working settings: choices the design has not settled"
+        @click="settingsOpen = !settingsOpen"
+      >settings</button>
       <!-- Phones: one dot, the current theme, that steps to the next. -->
       <button
         class="swatch cycle"
@@ -37,6 +42,28 @@
         @click="setTheme((themeIndex + 1) % THEMES.length)"
       ><span /></button>
     </header>
+
+    <template v-if="settingsOpen">
+      <div class="settings-backdrop" @click="settingsOpen = false" />
+      <section class="settings" role="dialog" aria-label="Settings">
+        <header class="settings-head">
+          <h2>Settings</h2>
+          <button class="quiet" @click="settingsOpen = false">close</button>
+        </header>
+        <p class="settings-note">Choices still being settled. Remembered in this browser.</p>
+        <div v-for="c in SETTING_CHOICES" :key="c.key" class="setting">
+          <div class="setting-label">{{ c.label }}</div>
+          <div class="setting-options" role="radiogroup" :aria-label="c.label">
+            <button
+              v-for="o in c.options" :key="String(o.value)" role="radio"
+              :class="{ current: settings[c.key] === o.value }" :aria-checked="settings[c.key] === o.value"
+              @click="settings[c.key] = o.value"
+            >{{ o.label }}</button>
+          </div>
+          <p class="setting-help">{{ c.help }}</p>
+        </div>
+      </section>
+    </template>
 
     <main class="stage" :style="{ '--veil': `${veil}px` }">
       <GeometryDiagram
@@ -125,6 +152,7 @@
 </template>
 
 <script setup lang="ts">
+import { settings, SETTING_CHOICES } from '../composables/useSettings'
 import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { useWorkspace } from '../composables/useWorkspace'
 import { useVerification } from '../composables/useVerification'
@@ -142,6 +170,7 @@ import type { Namespace } from '../composables/useKB'
 
 const ws = useWorkspace()
 const contentsOpen = ref(false)
+const settingsOpen = ref(false)
 
 // ── colour themes (contrast checked: ink and accent ≥ 4.5:1 on paper, soft ≥ 4.5:1) ──
 
@@ -525,6 +554,31 @@ const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
 .cycle { display: none; }
 .shuffle { margin-left: 0.4rem; text-decoration-style: dotted; }
 .shuffle.on { color: var(--ink); text-decoration-style: solid; }
+.themes { margin-right: 1rem; }
+.settings-toggle { align-self: center; margin-right: 1.5rem; text-decoration-style: dotted; }
+.settings-toggle.on { color: var(--ink); text-decoration-style: solid; }
+
+/* ── settings: a card under the masthead, in the page's own colours ── */
+.settings-backdrop { position: fixed; inset: 0; z-index: 6; }
+.settings {
+  position: fixed; z-index: 7; top: 92px; right: 1.5rem; width: min(380px, calc(100vw - 2rem));
+  background: var(--paper); color: var(--ink); border: 2px solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink); padding: 1rem 1.2rem 1.2rem;
+}
+.settings-head { display: flex; align-items: baseline; justify-content: space-between; }
+.settings-head h2 { margin: 0; font: 900 1.1rem var(--font-display); letter-spacing: 0.04em; text-transform: uppercase; }
+.settings-note { margin: 0.3rem 0 1rem; color: var(--soft); font: 0.75rem var(--font-mono); }
+.setting + .setting { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--soft); }
+.setting-label { font: 400 0.75rem var(--font-mono); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+.setting-options { display: inline-flex; border: 2px solid var(--ink); }
+.setting-options button {
+  background: none; border: 0; padding: 0.25rem 0.9rem; cursor: pointer; color: var(--ink);
+  font: 0.85rem var(--font-mono);
+}
+.setting-options button + button { border-left: 2px solid var(--ink); }
+.setting-options button.current { background: var(--ink); color: var(--paper); }
+.setting-options button:not(.current):hover { color: var(--accent); }
+.setting-help { margin: 0.6rem 0 0; font: 0.9rem/1.4 var(--font-prose); color: var(--ink); opacity: 0.8; }
 
 /* ── stage: the figure fills it, the text floats over its left side ── */
 .stage { position: relative; flex: 1; min-height: 0; }
@@ -658,10 +712,12 @@ const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
   .wordmark { padding: 0 1rem; font-size: 1.2rem; }
   .title { font-size: 1.3rem; }
   .ns, .shuffle { display: none; }
+  .settings-toggle { margin: 0 0 0 auto; }
+  .settings { top: auto; bottom: 1rem; right: 1rem; }
   /* One theme dot instead of six, so the title has room. */
   .themes { display: none; }
   .cycle {
-    display: grid; flex: none; align-self: center; margin: 0 0.9rem 0 auto;
+    display: grid; flex: none; align-self: center; margin: 0 0.9rem 0 0.8rem;
     width: 30px; height: 30px; position: relative;
   }
   .cycle span { width: 11px; height: 11px; }

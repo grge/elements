@@ -204,7 +204,9 @@ play there, mentioned by the figure's unfolding or concluded by one of the page'
 (`lemmasInPlay` in figure.ts). The parallelogram's page says nothing of area, so chapter 4's lemma that
 a diagonal halves it does not hatch it; drop-corner's own lemma concludes equal areas, so its hatching
 stays. Marks of the constructions a page is built from are kept, at their depth, so they recede. The
-thumbnails follow the same rule, with the book's `?` lines for their predicate.
+thumbnails follow the same rule, with the book's `?` lines for their predicate. Whether marks from
+elsewhere are left off or drawn faint (two levels deeper) is a working setting while the design
+settles (the settings pane in the masthead, `useSettings.ts`); off by default.
 
 The drawing infers no equality of its own. On `eq-triangle`'s page the three sides are ticked because
 its two lemmas are ✓, and wherever `eq-triangle` is used, on the scratchpad or inside I.2, the book's

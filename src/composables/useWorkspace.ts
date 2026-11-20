@@ -1,4 +1,5 @@
 import { ref, computed, shallowRef, watch } from 'vue'
+import { settings } from './useSettings'
 import { ParseError, parseSource, type Lemma, type TopLevel } from '../language/parser'
 import { buildRuntimeState, type RuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
@@ -200,7 +201,7 @@ export function useWorkspace() {
   // tears down the whole page in production, editor included, which loses focus mid-typing.
   const drawn = computed(() => {
     if (!runtime.value) return null
-    try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value, statement.value) }
+    try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value, statement.value, settings.marksAside) }
     catch (e) { console.warn('Figure error:', e); return null }
   })
   // Its marks merged by the forward closure (useClosure.ts): at once if the answer is remembered,

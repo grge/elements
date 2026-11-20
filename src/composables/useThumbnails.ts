@@ -7,7 +7,7 @@
  * predicate (which makes a new knowledge base) refreshes them.
  */
 
-import { shallowRef, triggerRef } from 'vue'
+import { shallowRef, triggerRef, watch } from 'vue'
 import type { KnowledgeBase } from '../kb/inference'
 import { extract, type Extraction } from '../geometry/extraction'
 import { marksNow, mergedMarks } from './useClosure'
@@ -15,6 +15,7 @@ import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import { drawFigure, type Figure } from '../geometry/figure'
 import type { Lemma } from '../language/parser'
 import { bookLemmas, pageLemmas } from './useKB'
+import { settings } from './useSettings'
 
 export interface Thumbnail {
   figure: Figure
@@ -28,13 +29,15 @@ export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly
   const x = extract(kb, [{ name, args }])
   const facts = x.constraints
   // Marked as its page is: by the relations in play there (its own `?` lines).
-  const figure = drawFigure(kb, x, lemmas, pageLemmas(name))
+  const figure = drawFigure(kb, x, lemmas, pageLemmas(name), settings.marksAside)
   if (!figure) return null
   const { drawing } = realise(plan(buildModel(facts, args)))
   return drawing.coords.size ? { figure, coords: drawing.coords, extraction: x } : null
 }
 
-const cache = new WeakMap<KnowledgeBase, Map<string, Thumbnail | null>>()
+let cache = new WeakMap<KnowledgeBase, Map<string, Thumbnail | null>>()
+// A thumbnail's marks follow the settings: drawn afresh when they change.
+watch(() => settings.marksAside, () => { cache = new WeakMap() })
 const SLICE_MS = 12
 
 export function useThumbnails() {
