@@ -33,9 +33,13 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 3. **Pages that answer quickly, and the store built for theories.**
    - Definitions as abbreviations: done (November 2026; architecture.md). The same verdicts
      everywhere, ten to fifty times fewer facts, the book in three quarters of the time. With it, a
-     budget of work beside the budget of derivations. Found on the way: an equivalence matched with
-     none of its points bound walks every tuple of points, mentioned or not (the reflexive case); it
-     is most of the time of the heaviest pages, and the evaluator below should not do it.
+     budget of work beside the budget of derivations.
+   - The equivalence walk: done. An equivalence matched with a block unbound walked every tuple of
+     points, mentioned or not, for the reflexive case; now only the tuples consistent with what is
+     bound. The same verdicts; the book's checks 33 s to 19 s, *Beyond the book*'s 227 s to 140 s,
+     the whole test suite 583 tests in about two minutes. Pages that run to their budget (most
+     marks closures) take as long as the budget allows: their time is the budget's, not the
+     engine's speed.
    - Relevance: measured and dropped (November 2026). After structure and abbreviations 51 rules
      are live, every goal reaches 49 of them and `false` all 51: the book's relations are one web
      (everything feeds equality and distinctness, which feed everything).

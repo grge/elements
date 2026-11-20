@@ -442,12 +442,10 @@ export class Saturation {
       return
     }
 
-    // Walk every class, including the singleton classes of tuples never mentioned.
-    const pool = [...(mask[0] ? this.reps : this.names)]
+    // Every class of tuples mentioned.
+    const mentioned = this.classesOf(p).parent
     const seen = new Set<string>()
-    const keys = new Set<string>([...this.classesOf(p).parent.keys()])
-    for (const t of cartesian<string>(Array.from({ length: k }, () => pool))) keys.add(this.tupleKey(p, e, t))
-    for (const key of keys) {
+    for (const key of mentioned.keys()) {
       this.work++
       const root = this.tupleRoot(p, key)
       if (seen.has(root)) continue
@@ -456,6 +454,27 @@ export class Saturation {
       for (const x of tuples) for (const y of tuples) {
         const t = this.unifyArgs(s, args, [...x, ...y], mask)
         if (t) yield t
+      }
+    }
+    // A tuple never mentioned is a class of its own, so it matches only reflexively: both blocks are
+    // images of the one tuple. Only tuples consistent with what is bound can match: generate them
+    // from the block with fewer unbound variables (bound positions fixed, the rest over every point),
+    // each paired with its images in the other block.
+    const pool = [...(mask[0] ? this.reps : this.names)]
+    const blocks = [args.slice(0, k), args.slice(k)]
+    const unbound = (b: readonly string[]) => b.filter(v => !s.has(v)).length
+    const from = unbound(blocks[0]) <= unbound(blocks[1]) ? 0 : 1
+    const choices = blocks[from].map(v => {
+      const b = s.get(v)
+      if (!b) return pool
+      return mask[0] ? [this.find(b.v)] : b.flex ? [...this.members(this.find(b.v))] : [b.v]
+    })
+    for (const t of cartesian<string>(choices)) {
+      this.work++
+      if (mentioned.has(this.tupleKey(p, e, t))) continue
+      for (const y of orbit(e.blockGroup, t)) {
+        const u = this.unifyArgs(s, args, from === 0 ? [...t, ...y] : [...y, ...t], mask)
+        if (u) yield u
       }
     }
   }

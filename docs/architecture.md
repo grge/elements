@@ -106,6 +106,10 @@ fall ten to fifty times (the windmill's from 20 847 to 1 984); the book checks i
 time. The definitions analysis (`definitions.ts`) keeps every clause firing (`abbreviate: false`), since
 it decides what a definition is.
 
+Matching an equivalence with a block unbound walks its mentioned classes, then the tuples never
+mentioned, which match only reflexively (both blocks images of one tuple): only those consistent with
+what is bound, generated from the block with fewer unbound variables.
+
 The search has two budgets, whichever runs out first: derivations, and **work** (partial matches and
 tuples considered, `Saturation.work`), which is in proportion to time. Derivations alone stopped
 measuring anything once the cheap derivations of defined facts were gone: the same budget bought three
