@@ -1,5 +1,5 @@
 /**
- * The stress test (roadmap, Next, step 2): each lemma of tests/fixtures/stress.geo checked as a page
+ * The stress test (roadmap, Next, step 2): each lemma of src/language/extra/beyond.geo checked as a page
  * checks it, with what its figure takes to draw.
  *
  *   npx vite-node scripts/stress.ts [--budget N] [--distinct]
@@ -34,7 +34,7 @@ function withConvention(lemma: Lemma): Lemma {
   return { ...lemma, hypotheses: [...lemma.hypotheses, ...extra] }
 }
 
-const source = readFileSync(resolve(__dirname, '../tests/fixtures/stress.geo'), 'utf8')
+const source = readFileSync(resolve(__dirname, '../src/language/extra/beyond.geo'), 'utf8')
 parseSource(source)   // fail early on a syntax error
 const kb = new KnowledgeBase([...bookRules, ...parseRules(source)])
 

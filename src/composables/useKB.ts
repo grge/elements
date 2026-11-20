@@ -53,20 +53,29 @@ export interface ClauseItem {
 }
 
 const chapterSources = import.meta.glob('../language/book/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
+/**
+ * Chapters after the book that are not part of it (`extra/`: the stress test). Their pages are pages
+ * like any other, and their lemmas are checked on them, but never taken as proven for the figure's
+ * marks, since they need not be ✓.
+ */
+const extraSources = import.meta.glob('../language/extra/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
 
-const loaded = Object.entries(chapterSources)
-  .sort(([a], [b]) => a.localeCompare(b))
-  .map(([path, source]) => {
-    const file = path.split('/').pop()!
-    const id = file.replace(/\.geo$/, '')
-    const title = source.match(/^#\s*(.+)$/m)?.[1].trim() ?? id
-    return { id, title, file, source, items: parseGeoFile(source, file) }
-  })
+const chapterOf = (extra: boolean) => ([path, source]: [string, string]) => {
+  const file = path.split('/').pop()!
+  const id = file.replace(/\.geo$/, '')
+  const title = source.match(/^#\s*(.+)$/m)?.[1].trim() ?? id
+  return { id, title, file, source, extra, items: parseGeoFile(source, file) }
+}
+const byPath = ([a]: [string, string], [b]: [string, string]) => a.localeCompare(b)
+const loaded = [
+  ...Object.entries(chapterSources).sort(byPath).map(chapterOf(false)),
+  ...Object.entries(extraSources).sort(byPath).map(chapterOf(true)),
+]
 validateConsistentArities(loaded.map(c => ({ sourceName: c.file, items: c.items })))
 
 export const chapters: Chapter[] = loaded.map(({ id, title }) => ({ id, title }))
 /** The book's lemmas. All are ✓ (the tests require it), so the figure takes their marks as proven. */
-export const bookLemmas: Lemma[] = loaded.flatMap(c => c.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []))
+export const bookLemmas: Lemma[] = loaded.filter(c => !c.extra).flatMap(c => c.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []))
 const bookRules: Rule[] = loaded.flatMap(c => parseRules(c.source))
 
 // Where each predicate is first defined in the book (chapter, then position), for ordering.

@@ -23,7 +23,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 
 | Path | What it is |
 |------|------------|
-| `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file |
+| `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file; `extra/`, chapters after the book that are not part of it (the stress test), whose lemmas are checked on their pages but never taken as proven for marks |
 | `src/kb/inference.ts` | `KnowledgeBase`, `unfoldTree` and `unfold`, and `forwardClosure` (the plain reference engine) |
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, or are symmetric |

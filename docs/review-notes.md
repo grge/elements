@@ -379,7 +379,7 @@ the given one, is set aside as one condition (a theorem) by carrying the plan ou
 ## The stress test (November 2026)
 
 Thirteen theorems beyond Euclid's first books, written as a user would write them with the book's
-vocabulary and no help for the engine (`tests/fixtures/stress.geo`; `npx vite-node
+vocabulary and no help for the engine (`src/language/extra/beyond.geo`, the chapter *Beyond the book*; `npx vite-node
 scripts/stress.ts [--distinct]`). For each: does it draw, does it hold in sampled figures, does it
 prove. Where it does not prove, the textbook proof's ingredients were added one at a time as
 hypotheses to find what blocks it ("measured"); otherwise the blocker is read from the proof.
