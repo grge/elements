@@ -186,7 +186,7 @@ export interface ConstructionPlan {
 }
 
 /** Loci available to point p once the points in `placed` (in this order) are placed. */
-function lociFor(model: ConstructionModel, p: string, placed: readonly string[], banned?: ReadonlySet<string>): Locus[] {
+function lociFor(model: ConstructionModel, p: string, placed: readonly string[], banned?: ReadonlySet<string>, euclid = false): Locus[] {
   const isPlaced = new Set(placed)
   const rank = (q: string) => placed.indexOf(q)
   const out: Locus[] = []
@@ -262,7 +262,8 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
       .filter(q => isPlaced.has(q))
       .sort((x, y) => rank(x) - rank(y))
     if (complete.length > 0) {
-      for (const c of others) out.push({ kind: 'circle', center: c, radius: complete[0] })
+      // With Euclid's moves only, the compass opens from the centre itself (the collapsing compass).
+      for (const c of others) out.push({ kind: 'circle', center: c, radius: (euclid && complete.find(s => s.includes(c))) || complete[0] })
     } else {
       for (let i = 1; i < others.length; i++) out.push({ kind: 'bisector', of: [others[0], others[i]] })
     }
@@ -278,6 +279,7 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
   const kept: Locus[] = []
   for (const l of out) {
     if (banned?.has(lociKey(p, l))) continue
+    if (euclid && !(l.kind === 'line' || (l.kind === 'circle' && l.radius.includes(l.center)))) continue
     const through = pivots(l)
     if (through.length && kept.some(k => pivots(k).some(q => through.includes(q)))) continue
     if (kept.some(k => sameLocus(k, l))) continue
@@ -318,6 +320,13 @@ const RAY_START = 0.02
 export interface PlanOptions {
   /** Points that must be free inputs (placed before anything constrains them). */
   free?: string[]
+  /**
+   * Euclid's moves only: a line through two placed points, a circle about a placed point through
+   * another (the collapsing compass), and where they meet, or any point on one. A figure that still
+   * draws is a ruler-and-compass construction by its own clauses; one that does not is drawn with
+   * the planner's help (carried lengths, copied angles, perpendiculars, parallels, areas).
+   */
+  euclid?: boolean
 }
 
 /**
@@ -375,7 +384,7 @@ function planOnce(model: ConstructionModel, options: PlanOptions, banned: Readon
   const add = (a: Cost, b: Cost): Cost => [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
   const less = (a: Cost, b: Cost) => a[0] !== b[0] ? a[0] < b[0] : a[1] !== b[1] ? a[1] < b[1] : a[2] < b[2]
   const stepCost = (p: string, placed: string[]): Cost => {
-    const dof = 2 - Math.min(2, lociFor(model, p, placed, banned).length)
+    const dof = 2 - Math.min(2, lociFor(model, p, placed, banned, options.euclid).length)
     return [dof, isAuxiliary(p) ? dof : 0, dof > 0 ? index.get(p)! : 0]
   }
 
@@ -391,7 +400,7 @@ function planOnce(model: ConstructionModel, options: PlanOptions, banned: Readon
       const mask = maskOf(placed)
       const hit = memo.get(mask)
       if (hit) return hit
-      const determined = remaining.find(p => lociFor(model, p, placed, banned).length >= 2)
+      const determined = remaining.find(p => lociFor(model, p, placed, banned, options.euclid).length >= 2)
       const candidates = determined ? [determined] : remaining
       let result = { cost: [Infinity, Infinity, Infinity] as Cost, next: null as string | null }
       for (const p of candidates) {
@@ -418,7 +427,7 @@ function planOnce(model: ConstructionModel, options: PlanOptions, banned: Readon
   // their own: they come from the facts, and every fact is checked.
   const steps: Step[] = []
   order.forEach((p, k) => {
-    const loci = lociFor(model, p, order.slice(0, k), banned)
+    const loci = lociFor(model, p, order.slice(0, k), banned, options.euclid)
     if (loci.length === 0) steps.push({ kind: 'free', point: p })
     else if (loci.length === 1) steps.push({ kind: 'on', point: p, locus: loci[0] })
     else steps.push({ kind: 'meet', point: p, loci: [loci[0], loci[1]] })

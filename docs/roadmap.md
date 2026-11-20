@@ -120,6 +120,28 @@ cannot be written honestly without them, and designed as a whole.
 - **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
   object would read better and suit other geometries. Not needed yet.
 - **Comparisons of size**, for the triangle inequality and Euclid I.16–25.
+- **Which pages are Euclid's constructions.** Three things that came apart with `right` (November
+  2026): what the clauses mean (the logic); how the figure is placed (the planner, by any method:
+  carried lengths, copied angles as measured rays, perpendiculars, Thales, areas by their height, the
+  solver as a last resort); and whether the clauses *are* a ruler-and-compass construction. The
+  steps list blurs the second into the third: it shows the planner's route as if it were the
+  construction. `right` is a definition (Euclid's own, definition 10), whose d need only exist;
+  `perpendicular` is a construction (I.11), whose points are the method. A check would tell them
+  apart: plan with Euclid's moves only (a line through two points, a circle about a point through a
+  point, where they meet, any point on one; `plan(model, { euclid: true })`) and say on the page
+  whether the figure still draws. Measured: 25 of the 39 pages that draw pass. Chapter 1 passes but
+  for `eq-lines`; chapter 2's constructions pass (`bisect`, `bisect-angle`, `perpendicular`,
+  `drop-perpendicular`) but `copy-angle`, which carries lengths rather than transferring them (I.2,
+  I.22); chapters 3 and 4 pass nowhere, since `parallel-through` is built on `copy-angle` and the
+  rest are written with the relations `parallel` and `right` rather than constructions of them. The
+  relations' own pages fail, rightly. To settle:
+  - What is given. Euclid's problems say ("on a given straight line"); a definition does not.
+    `midpoint m a b` passes only because the planner takes m and a as given and doubles a-m to b;
+    that is not I.10. Which points a page gives would have to be said, or read from its signature.
+  - How the page says it: a mark on the page and in the contents, perhaps the steps list read as
+    Euclid's construction when it is one.
+  - Whether the book should then write more constructions where it now states relations (drop-corner
+    with `parallel-through` rather than `parallel`), trading readability for a page that passes.
 
 ## The workbench
 

@@ -419,3 +419,16 @@ describe('dragging after the construction is reversed', () => {
     expect(Math.hypot(after[0] - at[0], after[1] - at[1])).toBeLessThan(1e-9)
   })
 })
+
+describe("Euclid's moves only", () => {
+  const passes = (text: string) => realise(plan(buildModel(factsOf(text)), { euclid: true })).valid
+  it('draws a construction made of them: the equilateral triangle, the perpendicular (I.11)', () => {
+    expect(passes('eq-triangle a b c')).toBe(true)
+    expect(passes('perpendicular a c d')).toBe(true)
+  })
+  it('does not draw what needs the planner: a carried length, a right angle by definition, a parallel', () => {
+    expect(passes('copy-angle a b c e g d')).toBe(false)
+    expect(passes('right a b c')).toBe(false)
+    expect(passes('parallelogram a b c d')).toBe(false)
+  })
+})
