@@ -15,15 +15,39 @@ In order. Each is worth doing on its own, and each is measured with `scripts/ben
    found. Evidence already finds a figure for 59 of 64 lemmas in milliseconds.
    - One sampler for pages and evidence. `configurations` never varies branches, so the windmill's
      page constructs but its lemmas get no sampled figure; `realise` varies them only at random after
-     40 failures. Search branches and slider directions systematically, and choose a branch as soon as
-     an order fact can decide it.
+     40 failures (step 2 makes that systematic).
    - Count two parallels to one line as one condition, not two, so Playfair's hypotheses draw.
    - A witness needs every hypothesis to hold with a real margin (`distinct`, `triangle` well clear of
      degenerate), not the drawing's 1e-7. A solved figure is a weaker witness, and the verdict says so.
    - Check every derived fact against the figure: one that fails means an axiom is wrong or a bug (!).
    - The tests still run the full search for `false`, so a wrong axiom still shows (the unguarded I.29
      of chapter 3 is the regression case).
-2. **Pages that answer quickly.**
+2. **Clean up construction.** The premise, constructions as clauses that draw, holds; the mess is in
+   how the planner treats what the clauses leave implicit.
+   - **Hidden helper points.** A definition's auxiliary points cost degrees of freedom and change the
+     construction order: `right`'s extension point is a slider that changes nothing visible, and must
+     be placed before the right angle can be used, so `triangle-to-rectangle` is built backwards from
+     the rectangle. A perpendicular locus for `right`; helper points that change nothing placed
+     without counting as freedom; and settling whether they are drawn (below).
+   - **Branch choices.** Search branches and slider directions systematically, and choose a branch as
+     soon as an order fact can decide it, rather than checking order facts only on later points (the
+     windmill said NOT MET because of this).
+   - **Construction order.** Prefer the order the definition is written in: a construction's inputs
+     are the points it names first.
+   - **Figures that read well**: spread out, no slivers, points not crowded.
+   - **What a construction draws, and how a reader can tell.** A relation drawn as itself stops the
+     drawing there, so `right a b c` draws Byrne's square and hides its d. The leading idea: unfold
+     everything and draw bottom-up, each level taking a turn after its body has drawn, to add or
+     restyle (`right` turns two equal-angle arcs into a square), never to delete. To settle: what a
+     turn may do; who modifies a fact two definitions share; the clutter it adds; a second hook on the
+     relation table, with figure.ts composing.
+3. **A stress test of the design.** About a dozen theorems beyond Euclid's first books, chosen to probe
+   the system rather than fill the book: Ceva, the centroid and circumcentre, the nine-point circle,
+   the Simson line, a couple of easy olympiad problems, one hyperbolic statement. Write each as
+   clauses and sort it: draws and proves now; needs sums; needs cases; cannot be said. The tally says
+   whether the design carries beyond Euclid's first books, and whether arithmetic (step 4) is the
+   addition to make. Record it in review-notes.md.
+4. **Pages that answer quickly, and the store built for theories.**
    - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
      matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.
    - Relevance: fire only rules that can reach the goal, `false` or a mark's query (the predicate
@@ -31,33 +55,27 @@ In order. Each is worth doing on its own, and each is measured with `scripts/ben
    - The marks closure: `rectangle-to-square` waits 44 s for its marks. One closure per page, kept
      and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
      than receiving them with every request.
-   - Then, if pages still wait, the evaluator itself, replaced once and measured: semi-naive over the
-     union-find store (rebuilding after merges, as egglog does), indexes on argument positions and on
-     class membership, a budget counted in facts added. Today 90% of derivations re-derive known
-     facts, and a bound atom scans every fact of its predicate.
-3. **What a page shows.**
+   - The evaluator, replaced once and measured: semi-naive over the union-find store (rebuilding after
+     merges, as egglog does), indexes on argument positions and on class membership, a budget counted
+     in facts added. Today 90% of derivations re-derive known facts, and a bound atom scans every fact
+     of its predicate. Build the store as a core (the equality, canonical keys) with theory solvers
+     attached, recognised from the rules as equivalences are now: equivalence first, then addition if
+     the stress test calls for it (*Open questions*, sums). Abstract the interface once two solvers
+     exist, not before.
+5. **What a page shows.**
    - Marks chosen by the page's statement first, its sub-constructions receding. Today marks are
      global: every member of every class, from every lemma about anything on the page, so a
      parallelogram is hatched all over and chapter 3's pages carry chapter 4's marks.
    - A class that tiles a figure shown as what it is; Byrne fills a square where we hatch its half.
-   - Figures that read well: spread out, no slivers, the construction in its natural order. A
-     perpendicular locus for `right`, so its extension point stops costing a degree of freedom and
-     `triangle-to-rectangle` is no longer built backwards from the rectangle.
-   - What a construction draws, and how a reader can tell. A relation drawn as itself stops the
-     drawing there, so `right a b c` draws Byrne's square and hides its d. The leading idea: unfold
-     everything and draw bottom-up, each level taking a turn after its body has drawn, to add or
-     restyle (`right` turns two equal-angle arcs into a square), never to delete. To settle: what a
-     turn may do; who modifies a fact two definitions share; the clutter it adds; a second hook on the
-     relation table, with figure.ts composing.
    - Points under the notice: fitting the figure leaves no room for the plate at its foot.
    - Equal angles alone draw no arcs (three equiangular triangles, in headless screenshots at least).
-4. **Pay back what was done for speed.** Pythagoras with whole squares (five times the budget today);
+6. **Pay back what was done for speed.** Pythagoras with whole squares (five times the budget today);
    guards whose only reason was the join, each rechecked; I.43, the complements; the midline of
    chapter 3.
-5. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
+7. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
    axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
    proof that leans on `parallel` being an equivalence leans on I.30.
-6. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
+8. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
@@ -71,7 +89,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 |---|---|
 | 1, length | written |
 | 2, angle | written; spreads set aside |
-| 3, direction | written but for the midline (*Next*, 4) |
+| 3, direction | written but for the midline (*Next*, 6) |
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
 | 5, circle | mostly content on chapters 1–4; the circumcentre waits on cases |
 | 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
@@ -89,6 +107,13 @@ cannot be written honestly without them, and designed as a whole.
   as equivalences are and solved by linear arithmetic over its classes. The alternative is Horn
   clauses through auxiliary constructions, as Euclid does. A hyperbolic area chapter (area as angle
   defect) needs sums too.
+  The leading plan (November 2026), with no new syntax: a relation such as `angle-add` gets its own
+  rules (the parts commute, equal parts swap in, the parts determine the whole, cancellation); the
+  engine proves from them that it is addition over an equivalence's classes; and a linear solver
+  attached to the store turns its facts into equations and shares merges with the union-find, as SMT
+  solvers share equalities. The step to accept deliberately: the solver sees sums no figure draws.
+  Named quantities (`∠bac + ∠abc = …`, a change of language) only if statements with points alone
+  read badly. Built with step 4's store, if step 3 shows the need.
 - **Cases.** Horn clauses cannot split cases, and the least-model meaning depends on that. Waiting on
   them: the circumcentre; the shear and the median, axioms because Euclid's proofs split on where the
   apexes fall; every trivial case a `distinct` hypothesis excludes. Either stay with Horn clauses and
@@ -109,7 +134,8 @@ cannot be written honestly without them, and designed as a whole.
 - **The axioms taken for now.** Side-side-side, angle-side-angle, the shear, the median, I.29 with the
   postulate: each an axiom because its proof needs sides, cases or sums. For a reader they are fine
   when the book says so; as the logic grows, keep them in one list and pay them back where it can.
-- **Hidden points.** A definition's auxiliary points cannot be named from outside, so a lemma about
+- **Hidden points in lemmas** (the planner's side is *Next*, step 2). A definition's auxiliary
+  points cannot be named from outside, so a lemma about
   one writes the definition out (the parallelogram, twice, to name where its diagonals cross). Wider
   signatures, or leave it.
 - **Lines and circles as objects.** `parallel a b c d` talks about lines through point pairs; a line
@@ -137,7 +163,7 @@ three ways:
   `distinct` hypotheses. JavaScript has no mature Gröbner library; giac has a WebAssembly build.
 
 **Sibling books.** Chapters 1 and 2 use no parallel postulate, so a **hyperbolic** book in the Poincaré
-disk can share them and fork at the postulate: the same propositions, the same ✓ (*Next*, 5, makes
+disk can share them and fork at the postulate: the same propositions, the same ✓ (*Next*, 7, makes
 that checked). Its lines are arcs meeting the boundary at right angles and its circles Euclidean
 circles with shifted centres, so every intersection is one the planner already makes. A **spherical**
 book needs its own axioms from chapter 1 (antipodal points share many lines; `between` changes). A
