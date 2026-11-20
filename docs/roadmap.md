@@ -53,9 +53,10 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      the equivalences are recognised (*Open questions*, sums); abstract the interface once two
      solvers exist.
 4. **What a page shows.**
-   - Marks chosen by the page's statement first, its sub-constructions receding. Today marks are
-     global: every member of every class, from every lemma about anything on the page, so a
-     parallelogram is hatched all over and chapter 3's pages carry chapter 4's marks.
+   - Marks chosen by the page's statement first, its sub-constructions receding: done (November
+     2026; design.md, *Marks*). A proven mark is drawn only if its relation is in play on the page;
+     the depth that makes sub-constructions recede was already there. The windmill stays busy: area
+     is its subject. Next: what hovering a `?` line brings forward, so a mark left off can be shown.
    - A class that tiles a figure shown as what it is; Byrne fills a square where we hatch its half.
    - Points under the notice: fitting the figure leaves no room for the plate at its foot.
    - Equal angles alone draw no arcs (three equiangular triangles, in headless screenshots at least).

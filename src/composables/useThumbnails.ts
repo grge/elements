@@ -14,7 +14,7 @@ import { marksNow, mergedMarks } from './useClosure'
 import { buildModel, plan, realise, type Point } from '../geometry/construction'
 import { drawFigure, type Figure } from '../geometry/figure'
 import type { Lemma } from '../language/parser'
-import { bookLemmas } from './useKB'
+import { bookLemmas, pageLemmas } from './useKB'
 
 export interface Thumbnail {
   figure: Figure
@@ -27,7 +27,8 @@ export interface Thumbnail {
 export function computeThumbnail(kb: KnowledgeBase, name: string, args: readonly string[], lemmas: readonly Lemma[] = []): Thumbnail | null {
   const x = extract(kb, [{ name, args }])
   const facts = x.constraints
-  const figure = drawFigure(kb, x, lemmas)
+  // Marked as its page is: by the relations in play there (its own `?` lines).
+  const figure = drawFigure(kb, x, lemmas, pageLemmas(name))
   if (!figure) return null
   const { drawing } = realise(plan(buildModel(facts, args)))
   return drawing.coords.size ? { figure, coords: drawing.coords, extraction: x } : null

@@ -221,3 +221,24 @@ describe('triangles of equal area are hatched alike', () => {
     expect(new Set(scene.fills.map(f => f.n))).toEqual(new Set([1]))
   })
 })
+
+describe('a page marks what it talks about', () => {
+  // A page's statement: the book's `?` lines shown on its page (useKB `pageLemmas`).
+  const relationsMarked = async (text: string, name: string) => {
+    const { pageLemmas } = await import('../src/composables/useKB')
+    const rt = buildRuntimeState(kb, parseSource(text))
+    const x = extract(rt.kb, rt.configuration.allFacts())
+    return new Set(drawFigure(rt.kb, x, bookLemmas, pageLemmas(name))!.marks.map(m => m.name))
+  }
+
+  it('the parallelogram says nothing of area, so the area lemmas of a later chapter do not hatch it', async () => {
+    expect(new Set(figureFor('parallelogram a b c d').figure.marks.map(m => m.name)).has('eq-area')).toBe(true)   // every lemma, as before
+    const marked = await relationsMarked('parallelogram a b c d', 'parallelogram')
+    expect(marked.has('eq-area')).toBe(false)
+    expect(marked.has('eq-lines')).toBe(true)
+  })
+
+  it('a page whose own lemma concludes equal areas draws its hatching', async () => {
+    expect((await relationsMarked('drop-corner a b c d e', 'drop-corner')).has('eq-area')).toBe(true)
+  })
+})

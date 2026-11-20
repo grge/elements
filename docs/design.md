@@ -199,6 +199,13 @@ each is marked only if it is
   proven `? eq-lines a b b c: eq-triangle a b c` contributes ab = bc for those points. Matching is a
   renaming of the lemma's variables (a little matching for lemmas with several hypotheses), no search.
 
+A page marks only what it talks about (November 2026): a proven mark is drawn if its relation is in
+play there, mentioned by the figure's unfolding or concluded by one of the page's own `?` lines
+(`lemmasInPlay` in figure.ts). The parallelogram's page says nothing of area, so chapter 4's lemma that
+a diagonal halves it does not hatch it; drop-corner's own lemma concludes equal areas, so its hatching
+stays. Marks of the constructions a page is built from are kept, at their depth, so they recede. The
+thumbnails follow the same rule, with the book's `?` lines for their predicate.
+
 The drawing infers no equality of its own. On `eq-triangle`'s page the three sides are ticked because
 its two lemmas are ✓, and wherever `eq-triangle` is used, on the scratchpad or inside I.2, the book's
 lemmas travel with it and tick its sides there too. A user's own construction draws only its circles

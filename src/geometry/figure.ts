@@ -48,11 +48,26 @@ export interface Figure {
 }
 
 /**
+ * The lemmas whose marks a page draws: those whose relation is in play there, the relations its
+ * figure's unfolding mentions and those its own `?` lines (`statement`) conclude. A lemma about
+ * something the page does not talk about is left off, though it holds of the figure: the
+ * parallelogram's page says nothing of area, so the area lemmas of a later chapter do not hatch it,
+ * while a page whose lemma concludes equal areas draws its hatching. Marks of sub-constructions are
+ * kept, drawn at their depth (fainter). Without a statement, every lemma marks (as before).
+ */
+export function lemmasInPlay(x: Extraction, lemmas: readonly Lemma[], statement?: readonly Lemma[]): readonly Lemma[] {
+  if (!statement) return lemmas
+  const inPlay = new Set([...x.outline.map(f => f.name), ...statement.map(l => l.head.name)])
+  return lemmas.filter(l => inPlay.has(l.head.name))
+}
+
+/**
  * The figure of an extraction, with its marks: equalities it states, and those that `lemmas` (✓
  * ones only) prove about the constructions it uses.
  */
-export function drawFigure(kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[]): Figure | null {
+export function drawFigure(kb: KnowledgeBase, x: Extraction, lemmas: readonly Lemma[], statement?: readonly Lemma[]): Figure | null {
   const { equivalences } = analyseStructure(kb.allRules())
+  lemmas = lemmasInPlay(x, lemmas, statement)
   // Facts whose drawing is a mark are drawn wherever a lemma proves them, unless already written.
   const written = new Set(x.depicted.map(factKey))
   const proven = provenMarks(x.outline, lemmas, name => !!RELATIONS.get(name)?.mark && !equivalences.has(name))

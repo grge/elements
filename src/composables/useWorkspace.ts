@@ -192,11 +192,15 @@ export function useWorkspace() {
     return [...bookLemmas, ...own]
   })
 
+  /** The page's own `?` lines, checked or not: what it says, so which relations are in play. */
+  const statement = computed<Lemma[]>(() =>
+    'items' in parsed.value ? parsed.value.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []) : [])
+
   // What the figure draws. Never throw from here: the page renders from this, and a render error
   // tears down the whole page in production, editor included, which loses focus mid-typing.
   const drawn = computed(() => {
     if (!runtime.value) return null
-    try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value) }
+    try { return drawFigure(runtime.value.kb, extraction.value, provenLemmas.value, statement.value) }
     catch (e) { console.warn('Figure error:', e); return null }
   })
   // Its marks merged by the forward closure (useClosure.ts): at once if the answer is remembered,
