@@ -1,5 +1,5 @@
 /**
- * The engine's benchmark, the baseline the path in docs/north-star.md is measured against.
+ * The engine's benchmark, the baseline for the work in docs/north-star.md (measurements in docs/review-2026-11.md).
  *
  *   npx vite-node scripts/bench.ts [--scoped] [--only=text] [--json]   checking: every book lemma
  *   npx vite-node scripts/bench.ts pages                               drawing: every defined predicate's page

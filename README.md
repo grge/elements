@@ -90,8 +90,8 @@ docs/           documentation
 - [Language](docs/language.md): syntax and semantics, including how definitions are recognised.
 - [Architecture](docs/architecture.md): how checking and drawing work, and why.
 - [Design](docs/design.md): the visual design, what is built and what is planned.
-- [North star](docs/north-star.md): where the core is going, from the November 2026 review. It
-  covers the principles, the target design and the path, with measurements
+- [North star](docs/north-star.md): what elements is for, and how to decide what to work on.
+- [Review, November 2026](docs/review-2026-11.md): the engine's diagnosis and measurements
   (`npx vite-node scripts/bench.ts` reproduces them).
 - [Roadmap](docs/roadmap.md): open problems and ideas.
 - [Review notes](docs/review-notes.md): what writing the book has shown about the engine.

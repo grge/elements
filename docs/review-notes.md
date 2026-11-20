@@ -4,8 +4,8 @@ What writing the book shows about the engine, collected for the review sessions 
 the planner, the book itself, and the drawing. Each note says what happened, with numbers where there
 are some, and what it suggests. Started with chapter 4 (November 2026); add to it as chapters come.
 The roadmap keeps the plan; this page keeps the evidence. The first review drew on it in November
-2026: [north-star.md](north-star.md) gives the direction this evidence points to, with the review's
-own measurements.
+2026: [review-2026-11.md](review-2026-11.md) has its measurements, and [north-star.md](north-star.md)
+the direction.
 
 ## The logic: language, inference, performance
 
@@ -54,7 +54,7 @@ form. The language itself (predicates over points, definitions, lemmas) has not 
   evaluator, done properly, still cannot carry the book's figures. One probe so far: on the windmill
   figure, goal relevance alone cut the facts from 55,698 to 4,544, and the closure still did not
   finish, because of 1. Whether fixing 1 is enough is the first thing to measure. The review's
-  answer (north-star.md) is to do 4 first, by another route: a figure of the hypotheses shows they
+  answer (review-2026-11.md) is to do 4 first, by another route: a figure of the hypotheses shows they
   are consistent, and that search is 80% of checking time. Then the evaluator is replaced once.
 
 **Non-degeneracy is the main logical friction.** Forward chaining cannot argue by contradiction or by
