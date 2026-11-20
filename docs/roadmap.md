@@ -24,11 +24,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    add or restyle, never delete; who restyles a fact two definitions share) waits for more cases:
    the book's next chapters and the stress test supply them. Abstract then, not before.
 2. **A stress test of the design.** Done (November 2026; review-notes.md, *The stress test*): 13
-   theorems beyond the first books all draw, and none proves as written. Non-degeneracy blocks
-   nearly all of them, then points a proof needs that no hypothesis names, then sums (four), then
-   sides and comparisons. Arithmetic is real but not next. To decide: a non-degeneracy convention
-   for lemmas (distinct names, and the points definitions introduce, are distinct points), and
-   whether the step after it is points not named rather than the store.
+   theorems beyond the first books, now the chapter *Beyond the book*, all draw, and none proves as
+   written. Non-degeneracy blocked nearly all of them; the convention that different names are
+   different points is built (language.md, *Distinct points*), and what blocks them now is points a
+   proof needs that no hypothesis names, then sides, then sums (four of them). Arithmetic is real but
+   not next. To decide: whether points not named (constructions as rules with existential heads,
+   back from *Not now*) comes before the store.
 3. **Pages that answer quickly, and the store built for theories.**
    - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
      matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.

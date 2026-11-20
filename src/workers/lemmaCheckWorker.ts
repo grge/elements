@@ -44,7 +44,7 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
           // checker its search for a contradiction.
           let ev: Evidence | null = null
           try { ev = numericEvidence(item.lemma, runtime.kb) } catch { ev = null }
-          const check = checkLemma(item.lemma, runtime.kb, undefined, { consistent: () => !!ev?.witness, strict: true })
+          const check = checkLemma(item.lemma, runtime.kb, undefined, { consistent: () => !!ev?.witness, strict: true, distinctNames: true })
           v = verdict(check, ev)
         } else {
           v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)

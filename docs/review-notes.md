@@ -394,7 +394,7 @@ is refuted by a figure, rightly: its hypotheses also describe a parallelogram.
 |---|---|---|---|
 | midline (midpoints' segment parallel to the base) | yes | yes | non-degeneracy; a point the hypotheses do not name (f, on the parallel through c); sides (the diagonals' crossing). Proves step by step given all three (measured) |
 | centroid (medians concur) | yes | yes | the midline, and points not named |
-| circumcentre on the perpendicular bisector | yes | yes | non-degeneracy of the construction's own points (the vesicas'), which a lemma about `circumcentre` cannot name. Proves with the construction written out and its points distinct (measured) |
+| circumcentre on the perpendicular bisector | yes | yes | non-degeneracy of the construction's own points (the vesicas'), and sides: `circumcentre` says o is on the line through the vesica points, not between them, and which side of them it lies on decides the angle. Proves with the construction written out, o between, and its points distinct (measured) |
 | orthocentre (altitudes concur) | yes | yes | points not named (the triangle through the corners parallel to the sides), or circle theorems |
 | Euler's line | yes | yes | ratios (sums); out of budget at 93 000 facts |
 | nine-point circle | yes | yes | angles in a circle (chapter 5, sums); out of budget |
@@ -430,3 +430,14 @@ What it says, in order of how much each blocks:
 Found on the way and fixed: evidence did not test a claim whose definition adds a point (`right`'s
 extension), so every right-angle claim went untested; the relation table now measures the head
 itself.
+
+**The convention, built (November 2026).** A lemma that does not follow as written is checked again
+with every two of its points distinct, named or introduced by a definition, unless it relates them by
+`eq-point` (language.md). Measured: the book's 64 verdicts and its checking time are unchanged (all
+follow without it); of the regression lemmas, the two that hold only for distinct points now follow
+"for figures whose points are all apart"; *Beyond the book* proves nothing more, so the next walls
+there are points not named, sides and sums, as the table says; and its checks take twice as long
+(each is tried both ways). A claim that two names are one point (`? eq-point g h`, the natural way to
+state that lines concur) is exempt and checked, but nothing in the book derives such an equality yet,
+and evidence cannot test it, since the figure keeps different names apart.
+

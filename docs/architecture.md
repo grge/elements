@@ -117,6 +117,17 @@ lemma has a witness, and the book's checks take a fifth of the time (`scripts/be
 tests still run the full search, so a false axiom still shows, and they check that every fact the
 closure derives about a lemma's points holds in its witness.
 
+**The non-degeneracy convention** (`CheckOptions.distinctNames`, which the page uses): a lemma that does
+not follow is checked a second time with `distinct` for every two points of its unfolded hypotheses and
+claim, except pairs it relates by `eq-point`. The convention only adds hypotheses, so a plain ✓ is kept
+as the stronger result and the book's checks cost nothing more; a ✓ found the second way is marked
+`apart` ("for figures whose points are all apart"). A witness has its points apart, so it witnesses the
+convention too. A contradiction that only the convention brings is a pair of names the hypotheses make
+one point, and the verdict names them. The cost: a lemma that follows neither way is checked twice, and
+under the convention more guarded rules fire (most re-deriving known facts: the windmill's lemmas need
+three times the derivations for the same facts, which a budget counted in facts added would not mind,
+*Next*, step 3).
+
 What it cannot do: case splits. Facts that need one can be stated with a `distinct` hypothesis instead
 (the order of marched points holds once the first step is non-zero), and are on the
 [roadmap](roadmap.md).

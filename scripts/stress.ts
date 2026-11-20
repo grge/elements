@@ -57,7 +57,7 @@ for (const written of parseLemmas(source)) {
   let ev: Evidence | null = null
   try { ev = numericEvidence(lemma, kb) } catch (e) { ev = { kind: 'none', why: `${e}` } }
   const t0 = performance.now()
-  const check = checkLemma(lemma, kb, budget, { consistent: () => !!ev?.witness, strict: true })
+  const check = checkLemma(lemma, kb, budget, { consistent: () => !!ev?.witness, strict: true, distinctNames: true })
   const ms = performance.now() - t0
   const v = verdict(check, ev)
   console.log(`${v.type.padEnd(9)} ${text}`)

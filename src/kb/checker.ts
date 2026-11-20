@@ -2,7 +2,7 @@ import type { Lemma, Predicate } from '../language/parser'
 import { Configuration } from './configuration'
 import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
 import { saturate } from './saturate'
-import { FreshNames } from './names'
+import { FreshNames, displayName } from './names'
 
 /**
  * verified: the goal follows. vacuous: the hypotheses (or the configuration) are contradictory, i.e.
@@ -27,6 +27,8 @@ export interface CheckResponse {
   message?: string
   /** The hypotheses were shown consistent by a witness rather than by a search. */
   witnessed?: boolean
+  /** Verified only under the non-degeneracy convention: for figures whose points are all apart. */
+  apart?: boolean
 }
 
 export interface CheckOptions {
@@ -34,6 +36,47 @@ export interface CheckOptions {
   consistent?: () => boolean
   /** When the search for `false` runs out of budget, say so (`unshown`) rather than ✓. */
   strict?: boolean
+  /**
+   * The non-degeneracy convention: different names are different points, as in the figure. Every two
+   * points of the unfolded hypotheses and the claim, named or introduced by a definition, are
+   * `distinct`, unless the lemma itself relates them by `eq-point` (in a hypothesis or its claim,
+   * directly or through others). A ✓ under it holds of figures whose points are all apart, as
+   * Euclid's figures are (`apart`). Should the hypotheses force two points together, the convention
+   * contradicts them, and the verdict names the two.
+   *
+   * The convention only adds hypotheses, so what follows without it follows with it: a lemma is
+   * checked without it first, and a ✓ there is the stronger result (it holds of degenerate figures
+   * too). Only a lemma that does not follow is checked again under the convention.
+   */
+  distinctNames?: boolean
+}
+
+const EQUAL = 'eq-point'
+
+/**
+ * `distinct` for every two points of the facts and the goal, except those the facts or goal say are
+ * one point (by `eq-point`, through any chain of them).
+ */
+function nonDegeneracy(facts: readonly GroundPredicate[], goal: GroundPredicate): GroundPredicate[] {
+  const points = [...new Set([...facts, goal].flatMap(f => f.args))]
+  const parent = new Map(points.map(p => [p, p]))
+  const find = (p: string): string => { const q = parent.get(p)!; if (q === p) return p; const r = find(q); parent.set(p, r); return r }
+  for (const f of [...facts, goal]) if (f.name === EQUAL && f.args.length === 2) parent.set(find(f.args[0]), find(f.args[1]))
+  const out: GroundPredicate[] = []
+  for (let i = 0; i < points.length; i++) for (let j = i + 1; j < points.length; j++) {
+    if (find(points[i]) !== find(points[j])) out.push({ name: 'distinct', args: [points[i], points[j]] })
+  }
+  return out
+}
+
+/** Two different names the closure made one point: why the convention contradicts the hypotheses. */
+function forcedTogether(facts: readonly GroundPredicate[], assumed: readonly GroundPredicate[]): string | undefined {
+  const apart = new Set(assumed.map(f => f.args.join(' ')))
+  const f = facts.find(f => f.name === EQUAL && f.args[0] !== f.args[1] &&
+    (apart.has(f.args.join(' ')) || apart.has([...f.args].reverse().join(' '))))
+  if (!f) return undefined
+  const [a, b] = f.args.map(displayName)
+  return `the hypotheses make ${a} and ${b} one point, so they cannot be taken as different points`
 }
 
 function toGroundPredicate(pred: Predicate): GroundPredicate {
@@ -74,21 +117,28 @@ function runCheckPipeline(
 ): CheckResponse {
   // One supply of fresh names for the whole check, so auxiliaries of different hypotheses stay distinct.
   const fresh = new FreshNames()
-  const frontier = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
+  const unfolded = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
+  const assumed = options.distinctNames ? nonDegeneracy(unfolded, goal) : []
+  const frontier = [...unfolded, ...assumed]
   const budget = { maxDerivations }
   const sat = saturate(kb, frontier, { goal, ...budget })
   const facts = sat.allFacts()
+  const vacuous = (found: readonly GroundPredicate[]): CheckResponse => {
+    const message = assumed.length ? forcedTogether(found, assumed) : undefined
+    return { result: 'vacuous', facts, ...(message ? { message } : {}) }
+  }
   if (!sat.holds(goal)) {
-    return { result: sat.holds(FALSE) ? 'vacuous' : sat.exhausted ? 'out-of-budget' : 'not-provable', facts }
+    return sat.holds(FALSE) ? vacuous(facts) : { result: sat.exhausted ? 'out-of-budget' : 'not-provable', facts }
   }
   // The goal follows; the hypotheses must also be consistent, or the ✓ would hide a contradiction.
   // Nothing to fear if `false` cannot be derived at all from these kinds of facts; a witness shows
-  // it at once; otherwise the search is carried on to the end, looking for `false`.
-  if (sat.holds(FALSE)) return { result: 'vacuous', facts }
+  // it at once (a figure has its points apart, so it witnesses the convention too); otherwise the
+  // search is carried on to the end, looking for `false`.
+  if (sat.holds(FALSE)) return vacuous(facts)
   if (!mayDerive(kb, frontier, FALSE.name)) return { result: 'verified', facts }
   if (options.consistent?.()) return { result: 'verified', facts, witnessed: true }
   const search = saturate(kb, frontier, { goal: FALSE, ...budget })
-  if (search.holds(FALSE)) return { result: 'vacuous', facts }
+  if (search.holds(FALSE)) return vacuous(search.allFacts())
   return { result: search.exhausted && options.strict ? 'unshown' : 'verified', facts }
 }
 
@@ -112,7 +162,11 @@ export function checkLemma(
     lemma.hypotheses.map(toGroundPredicate),
     lemma,
   )
-  return runCheckPipeline(toGroundPredicate(lemma.head), seeds, kb, maxDerivations, options)
+  const goal = toGroundPredicate(lemma.head)
+  const plain = runCheckPipeline(goal, seeds, kb, maxDerivations, { ...options, distinctNames: false })
+  if (!options.distinctNames || plain.result === 'verified' || plain.result === 'vacuous' || plain.result === 'unshown') return plain
+  const apart = runCheckPipeline(goal, seeds, kb, maxDerivations, options)
+  return apart.result === 'verified' ? { ...apart, apart: true } : apart
 }
 
 export function checkGroundQuery(

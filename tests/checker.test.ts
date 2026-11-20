@@ -83,3 +83,36 @@ describe('queried-clause checker', () => {
     expect(checkLemma(lemma, kb).result).toBe('vacuous')
   })
 })
+
+describe('the non-degeneracy convention: different names are different points', async () => {
+  const { bookRules } = await import('./book')
+  const { verdict } = await import('../src/geometry/verdict')
+  const kb = new KnowledgeBase(bookRules)
+  const check = (text: string, distinctNames = true) => checkLemma(parseLemmas(text)[0], kb, 200_000, { distinctNames })
+
+  it('proves what holds only when the points are apart, and says so', () => {
+    // False when c is a (b would then be a too), so it does not follow without the convention.
+    const text = '? collinear a b d: between a b c, collinear a c d'
+    expect(check(text, false).result).not.toBe('verified')
+    const c = check(text)
+    expect(c).toMatchObject({ result: 'verified', apart: true })
+    expect(verdict(c, null).message).toBe('follows, for figures whose points are all apart')
+  })
+
+  it('keeps the stronger result where the convention is not needed', () => {
+    const c = check('? eq-lines a m m b: midpoint m a b')
+    expect(c.result).toBe('verified')
+    expect(c.apart).toBeUndefined()
+  })
+
+  it('does not take apart what the lemma says is one point', () => {
+    expect(check('? eq-lines a c b c: eq-point a b, circle c a d').result).toBe('verified')
+    expect(check('? eq-point m n: midpoint m a b, midpoint n a b').result).not.toBe('vacuous')
+  })
+
+  it('names the two points the hypotheses force together', () => {
+    const c = check('? parallel a x c d: eq-lines a b c c, triangle a c d')
+    expect(c.result).toBe('vacuous')
+    expect(c.message).toMatch(/make [ab] and [ab] one point/)
+  })
+}, 60_000)

@@ -141,6 +141,14 @@ A rule may conclude `false` (`false: eq-point a b, distinct a b`), and a lemma w
 it is reported as ⊥. The drawing reads `distinct` too: it rules out an intersection that would land on
 the given point, "the other intersection".
 
+**Different names are different points.** A figure has always taken distinct names for distinct
+points. A lemma's check now does too, where it must (November 2026): a lemma that does not follow as
+written is checked again with `distinct` for every two of its points, named or introduced by a
+definition, except those it relates by `eq-point` itself (in a hypothesis or its claim). A ✓ found
+that way reads "follows, for figures whose points are all apart", the figures Euclid argues about; a
+plain ✓ holds of degenerate figures too. Should the hypotheses make two names one point, they cannot
+be apart, and the verdict (⊥) names the two. `eq-point` stays the way to say two names are one point.
+
 ## Equality
 
 Equality of points (`eq-point`) and of segments (`eq-lines`) is written as ordinary clauses:

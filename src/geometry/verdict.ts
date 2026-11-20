@@ -26,7 +26,9 @@ export function verdict(check: CheckResponse, evidence: Evidence | null): Verdic
   const gaveUp = check.result === 'out-of-budget' ? 'the search ran out of its budget' : 'not derived'
   switch (check.result) {
     case 'vacuous':
-      return { type: 'vacuous', message: 'holds only vacuously: the hypotheses contradict each other' }
+      return { type: 'vacuous', message: check.message
+        ? `holds only vacuously: ${check.message}`
+        : 'holds only vacuously: the hypotheses contradict each other' }
     case 'invalid-query':
       return { type: 'false', message: check.message ?? 'not a question about this page' }
     case 'unshown':
@@ -34,7 +36,7 @@ export function verdict(check: CheckResponse, evidence: Evidence | null): Verdic
     case 'verified':
       return ev?.kind === 'fails'
         ? { type: 'alarm', message: `proven, yet ${ev.failing} fails in a sampled figure: an axiom may be false` }
-        : { type: 'verified', message: 'follows' }
+        : { type: 'verified', message: check.apart ? 'follows, for figures whose points are all apart' : 'follows' }
     default:
       if (ev?.kind === 'fails') return { type: 'false', message: `false: ${ev.failing} fails in a figure that satisfies the hypotheses` }
       if (ev?.kind === 'holds') return { type: 'unproven', message: `${gaveUp}, but it holds in all ${ev.samples} sampled figures` }
