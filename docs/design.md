@@ -156,7 +156,7 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
 | `supp a b c d e f` | side by side (one vertex, one shared arm): one arc across both, a straight angle; otherwise a dotted arc at each, which never means equal |
-| `right a b c` | Byrne's small square at the vertex |
+| `right a b c` | Byrne's small square at the vertex, and beneath it, fainter, its definition: a-b continued past b to its extension point, the right angle beside it squared too |
 | `parallel a b c d` | the segments a–b and c–d, their lines continuing faint, with arrows where the figure knows them parallel |
 | `triangle a b c` | its three sides, as segments; that the corners are not on one line is checked |
 | `eq-area a b c d e f` | the two triangles with their sides, hatched alike (Byrne colours them) |
@@ -169,7 +169,12 @@ Built (November 2026): each relation's entry in the table draws it through a pen
 straight line, a circle, an angle as an arc or a square); `right` has an entry of its own, so it is drawn
 as a square while the planner reads its definition. Every element keeps the facts that made it, which
 is how hovering a fact in the source brings its elements forward. A point only the planner's route uses
-(the auxiliary point inside `right`) is not drawn, as the route is not.
+is not drawn, as the route is not.
+
+Tried (November 2026): `right` draws its definition too (`drawsBody` in the relation table), a level
+deeper and so fainter: the extension point d on a-b continued past b, and the angle c-b-d squared as
+well, which is the definition (an angle equal to its own supplement) made visible. Under review as
+George reads through the book; the alternative is d shown only on request.
 
 ### The planner's route: shown on touch
 

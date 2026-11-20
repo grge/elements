@@ -12,6 +12,9 @@
  *   depicted  whether the figure draws it as itself where a path from a written fact first reaches
  *             it: a circle is drawn as a circle, though the planner reads its definition. A relation
  *             can be depicted and defined (`right`: Byrne's square, its definition read by the planner).
+ *   drawsBody for a depicted relation with a definition: its definition is drawn too, a level deeper
+ *             and so fainter, rather than stopping there (`right`'s square, and below it the line
+ *             continued past the vertex that the definition's equal angles stand on).
  *   draw      how it is drawn (design.md, "What each relation draws"), through a pen (figure.ts).
  *             Equalities draw nothing of their own: their marks come from the classes in marks.ts.
  *   byNames   holds in any figure by its convention that distinct names are distinct points
@@ -66,6 +69,7 @@ export interface Relation {
   arity: number | { min: number }
   read?(args: readonly string[], m: ModelReader): void
   depicted: boolean
+  drawsBody?: boolean
   draw?(args: readonly string[], pen: Pen): void
   mark?: boolean
   byNames?(args: readonly string[]): boolean
@@ -203,8 +207,8 @@ const TABLE: Relation[] = [
   },
   {
     // Defined in the book (an angle equal to its own supplement), so the planner reads its definition;
-    // drawn as Byrne draws it, a small square at the vertex.
-    name: 'right', arity: 3, depicted: true,
+    // drawn as Byrne draws it, a small square at the vertex, and its definition beneath.
+    name: 'right', arity: 3, depicted: true, drawsBody: true,
     draw: ([a, b, c], pen) => pen.angle(a, b, c, 'square'),
     mark: true,
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),

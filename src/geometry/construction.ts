@@ -876,9 +876,9 @@ function toLine(p: Point, a: Point, b: Point): number {
  * is a sliver (a corner close to the opposite side), or a point looks as if it lay on a line or circle
  * it is not on (one that is on it, to rounding, is not near it). And how nearly two drawn lines are
  * equal, parallel or perpendicular without being so: a figure scores low when it looks special, which
- * suggests a relation that is not there. Auxiliary points are not drawn, so they do not count. A line
- * runs across the page, so a point near it reads less as on it than one near a segment; it counts at
- * half weight.
+ * suggests a relation that is not there. An auxiliary point counts only if something drawn passes
+ * through it. A line runs across the page, so a point near it reads less as on it than one near a
+ * segment; it counts at half weight.
  */
 /** Closer than this (relative to the figure's size), a point is on what it is near. */
 const ON = 1e-9
@@ -886,7 +886,11 @@ const ON = 1e-9
 const GENERIC = 2
 
 export function legibility(cp: ConstructionPlan, coords: Map<string, Point>, why?: (what: string, score: number) => void): number {
-  const named = [...coords.keys()].filter(p => !isAuxiliary(p))
+  // The points the figure shows: named ones, and auxiliary ones a drawn line or circle passes through
+  // (a right angle's extension point).
+  const drawn = drawnBy(cp)
+  const onDrawn = new Set([...drawn.segments.flat(), ...drawn.lines.flat(), ...drawn.circles.flatMap(c => [c.center, ...c.through])])
+  const named = [...coords.keys()].filter(p => !isAuxiliary(p) || onDrawn.has(p))
   if (named.length < 2) return 1
   const pairs: [string, number][] = []
   for (let i = 0; i < named.length; i++) for (let j = i + 1; j < named.length; j++)
@@ -894,8 +898,8 @@ export function legibility(cp: ConstructionPlan, coords: Map<string, Point>, why
   const diam = Math.max(...pairs.map(([, d]) => d))
   if (diam === 0) return 0
   let worst = Infinity
-  const drawn = drawnBy(cp)
-  const shown = (ps: readonly string[]) => ps.every(p => coords.has(p) && !isAuxiliary(p))
+  const visible = new Set(named)
+  const shown = (ps: readonly string[]) => ps.every(p => visible.has(p))
   const at = (p: string) => coords.get(p)!
   // Distances count relative to the figure's size; ratios and angles count as they are, at a weight
   // (GENERIC) that trades them against crowding.

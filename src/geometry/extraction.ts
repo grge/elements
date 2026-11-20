@@ -8,7 +8,9 @@
  *                builds from. `circle a b c` arrives as its definition, `eq-lines a b a c`.
  *   depicted     on each path from a written fact, the first node the figure draws
  *                (DEPICTED_RELATIONS): a circle node is drawn as a circle, and what it unfolds to is
- *                not drawn again. Where unfolding stops is the logic's business, not the drawing's.
+ *                not drawn again, unless the relation draws its body too (`right`: its square, and the
+ *                definition beneath it, fainter). Where unfolding stops is the logic's business, not
+ *                the drawing's.
  *   unread       leaves the model cannot read (`eq-point`, `triangle`, a user's open predicate, a
  *                fact with the wrong number of points): reported, not silently dropped.
  *
@@ -71,7 +73,7 @@ export function extract(kb: KnowledgeBase, facts: readonly GroundPredicate[], op
   const walk = (n: UnfoldNode, drawn: boolean) => {
     const relation = relationOf(n.fact)
     if (!drawn) add(sets.outline, n)
-    if (!drawn && relation?.depicted) { add(sets.depicted, n); drawn = true }
+    if (!drawn && relation?.depicted) { add(sets.depicted, n); drawn = !relation.drawsBody }
     if (n.children) { n.children.forEach(c => walk(c, drawn)); return }
     if (relation?.read) add(sets.constraints, n)
     else if (n.fact.name !== 'false') add(sets.unread, n)
