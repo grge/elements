@@ -84,10 +84,14 @@ export function numericEvidence(lemma: Lemma, kb: KnowledgeBase, samples = SAMPL
   // The head is evaluated, not drawn: a relation the figure cannot impose can still be measured.
   const unmeasurable = claim.unread.find(f => !relationOf(f))
   if (unmeasurable) return { kind: 'none', why: `${unmeasurable.name} cannot be measured`, witness }
-  const goal = [...claim.constraints, ...claim.unread]
+  let goal = [...claim.constraints, ...claim.unread]
   // Points the head's own definition introduces would need witnesses: some point exists such that…
+  // Unless the relation table can measure the head itself (`right`: an angle of a right angle, whose
+  // definition adds an extension point).
   if (goal.some(f => f.args.some(a => a.includes('#') && !known.has(a)))) {
-    return { kind: 'none', why: 'the claim introduces points of its own', witness }
+    const head = { name: lemma.head.name, args: [...lemma.head.args] }
+    if (!relationOf(head)?.holds) return { kind: 'none', why: 'the claim introduces points of its own', witness }
+    goal = [head]
   }
 
   for (const coords of figures) {

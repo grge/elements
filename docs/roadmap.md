@@ -23,12 +23,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    areas hatched), and one interface for them (each level taking a turn after its body has drawn, to
    add or restyle, never delete; who restyles a fact two definitions share) waits for more cases:
    the book's next chapters and the stress test supply them. Abstract then, not before.
-2. **A stress test of the design.** About a dozen theorems beyond Euclid's first books, chosen to probe
-   the system rather than fill the book: Ceva, the centroid and circumcentre, the nine-point circle,
-   the Simson line, a couple of easy olympiad problems, one hyperbolic statement. Write each as
-   clauses and sort it: draws and proves now; needs sums; needs cases; cannot be said. The tally says
-   whether the design carries beyond Euclid's first books, and whether arithmetic (step 3) is the
-   addition to make. Record it in review-notes.md.
+2. **A stress test of the design.** Done (November 2026; review-notes.md, *The stress test*): 13
+   theorems beyond the first books all draw, and none proves as written. Non-degeneracy blocks
+   nearly all of them, then points a proof needs that no hypothesis names, then sums (four), then
+   sides and comparisons. Arithmetic is real but not next. To decide: a non-degeneracy convention
+   for lemmas (distinct names, and the points definitions introduce, are distinct points), and
+   whether the step after it is points not named rather than the store.
 3. **Pages that answer quickly, and the store built for theories.**
    - Definitions as abbreviations: defining clauses never fire; a defined goal is answered by
      matching its unfolding. Tried on the book: the same 64 verdicts, with 3 to 27 times fewer facts.

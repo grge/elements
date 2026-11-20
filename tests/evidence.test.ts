@@ -103,3 +103,15 @@ describe('witnesses', () => {
     expect(verdict(small, null).type).toBe('unproven')
   })
 })
+
+describe('a claim whose definition adds points is measured as itself', () => {
+  // `right` unfolds to an angle and an extension point the hypotheses do not name; the relation table
+  // measures a right angle directly, so such a claim is still tested.
+  const one = (text: string) => numericEvidence(parseLemmas(text)[0], kb)
+  it('a right angle that holds: the angle in a semicircle', () => {
+    expect(one('? right a b c: circle o a b, circle o a c, between a o c, distinct b a, distinct b c').kind).toBe('holds')
+  })
+  it('a right angle that does not', () => {
+    expect(one('? right a b c: circle o a b, circle o a c, distinct b a, distinct b c').kind).toBe('fails')
+  })
+})

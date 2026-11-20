@@ -375,3 +375,58 @@ perpendicular at the vertex and the circle on the arms. Every figure above const
 `triangle-to-rectangle` is now built from its triangle. Thales on a diameter, where the new circle is
 the given one, is set aside as one condition (a theorem) by carrying the plan out.
 
+
+## The stress test (November 2026)
+
+Thirteen theorems beyond Euclid's first books, written as a user would write them with the book's
+vocabulary and no help for the engine (`tests/fixtures/stress.geo`; `npx vite-node
+scripts/stress.ts [--distinct]`). For each: does it draw, does it hold in sampled figures, does it
+prove. Where it does not prove, the textbook proof's ingredients were added one at a time as
+hypotheses to find what blocks it ("measured"); otherwise the blocker is read from the proof.
+
+**Drawing carries: 13 of 13 construct**, Euler's line (17 points), the nine-point circle and the
+Simson line among them, and every true one holds in all 24 sampled figures. The isosceles trapezoid
+is refuted by a figure, rightly: its hypotheses also describe a parallelogram.
+
+**Proving does not: 0 of 13**, as written. What blocks each:
+
+| Theorem | Draws | Holds | Blocked by |
+|---|---|---|---|
+| midline (midpoints' segment parallel to the base) | yes | yes | non-degeneracy; a point the hypotheses do not name (f, on the parallel through c); sides (the diagonals' crossing). Proves step by step given all three (measured) |
+| centroid (medians concur) | yes | yes | the midline, and points not named |
+| circumcentre on the perpendicular bisector | yes | yes | non-degeneracy of the construction's own points (the vesicas'), which a lemma about `circumcentre` cannot name. Proves with the construction written out and its points distinct (measured) |
+| orthocentre (altitudes concur) | yes | yes | points not named (the triangle through the corners parallel to the sides), or circle theorems |
+| Euler's line | yes | yes | ratios (sums); out of budget at 93 000 facts |
+| nine-point circle | yes | yes | angles in a circle (chapter 5, sums); out of budget |
+| Thales (angle in a semicircle) | yes | yes | the angle sum (I.32): sums |
+| Thales' converse | yes | yes | a point not named (the rectangle's fourth corner), or sums |
+| chord bisected by the perpendicular from the centre | yes | yes | angle-angle-side (I.26's second half), which argues by comparing sizes; not derived with everything else stated (measured) |
+| equal tangents | yes | yes | hypotenuse-leg, the same |
+| Simson line | yes | yes | angles in a circle (sums); out of budget |
+| Varignon (midpoints of a quadrilateral make a parallelogram) | yes | yes | the midline only: given it, proves at once (measured) |
+| isosceles trapezoid's diagonals | yes | **no** | cases: not a parallelogram cannot be said |
+| Ceva; anything hyperbolic | — | — | cannot be said: ratios; the figure layer is the Euclidean plane |
+
+What it says, in order of how much each blocks:
+
+1. **Non-degeneracy blocks nearly everything, and comes first.** The figure assumes that distinct
+   names are distinct points (closure.ts); the checker does not, so a midpoint may sit on an end and
+   no vertical-angle or supplement rule fires. Stating `distinct` for every two named points
+   (`--distinct`) is not enough: the points a definition introduces (the circumcentre's vesicas)
+   cannot be named in a lemma. AlphaGeometry and the deductive-database provers meet the same wall
+   and handle it with non-degeneracy conditions read off the figure. A convention for lemmas (distinct
+   names, and the points definitions introduce, are distinct), with the witness showing the
+   hypotheses stay consistent under it, is the obvious candidate. A language decision, not a fix.
+2. **Points the hypotheses do not name.** Forward chaining over the hypotheses' points cannot draw the
+   auxiliary line a textbook proof starts with. Four of the thirteen need one. This is where "lemmas
+   as rules" and constructions as rules with existential heads come back from *Not now*.
+3. **Sums**, for four (Thales, Euler, nine-point, Simson): real, but behind 1 and 2, which every one
+   of those also needs. The arithmetic plan stands; it is not next.
+4. **Sides** (the midline's parallelogram) and **comparisons** (angle-angle-side, hypotenuse-leg):
+   one or two each.
+5. **Budget**: the three largest run out at 25 000 to 93 000 facts; the store work (*Next*) matters
+   once anything there can prove.
+
+Found on the way and fixed: evidence did not test a claim whose definition adds a point (`right`'s
+extension), so every right-angle claim went untested; the relation table now measures the head
+itself.
