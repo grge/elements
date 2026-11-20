@@ -30,46 +30,28 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    proof needs that no hypothesis names, then sides, then sums (four of them). Arithmetic is real but
    not next. Points not named are parked (November 2026, below, *Not now*): proofs that need them
    wait, and the store comes next.
-3. **Pages that answer quickly, and the store built for theories.**
-   - Definitions as abbreviations: done (November 2026; architecture.md). The same verdicts
-     everywhere, ten to fifty times fewer facts, the book in three quarters of the time. With it, a
-     budget of work beside the budget of derivations.
-   - The equivalence walk: done. An equivalence matched with a block unbound walked every tuple of
-     points, mentioned or not, for the reflexive case; now only the tuples consistent with what is
-     bound. The same verdicts; the book's checks 33 s to 19 s, *Beyond the book*'s 227 s to 140 s,
-     the whole test suite 583 tests in about two minutes. Pages that run to their budget (most
-     marks closures) take as long as the budget allows: their time is the budget's, not the
-     engine's speed.
-   - Relevance: measured and dropped (November 2026). After structure and abbreviations 51 rules
-     are live, every goal reaches 49 of them and `false` all 51: the book's relations are one web
-     (everything feeds equality and distinctness, which feed everything).
-   - The marks closure: now under the same budget of work as the checker (saturate.ts `MAX_WORK`),
-     all pages' closures 292 s to 228 s, Euler's line 98 s to 28 s; `rectangle-to-square` still
-     waits 56 s, nearly all of it in the equivalence walk (next item). One closure per page, kept
-     and extended, rather than each worker saturating from scratch; the worker keeps the rules rather
-     than receiving them with every request.
-   - Orbits and canonical forms memoised (November 2026): a tuple's images under its group, and its
-     least image, were recomputed every time the same tuple was matched, the largest single cost
-     left. The same verdicts; the book's checks 19 s to 11.5 s, *Beyond the book*'s 140 s to 81 s,
-     the test suite under 90 s. The profile is now flat: matching itself.
-   - The different-names convention as a theory in the store (`distinct` answered from the
-     names, not a fact per pair): tried and reverted (November 2026). The same verdicts, no
-     faster. The convention's cost is not its facts but the guarded rules it lets fire, real
-     derivations: the price of proving more.
-   - Semi-naive evaluation: tried and reverted (November 2026). Built over the union-find store
-     (facts and class members stamped, a full match after merges or new points, of which the
-     rectangle has five), every verdict the same, but no faster: the book 12% slower, *Beyond the
-     book* the same. The duplicate derivations (the rectangle's 58 000 for 1 335 facts) do not come
-     from re-matching old facts, which is all semi-naive saves, but from many different matches
-     deriving the same fact: symmetric images, and rules that overlap. Fewer duplicates would take
-     fewer, less overlapping rules, which is the book's business, or a cheaper derivation.
-   - The evaluator, replaced once and measured: semi-naive over the union-find store (rebuilding after
-     merges, as egglog does), indexes on argument positions and on class membership, a budget counted
-     in facts added. Today 90% of derivations re-derive known facts, and a bound atom scans every fact
-     of its predicate. Build the store as a core (the equality, canonical keys) with theory solvers
-     attached, recognised from the rules as equivalences are now: equivalence first, then addition if
-     the stress test calls for it (*Open questions*, sums). Abstract the interface once two solvers
-     exist, not before.
+3. **Pages that answer quickly.** Done (November 2026). The book's checks 33 s to 11.5 s, *Beyond
+   the book*'s 227 s to 81 s, all pages' marks closures 292 s to 141 s, the test suite under 90 s;
+   every verdict the same throughout (the book, the regression lemmas, *Beyond the book*, compared
+   at each step).
+   - Kept: definitions as abbreviations (ten to fifty times fewer facts; architecture.md); a budget
+     of work beside the budget of derivations, the default for every search, the marks closure
+     included; equivalences matched with a block unbound walk only the tuples consistent with what
+     is bound, not every tuple of points; a tuple's images and canonical form memoised. The profile
+     is now flat: matching itself.
+   - Measured and dropped: relevance (every goal reaches 49 of the 51 live rules: the book's
+     relations are one web); semi-naive evaluation (built over the union-find store, no faster: the
+     duplicate derivations, the rectangle's 58 000 for 1 335 facts, come from many different
+     matches deriving the same fact, symmetric images and overlapping rules, not from re-matching
+     old facts); the different-names convention as a theory in the store (no faster: its cost is
+     the guarded rules it lets fire, which are real derivations); choosing a rule's first atom by
+     size (slower).
+   - Not done, and not worth it now: one marks closure per page kept and extended across edits
+     (closures run to their budget, and an edit that removes a fact restarts it anyway).
+   - What would help next, if pages need to be faster: fewer, less overlapping rules (the book's
+     business), and a cheaper derivation. A theory solver for sums, when sums come, attaches where
+     the equivalences are recognised (*Open questions*, sums); abstract the interface once two
+     solvers exist.
 4. **What a page shows.**
    - Marks chosen by the page's statement first, its sub-constructions receding. Today marks are
      global: every member of every class, from every lemma about anything on the page, so a
