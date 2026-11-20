@@ -3,17 +3,17 @@
 # The stress test (roadmap, step 2): theorems beyond Euclid's first books, written with the book's
 # vocabulary and no help for the engine, to probe the system rather than fill the book. Each page is
 # a figure with its theorem beneath. All of them draw; none proves as written. Each page says what
-# blocks it (review-notes.md, The stress test). Not part of the book: these lemmas are checked on
+# blocks it (review-notes.md, The stress test). Non-degeneracy no longer does: the checker takes
+# different names as different points where it must. Not part of the book: these lemmas are checked on
 # their pages but never taken as proven elsewhere.
 
 # ── triangle centres
 
 # The triangle midpoint theorem: the segment joining two sides' midpoints is parallel to the third.
 #
-# Blocked by non-degeneracy (nothing says the midpoints differ from the corners), by a point no
-# hypothesis names (the textbook proof draws the parallel to a-b through c, meeting d-e continued at
-# f), and by sides (the parallelogram it makes needs its diagonals' crossing). Given all three, it
-# proves step by step.
+# Blocked by a point no hypothesis names (the textbook proof draws the parallel to a-b through c,
+# meeting d-e continued at f), and by sides (the parallelogram it makes needs its diagonals'
+# crossing). Given both, it proves step by step.
 midline a b c d e:
     triangle a b c
     midpoint d a b
@@ -37,8 +37,9 @@ centroid a b c d e f g:
 # The circumcentre is on each side's perpendicular bisector: the line from it to a side's midpoint is
 # perpendicular to that side.
 #
-# Blocked by non-degeneracy of the circumcentre's own points (its vesicas), which a lemma about it
-# cannot name. With the construction written out and its points distinct, it proves at once.
+# Blocked by sides: the circumcentre is on the line through each vesica's two points, and which side
+# of them it lies on decides the angle there. With the construction written out and o between the
+# vesica's points, it proves at once.
 circumcentre-bisector a b c o m:
     circumcentre a b c o
     midpoint m a c
