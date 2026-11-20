@@ -89,7 +89,7 @@ export function numericEvidence(lemma: Lemma, kb: KnowledgeBase, samples = SAMPL
   // Unless the relation table can measure the head itself (`right`: an angle of a right angle, whose
   // definition adds an extension point).
   if (goal.some(f => f.args.some(a => a.includes('#') && !known.has(a)))) {
-    const head = { name: lemma.head.name, args: [...lemma.head.args] }
+    const head = { name: lemma.head.name, args: [...lemma.head.args], depth: 0 }
     if (!relationOf(head)?.holds) return { kind: 'none', why: 'the claim introduces points of its own', witness }
     goal = [head]
   }
