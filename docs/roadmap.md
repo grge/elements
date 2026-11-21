@@ -192,7 +192,19 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         whole's quadrance: the linear shadow of the triple-quad formula, a law of its own) and
         Apollonius' median law, so III.14 with halves derived and Thales' converse wait. Declaring a
         word's linear form instead was weighed and refused: the rules are the meaning.
-      - **Angle-angle-side retested** with the fixes in: whether the III.3 converse follows by
+      - **Headroom first** (November 2026). Adding AAS broke the windmill (Pythagoras), not by being
+        wrong: its proof used 2.48 of its 2.5 million units of work, and any rule relevant to it
+        tipped it over (the first attempt, committed with the failure unread, was reverted). Profiled:
+        theories (turns, quadrance) do 5.7% of chapters 3 and 4's work, so lazy theories would not
+        help; four core rules do 72%, mostly rediscovering what they know (side-angle-side 6,300
+        matches for 7 facts). So rules' own symmetries are now broken while matching (architecture.md):
+        the windmill 1.87 million, the book bench 44 s to 34 s with the rules below added.
+      - **Angle-angle-side: done (November 2026).** The III.3 converse proves without it, by quadrance
+        across the foot of the perpendicular: two small rules, a right angle's arms are two lines
+        (chapter 2) and Pythagoras from a quarter turn (chapter 4). The incircle's step (a point of an
+        angle's bisector is as far from both sides) needs it: its equal parts are angles. So AAS is an
+        axiom of chapter 2, both forms, beside angle-side-angle.
+      - **Angle-angle-side retested** with the fixes in (as planned): whether the III.3 converse follows by
         quadrance and the right-angle rule, or AAS stays an axiom.
    1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
       them, no centre point: a new kind of drawing), placed (a point on the circle through three

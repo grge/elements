@@ -20,6 +20,7 @@ import type { Predicate, Rule } from '../language/parser'
 import type { GroundPredicate, KnowledgeBase } from './inference'
 import { analyseStructure, type Difference, type Equivalence, type Structure, type Sum } from './structure'
 import { Lattice, type Vector } from './lattice'
+import { ruleSymmetries, type SymmetryBreak } from './symmetry'
 import { fingerprint, Lru } from './rules'
 
 const OBJECT = '__object__'
@@ -75,6 +76,8 @@ export interface Prepared {
    * The meaning is unchanged: only when the work is done.
    */
   defined: Map<string, Rule>
+  /** Each rule's own symmetries (symmetry.ts): matches that are images of a lesser one are skipped. */
+  breaks: Map<Rule, SymmetryBreak>
 }
 
 const preparedByKB = new WeakMap<KnowledgeBase, Prepared>()
@@ -129,12 +132,15 @@ export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
   const live = kb.allRules()
     .filter(r => !skip.has(r) && !defined.has(r.head.name))
     .map(r => r.body.some(b => defined.has(b.name)) ? { ...r, body: expandDefined(r.body, defined) } : r)
+  const breaks = new Map<Rule, SymmetryBreak>()
+  for (const r of live) { const b = ruleSymmetries(r, structure); if (b) breaks.set(r, b) }
   const out: Prepared = {
     structure,
     redundant,
     axioms: live.filter(r => r.body.length === 0),
     rules: live.filter(r => r.body.length > 0),
     defined,
+    breaks,
   }
   byKB.set(kb, out)
   byRules.set(key, out)
@@ -143,7 +149,7 @@ export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
 
 /** Does the structure alone derive the rule's head from its body (on fresh constants)? */
 function impliedByStructure(rule: Rule, structure: Structure): boolean {
-  const sat = new Saturation({ structure, redundant: [], axioms: [], rules: [], defined: new Map() })
+  const sat = new Saturation({ structure, redundant: [], axioms: [], rules: [], defined: new Map(), breaks: new Map() })
   for (const b of rule.body) sat.assert({ name: b.name, args: b.args })
   sat.assert({ name: OBJECT, args: rule.head.args })
   return sat.holds({ name: rule.head.name, args: rule.head.args })
@@ -669,8 +675,28 @@ export class Saturation {
     }
   }
 
-  private *join(body: readonly Predicate[], s: Subst): Generator<Subst> {
+  /**
+   * Can this partial match still be the least of its family under the rule's symmetries? At the first
+   * variable (in the break's order) where it and its image differ, it must be the lesser; undecided
+   * while that variable or its image is unbound. Values compared as names: a family's images rename
+   * the same values, so its least member is the same however equal points are named.
+   */
+  private leastSoFar(s: Subst, brk: SymmetryBreak): boolean {
+    for (const perm of brk.perms) {
+      for (const x of brk.order) {
+        const u = s.get(x), v = s.get(perm.get(x) ?? x)
+        if (!u || !v) break
+        if (u.v === v.v) continue
+        if (u.v > v.v) return false
+        break
+      }
+    }
+    return true
+  }
+
+  private *join(body: readonly Predicate[], s: Subst, brk?: SymmetryBreak): Generator<Subst> {
     this.work++
+    if (brk && !this.leastSoFar(s, brk)) return
     if (body.length === 0) { yield s; return }
     // Greedy: match the atom with the largest share of already-bound arguments next. An atom of a
     // solved relation (a difference) waits until the others have bound its arguments, if they can:
@@ -683,7 +709,7 @@ export class Saturation {
       if (score > bestScore) { best = i; bestScore = score }
     }
     const rest = body.filter((_, i) => i !== best)
-    for (const s1 of this.match(body[best], s)) yield* this.join(rest, s1)
+    for (const s1 of this.match(body[best], s)) yield* this.join(rest, s1, brk)
   }
 
   /** Ground instances of a rule's head under `s`; head-only variables range over all objects. */
@@ -726,7 +752,7 @@ export class Saturation {
         if (this.lastRun.get(rule) === this.version) continue
         this.lastRun.set(rule, this.version)
         // Materialise first: asserting mutates the structures being matched against.
-        const matches = [...this.join(rule.body, new Map())]
+        const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
         for (const s of matches) {
           for (const h of this.heads(rule, s)) this.assert(h)
           if (this.done(false)) return

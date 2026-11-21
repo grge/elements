@@ -119,6 +119,15 @@ back as parallels, the rule itself not fired. Relevance follows these links. And
 relation in a rule's body waits until its arguments are bound, then asks the solver, so rules see
 what the solver knows.
 
+**A rule's own symmetries are broken** (November 2026, `symmetry.ts`). A renaming of a rule's
+variables that maps its body onto itself (each atom onto one that reads the same, by what the
+structure analysis proved) and its head onto an equivalent head turns every match into another with
+the same conclusion: side-angle-side has three (exchange the triangles, read both backwards, both).
+Matching keeps only the least match of each such family in a fixed order of the variables, checked
+as soon as the deciding variables are bound (lex-leader). Any subset of the symmetries is sound: the
+least member of a family passes every check. Measured on chapters 1 to 3: every closure that runs to
+its end identical, 16% less work; the windmill's proof 2.48 million units of work to 1.87 million.
+
 **Only rules that can help are fired** (November 2026, `relevant`): working back from what will be
 asked (the goal, or a closure's queries), `false` and the equality, through the bodies of rules whose
 heads are needed, a rule whose head is never needed is not fired. Sound: what it would derive could only
