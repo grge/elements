@@ -217,9 +217,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
       III.26–29), tangents (III.17 as `tangent-from`, equal tangents, their angle halved, the incircle's
       step by angle-angle-side), turns in a circle (III.21, III.22, III.31, III.32 with the diameter's
       far end named). III.32 needed all quarter turns alike, said of turns alone (chapter 3): a turn its
-      own reverse is no turn or a quarter turn. III.14 proves but has no figure (the planner cannot
-      draw a chord with a given midpoint: a reflection through a point), so it waits in *Beyond the
-      book*; that move is wanted.
+      own reverse is no turn or a quarter turn. III.14 proves but has no figure, so it waits in *Beyond the book*. Not a missing
+      construction (reflecting c through n is `midpoint`'s own definition, constructible today) but
+      the order: a chord with a given midpoint is built through a fact the hypotheses imply and do not
+      state (the midpoint is the foot of the perpendicular from the centre), and the planner plans
+      from stated facts only. Euclid's own form (distances along the perpendiculars) is constructible,
+      but its proof halves the equal chords, which needs the quarter (*Candidates*).
    3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
       centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre
       bisecting their angle. Turns in a circle: III.21 (axiom), III.22, III.31, III.32.
