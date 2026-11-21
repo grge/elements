@@ -85,7 +85,16 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      the figure has; both halves (parallel, and half as long) follow under the convention, in 12 to 23
      s. The bare statement stays in *Beyond the book* (`midline-plain`) as the case of points not
      named. Step 5 is done.
-6. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
+6. **Sums, before chapter 5** (decided November 2026). Book III's heart (the angle at the centre,
+   angles in a segment, cyclic quadrilaterals, the semicircle) rests on the angle sum (I.32), and so do
+   most of the stress test's open theorems. How sums work will set how chapter 5 is phrased, whether
+   angle-angle-side is an axiom or a theorem (it follows from I.32 and angle-side-angle), and whether
+   the split forms of chapters 2 and 4 stay. Design first (*Open questions*, sums), then a measured
+   build. Measured on chapter 5 today: the chord's perpendicular (III.1, 3), equal chords and angles
+   at the centre (III.26–29) and Euclid's tangent from a point (III.17) prove; the III.3 converse and
+   the incircle need angle-angle-side; equal tangents need hypotenuse-leg; III.20–22 and III.31 need
+   sums; intersecting chords (III.35–37) need ratio.
+7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,

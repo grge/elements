@@ -259,6 +259,12 @@ hatched alike) and an area locus in the planner: done (November 2026).
 
 ### 5. Circle
 
+Waits on sums (roadmap, *Next*). The plan: 5a, writable now (the tangent, defined by its right angle
+since "touches without cutting" is a negation; chords and the centre; constructions: find the centre,
+the tangent from a point, the circle through three points); 5b, after sums (the angle at the centre,
+angles in a segment, cyclic quadrilaterals, the semicircle, the alternate segment, a segment admitting
+an angle); 5c, comparisons (the III.3 converse, the incircle; equal tangents need hypotenuse-leg).
+
 The centre of a circle, chords, tangents, the angle in a semicircle, inscribed angles, cyclic
 quadrilaterals, the circumcircle (the three perpendicular bisectors meet) and the incircle (the three
 angle bisectors meet). Concurrences are good to see in the drawing: the planner uses two of the three
