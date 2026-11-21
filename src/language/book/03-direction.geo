@@ -292,15 +292,28 @@ eq-turn b a b c c b c a: eq-lines a b a c
 
 # ── turns in a circle
 
+# Four points on one circle: a, b, c and d are cyclic. Said without its centre, since the circles
+# a proof finds (two corners and the feet of two altitudes, standing on one side) have none the figure
+# names. A circle about a centre makes its points cyclic, in any order.
+cyclic a b c d: circle o a b, circle o a c, circle o a d
+cyclic b a c d: cyclic a b c d
+cyclic a c b d: cyclic a b c d
+cyclic a b d c: cyclic a b c d
+
+# Three points not on a line fix a circle: two that share them are one.
+cyclic a b d e: cyclic a b c d, cyclic a b c e, triangle a b c
+
 # Angles in the same segment (III.21), as turns: from any point of a circle, a chord a-b is seen at
 # one turn. Directed, there is no "same segment": from the other arc the angle is the supplement, and
 # the turn is the same. Euclid proves it from the angle at the centre (III.20), halving the angle there,
 # which needs to know which side of the chord the centre lies. With turns that halving is not sound
 # (twice a quarter turn and twice no turn are both no turn), and sides cannot be said. So here it is
 # taken as an axiom of turns, as the full-angle method takes it: a theorem in Euclid, given here.
-# (Its converse, that equal turns put four points on a circle, would need a centre the figure does
-# not name.)
-eq-turn c a c b d a d b: circle o a b, circle o a c, circle o a d
+eq-turn c a c b d a d b: cyclic a b c d
+
+# And its converse (III.21's, which Euclid leaves unsaid until III.22 and the circle through three
+# points): where a chord is seen at one turn from two points off its line, the four are on a circle.
+cyclic a b c d: eq-turn c a c b d a d b, triangle a b c, triangle a b d
 
 # ── propositions
 

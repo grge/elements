@@ -73,9 +73,8 @@ altitudes a b c d e h f:
 
 ? right c f a: altitudes a b c d e h f
 
-# As turns: c-f turns to f-a as f-a turns back, a quarter turn. Proves with a word for four points on
-# one circle (no centre named), concluded from equal turns: a-b-d-e and c-d-h-e are on circles, their
-# right angles standing on a-b and c-h. Without it, that converse of III.21 cannot be said.
+# As turns: c-f turns to f-a as f-a turns back, a quarter turn. Proves (chapter 3): a-b-d-e and c-d-h-e
+# are cyclic, their right angles standing on a-b and c-h, and the turns are chased round them.
 ? eq-turn f c f a f a f c: altitudes a b c d e h f
 
 # Euler's line: the circumcentre o, the centroid g and the orthocentre h are collinear.
@@ -105,7 +104,7 @@ nine-point a b c d e f n k:
 ? circle n d k: nine-point a b c d e f n k
 
 # As turns: k sees d-e at the turn f does, which is to be on the circle through d, e and f. Proves as
-# the altitudes do, given a word for four points on a circle.
+# the altitudes do.
 ? eq-turn k d k e f d f e: nine-point a b c d e f n k
 
 # ── circles
@@ -178,8 +177,8 @@ simson a b c o p d e f:
 
 ? collinear d e f: simson a b c o p d e f
 
-# As turns: d-e and d-f turn by nothing, one line. Proves as the altitudes do, given a word for four
-# points on a circle: p-b-d-f and p-c-d-e are, by their right angles.
+# As turns: d-e and d-f turn by nothing, one line. Proves as the altitudes do: p-b-d-f and p-c-d-e are
+# cyclic, by their right angles.
 ? eq-turn d e d f d e d e: simson a b c o p d e f
 
 # ── quadrilaterals

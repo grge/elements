@@ -46,8 +46,9 @@ describe('turns in the book', () => {
     expect(equivalences.get('eq-turn')?.k).toBe(4)
   })
 
-  it('no rule concludes anything from a turn, so a proof that asks for none never fires its rules', () => {
-    expect(bookRules.some(r => r.head.name !== 'eq-turn' && r.body.some(b => b.name === 'eq-turn'))).toBe(false)
+  it('from a turn only turns and circles are concluded, so a proof that asks for neither never fires their rules', () => {
+    const from = new Set(bookRules.filter(r => r.body.some(b => b.name === 'eq-turn' || b.name === 'cyclic')).map(r => r.head.name))
+    expect([...from].sort()).toEqual(['cyclic', 'eq-turn'])
   })
 })
 

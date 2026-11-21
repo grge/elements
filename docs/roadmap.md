@@ -118,9 +118,16 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      no turn are both no turn). Euclid's proof halves undirected angles, which is sound, but needs
      sides. So, as the full-angle method does, chapter 3 takes it as an axiom, saying it is a theorem in
      Euclid; III.22 and III.31 follow at once. Its converse (equal turns put four points on a circle)
-     waits: it would conclude a circle whose centre the figure does not name. III.20 waits for the
-     Euclid book. Next: the stress test's angle-chasing theorems restated as turns (orthocentre,
-     Simson, nine-point), the real test of the solver.
+     concludes `cyclic` (below), since a circle about a centre would need one the figure names.
+     III.20 waits for the Euclid book.
+   - The stress test as turns (November 2026): the altitudes, the Simson line and the nine-point
+     circle prove, in 2 to 15 s. They needed two more things: all right angles turn alike (the
+     fourth postulate, directed), and `cyclic a b c d`, four points on one circle with no centre
+     named, an open word so that III.21's converse can conclude it (the circles a proof finds have
+     no centre the figure names; the prover cannot make one, though the planner can place it).
+     III.21 is stated through `cyclic`. `cyclic` is rules only: not yet a word of the plane
+     (measured, drawn, placed), until a statement wants to say it. The circumcentre's bisector stays
+     blocked by congruence and sides.
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
