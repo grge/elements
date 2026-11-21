@@ -5,6 +5,22 @@ What to revisit when the book is reorganised as a whole, at the end of the probe
 names, placement and what is primitive stay provisional. Each entry says what, and why it is worth
 reconsidering; an entry leaves when it is settled. Newest at the end of each section.
 
+## The test for every tool (November 2026)
+
+A tool can do three jobs, judged separately:
+
+- **Power**: does it let statements in Euclid's words prove what they could not? A theory is best as
+  hidden machinery (as an SMT solver's theories are): bridges in from familiar facts *and back out* to
+  familiar conclusions. Quadrance does this (its equal lengths feed SSS); turns, without return
+  bridges, do not yet, so their theorems must be restated in turn-language.
+- **Vocabulary**: is it a word a reader would want to say? `cyclic` (concyclic, classical), yes;
+  `quad-sum`, no: it stays internal; `eq-turn`, weakly.
+- **Tools**: does it give the workbench a new construction? `eq-turn` and `cyclic` (once a word of the
+  plane) do.
+
+The book's statements use only words that pass the vocabulary test; the rest is machinery. A word that
+appears in statements only because the engine needs it is a cost (the README: the clauses are prose).
+
 ## Words
 
 - **`circle` and `cyclic`**: two words for being on a circle, one with a centre (defined, by equal

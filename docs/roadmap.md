@@ -138,8 +138,31 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
    Chapter 5, planned (November 2026), in this order:
-   0. Quadrance first (*Candidates*): prototyped outside the book and measured on the chapter's
-      blocked theorems, since it may make hypotenuse-leg, the III.3 converse and III.14 theorems.
+   0. Before the chapter, in order:
+      - **Two engine fixes.** Rules whose body repeats a variable inside an equivalence's tuples
+        (`eq-turn b a b c b c b a`) never match: silent incompleteness, found while prototyping
+        quadrance. And a contradiction ("o and a one point") from a rule that a right angle's arms are
+        two lines (`triangle a b c` from `right`'s body) together with the turn bridges: an unsound
+        rule in a degenerate case or an engine bug, to be traced before anything rests on it.
+      - **Return bridges for turns** (decided November 2026). Turns have bridges in (right angles,
+        parallels, isosceles triangles) but none out, so what the solver proves stays in turn-language
+        and theorems must be restated to meet it (the Simson line as "turns by nothing"). Wanted:
+        turning by nothing gives `parallel` (and so `collinear` through a shared point), and a
+        quarter turn gives `right`, so that the stress theorems prove as Euclid states them
+        (`collinear d e f`, `right c f a`). Needs `right`'s definition cycle resolved first (ledger).
+        Turns into equal angles need orientation, a sides question, and may stay out.
+      - **Quadrance as one discovered word** (decided November 2026): `quad-sum a b c d e f`,
+        Q(a b) + Q(c d) = Q(e f), whose additivity the engine proves from its rules as it does for
+        turns (swapping its first two pairs, equal lengths swapped in, cancellation); a rational
+        solver over classes of equal lengths that feeds equal lengths back into the store; and
+        Pythagoras as its bridge. Internal machinery: statements stay in Euclid's words. Proves
+        hypotenuse-leg (so equal tangents and their bisected angle) and III.14 with the halves given.
+        Not met by it, left as candidates: the quarter (a midpoint's half has a quarter of the
+        whole's quadrance: the linear shadow of the triple-quad formula, a law of its own) and
+        Apollonius' median law, so III.14 with halves derived and Thales' converse wait. Declaring a
+        word's linear form instead was weighed and refused: the rules are the meaning.
+      - **Angle-angle-side retested** with the fixes in: whether the III.3 converse follows by
+        quadrance and the right-angle rule, or AAS stays an axiom.
    1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
       them, no centre point: a new kind of drawing), placed (a point on the circle through three
       placed points).
@@ -147,7 +170,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
       centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre
       bisecting their angle. Turns in a circle: III.21 (axiom), III.22, III.31, III.32.
-   Decided with it (the first two provisional until quadrance is measured):
+   Decided with it (the first two provisional; quadrance replaces hypotenuse-leg, and the AAS retest
+   decides the other):
    - Angle-angle-side an axiom: the second half of I.26, whose first half (angle-side-angle) the book
      already takes. Unlocks the III.3 converse and the incircle.
    - Hypotenuse-leg an axiom of congruence: Euclid does not state it, and it follows only through
@@ -170,13 +194,9 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 
 **Candidates**, tools we expect to adopt when a chapter needs them; not yet planned (November 2026):
 
-- **Quadrance** (Wildberger): squared length. Lengths' arithmetic is linear in quadrances, over the
-  reals, so dividing is sound (unlike turns). A word saying quadrances add, a linear solver as for
-  turns, and bridges: a right angle gives Pythagoras (Q(hypotenuse) = Q(leg) + Q(leg)), a midpoint a
-  quarter (Q(a m) = Q(a b) / 4), Apollonius' median law. Would prove hypotenuse-leg (so equal
-  tangents), the III.3 converse without angle-angle-side, III.14 and Thales' converse. Not lengths
-  along a line (|a b| = |a m| + |m b| needs square roots). Ratios might later follow as logarithms of
-  quadrances, products becoming sums. First in chapter 5's order.
+- **The quarter and Apollonius' median law**, quadrance's laws with coefficients, which one additive
+  word cannot express (*Next*, 7, step 0). Would prove III.14 with the halves derived and Thales'
+  converse. Wanted: a way the engine could discover them from rules, not a declared linear form.
 - **Signed area**: area with a direction, additive and free of sides as turns are, on the same
   lattice. For the deferred sums of areas (II.14, I.48). Wildberger's quadrea (16 times area squared)
   is quadratic, not the tool for sums.
