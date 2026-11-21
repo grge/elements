@@ -22,7 +22,8 @@ export function assumedOf(points: readonly string[]): GroundPredicate[] {
 }
 
 export function closureAnswers(kb: KnowledgeBase, facts: readonly GroundPredicate[], queries: readonly GroundPredicate[], assume: readonly GroundPredicate[] = []): boolean[] {
-  let sat = saturate(kb, [...facts, ...assume])
-  if (assume.length && sat.holds({ name: 'false', args: [] })) sat = saturate(kb, facts)
+  const relevant = [...new Set(queries.map(q => q.name))]
+  let sat = saturate(kb, [...facts, ...assume], { relevant })
+  if (assume.length && sat.holds({ name: 'false', args: [] })) sat = saturate(kb, facts, { relevant })
   return queries.map(q => sat.holds(q))
 }

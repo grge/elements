@@ -33,7 +33,7 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
-import { angle as angleAt, area as areaOf } from './measure'
+import { angle as angleAt, area as areaOf, turn as turnOf } from './measure'
 import { relationOf, type ModelReader } from './relations'
 import { UnionFind, mergeLines, segmentKey, segmentEnds } from './classes'
 
@@ -162,6 +162,16 @@ export type Locus =
   | { kind: 'thales'; ends: [string, string] }
   /** The line through `at` perpendicular to the line from `at` to `to`. */
   | { kind: 'perpendicular'; at: string; to: string }
+  /**
+   * The line through `through` turned from the line `base` by the turn from line `turn[0..1]` to line
+   * `turn[2..3]` (`sign` 1), or back by it (`sign` -1): a turn copied onto a line.
+   */
+  | { kind: 'turned'; through: string; base: [string, string]; turn: [string, string, string, string]; sign: 1 | -1 }
+  /**
+   * The circle through `ends` on which the turn from the line to one end to the line to the other is
+   * the turn `turn` (from line turn[0..1] to turn[2..3]): directed, it is the whole circle (III.21).
+   */
+  | { kind: 'seen'; ends: [string, string]; turn: [string, string, string, string] }
 
 export type Step =
   | { kind: 'free'; point: string }
@@ -259,6 +269,34 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
       if (other(t1) === v && other(t2) === u) out.push({ kind: 'bisector', of: [u, v] })
     }
   }
+  // Equal turns: p's line from a placed point is at a known turn from a placed line; or p sees a
+  // placed chord at a known turn, and is on its circle.
+  for (const m of model.measures) {
+    if (m.name !== 'eq-turn') continue
+    if (!m.args.every(q => q === p || isPlaced.has(q))) continue
+    const L = [0, 1, 2, 3].map(i => [m.args[2 * i], m.args[2 * i + 1]] as [string, string])
+    const has = L.map(l => l.includes(p))
+    const count = m.args.filter(q => q === p).length
+    // The turn the equation gives p's line(s): the other block's.
+    const known = (i: number): [string, string, string, string] => i < 2 ? [...L[2], ...L[3]] : [...L[0], ...L[1]]
+    if (count === 1) {
+      const i = has.indexOf(true)
+      const partner = L[i][0] === p ? L[i][1] : L[i][0]
+      const base = L[i % 2 === 0 ? i + 1 : i - 1]
+      if (base[0] === base[1] || known(i)[0] === known(i)[1] || known(i)[2] === known(i)[3]) continue
+      // On a line through the partner the direction is fixed already.
+      if (model.lines.some(l => l.includes(p) && l.includes(partner))) continue
+      out.push({ kind: 'turned', through: partner, base, turn: known(i), sign: i % 2 === 0 ? -1 : 1 })
+    } else if (count === 2) {
+      // p at the meeting of the two lines of one block: lines p-u and p-v.
+      for (const i of [0, 2]) {
+        if (!has[i] || !has[i + 1]) continue
+        const u = L[i][0] === p ? L[i][1] : L[i][0], v = L[i + 1][0] === p ? L[i + 1][1] : L[i + 1][0]
+        if (u === v || u === p || v === p) continue
+        out.push({ kind: 'seen', ends: [u, v], turn: known(i) })
+      }
+    }
+  }
   for (const cls of model.lengths) {
     const complete = cls.filter(([a, b]) => isPlaced.has(a) && isPlaced.has(b))
     const others = cls
@@ -308,13 +346,14 @@ function pivots(l: Locus): string[] {
     case 'parallel': return [l.through]
     case 'angle': case 'angle-bisector': return [l.vertex]
     case 'perpendicular': return [l.at]
+    case 'turned': return [l.through]
     default: return []
   }
 }
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area'].includes(m.name)).length
+    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn'].includes(m.name)).length
 }
 
 const DP_LIMIT = 18
@@ -535,6 +574,32 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
       const v = g(locus.at), d = sub(g(locus.to), v)
       return Math.hypot(...d) < 1e-12 ? null : { kind: 'line', p: v, d: [-d[1], d[0]] }
     }
+    case 'turned': {
+      const [a, b] = locus.base.map(g), [e, f, h, k] = locus.turn.map(g)
+      const t = turnOf(e, f, h, k), d = sub(b, a)
+      if (Number.isNaN(t) || Math.hypot(...d) < 1e-12) return null
+      const r = locus.sign * t
+      return { kind: 'line', p: g(locus.through), d: [d[0] * Math.cos(r) - d[1] * Math.sin(r), d[0] * Math.sin(r) + d[1] * Math.cos(r)] }
+    }
+    case 'seen': {
+      // The chord u-v seen at turn t: the centre is on its perpendicular bisector, at cot t times half
+      // the chord from its midpoint, on the side that gives the turn (tried, not derived: one of two).
+      const [u, v] = locus.ends.map(g), [e, f, h, k] = locus.turn.map(g)
+      const t = turnOf(e, f, h, k), d = sub(v, u), L = Math.hypot(...d)
+      if (Number.isNaN(t) || L < 1e-12) return null
+      if (t < 1e-9 || Math.PI - t < 1e-9) return { kind: 'line', p: u, d }   // no turn: the chord's own line
+      const mid: Point = [(u[0] + v[0]) / 2, (u[1] + v[1]) / 2], n: Point = [-d[1] / L, d[0] / L]
+      const off = (L / 2) / Math.tan(t)
+      // The turn is the same from every point of the circle but the chord's ends: tried at the point
+      // across the centre from the chord's midpoint.
+      for (const sd of [1, -1]) {
+        const c: Point = [mid[0] + sd * off * n[0], mid[1] + sd * off * n[1]]
+        const r = dist(c, u), away = sub(c, mid), al = Math.hypot(...away)
+        const far: Point = al > 1e-9 * r ? [c[0] + r * away[0] / al, c[1] + r * away[1] / al] : [c[0] + r * n[0], c[1] + r * n[1]]
+        if (Math.abs(turnOf(far, u, far, v) - t) < 1e-6) return { kind: 'circle', c, r }
+      }
+      return null
+    }
   }
 }
 
@@ -664,6 +729,8 @@ export function describeLocus(l: Locus): string {
     case 'area': return `a parallel to ${n(l.base)} at the height that gives the area of ${n(l.area)}`
     case 'thales': return `the circle on ${n(l.ends)}`
     case 'perpendicular': return `the perpendicular to ${n([l.at, l.to])} at ${n([l.at])}`
+    case 'turned': return `the line through ${n([l.through])} turned ${l.sign > 0 ? 'from' : 'back from'} ${n(l.base)} as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
+    case 'seen': return `the circle through ${n(l.ends)} on which ${n(l.ends)} is seen as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
   }
 }
 

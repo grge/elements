@@ -249,7 +249,7 @@ export function buildScene(
   const ticked: { segment: number; n: number; lv: number }[] = []
   const arrowed: { segment: number; n: number; lv: number; facts: string[]; mark: { mark: number; member: number }; along: Point }[] = []
   const fills: Scene['fills'] = []
-  const counts = { ticks: 0, arcs: 0, arrows: 0, hatch: 0 }
+  const counts = { ticks: 0, arcs: 0, arrows: 0, hatch: 0, turns: 0 }
   figure.marks.forEach((cls, ci) => {
     const shown = cls.members.map((_, i) => i).filter(i => visible(cls.members[i]))
     // A class the closure knows to be right angles is drawn as squares (its relation's drawing), and
@@ -283,6 +283,67 @@ export function buildScene(
         const member = cls.members[mi]
         const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
         angleAt(points[0], points[1], points[2], n, 'arc', level(member.depth), facts, { mark: ci, member: mi })
+      }
+      return
+    }
+    if (kind === 'turns' && cls.k === 4) {
+      // Equal turns: at the meeting of each member's two lines, arcs turning from the first line to the
+      // second, the outermost ending in an arrowhead: which way it turns is what a turn says. Lines
+      // that do not meet (no turn) or meet off the page have no place; a class needs two.
+      const places = new Map<string, { mi: number; x: Point; from: number; sweep: number }>()
+      // A flipped member is the turn back: from its second line to its first.
+      const turnOf = (mi: number) => { const ps = cls.members[mi].points; return cls.members[mi].flipped ? [ps[2], ps[3], ps[0], ps[1]] : ps }
+      for (const mi of shown) {
+        const [a, b, c, d] = turnOf(mi).map(at) as Point[]
+        const u: Point = [b[0] - a[0], b[1] - a[1]], v: Point = [d[0] - c[0], d[1] - c[1]]
+        const den = u[0] * v[1] - u[1] * v[0], nu = Math.hypot(...u), nv = Math.hypot(...v)
+        if (nu < 1e-9 || nv < 1e-9 || Math.abs(den) < 1e-6 * nu * nv) continue
+        const k = ((c[0] - a[0]) * v[1] - (c[1] - a[1]) * v[0]) / den
+        const x: Point = [a[0] + k * u[0], a[1] + k * u[1]]
+        if (x[0] < -width * 0.05 || x[0] > width * 1.05 || x[1] < -height * 0.05 || x[1] > height * 1.05) continue
+        let sweep = Math.atan2(den, u[0] * v[0] + u[1] * v[1])
+        sweep = ((sweep % Math.PI) + Math.PI) % Math.PI
+        // Start along the first line on the side its segment lies, if the end then runs along the
+        // second's; else whichever of the two starts does better.
+        const toward = (p: Point, q: Point, dir: number) => {
+          const m: Point = [(p[0] + q[0]) / 2 - x[0], (p[1] + q[1]) / 2 - x[1]]
+          return Math.cos(dir) * m[0] + Math.sin(dir) * m[1]
+        }
+        const ua = Math.atan2(u[1], u[0])
+        const score = (from: number) => Math.sign(toward(a, b, from)) + Math.sign(toward(c, d, from + sweep))
+        const from = score(ua) >= score(ua + Math.PI) ? ua : ua + Math.PI
+        const key = `${Math.round(x[0])},${Math.round(x[1])}|${Math.round(sweep * 1000)}`
+        if (!places.has(key)) places.set(key, { mi, x, from, sweep })
+      }
+      if (places.size < 2) return
+      const n = ++counts.turns
+      for (const { mi, x, from, sweep } of places.values()) {
+        const member = cls.members[mi]
+        const lv = level(member.depth)
+        const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
+        const mark = { mark: ci, member: mi }
+        const [pa, pb, pc, pd] = turnOf(mi)
+        addSegment(pa, pb, lv, facts); addSegment(pc, pd, lv, facts)
+        let outer = 0
+        for (let i = 0; i < n; i++) {
+          const r = tick * 2.4 + i * tick * 0.8
+          const p0 = [x[0] + r * Math.cos(from), x[1] + r * Math.sin(from)]
+          const p1 = [x[0] + r * Math.cos(from + sweep), x[1] + r * Math.sin(from + sweep)]
+          arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 0 1 ${p1[0]} ${p1[1]}`, level: lv, kind: 'arc' })
+          meta.arcs.push({ facts, mark })
+          outer = r
+        }
+        // The arrowhead, at the end of the outermost arc, pointing on round.
+        const end = from + sweep, tip: Point = [x[0] + outer * Math.cos(end), x[1] + outer * Math.sin(end)]
+        const along: Point = [-Math.sin(end), Math.cos(end)], size = tick * 0.75
+        const back: Point = [tip[0] - along[0] * size, tip[1] - along[1] * size], side: Point = [-along[1] * size * 0.6, along[0] * size * 0.6]
+        arcs.push({ d: `M ${back[0] + side[0]} ${back[1] + side[1]} L ${tip[0]} ${tip[1]} L ${back[0] - side[0]} ${back[1] - side[1]}`, level: lv, kind: 'arrow' })
+        meta.arcs.push({ facts, mark })
+        // Both lines reach the meeting point, at least as far as the arcs (as an angle's arms do).
+        for (const dir of [from, end]) {
+          segments.push([x[0], x[1], x[0] + outer * 1.15 * Math.cos(dir), x[1] + outer * 1.15 * Math.sin(dir), lv])
+          meta.segments.push({ ends: [pa, pc], facts: [...facts], mark: null })
+        }
       }
       return
     }

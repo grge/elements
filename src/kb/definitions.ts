@@ -94,12 +94,16 @@ function analyse(rules: readonly Rule[]): Map<string, DefinitionStatus> {
 
   // Check that the other clauses of each defined predicate follow from its chosen definition; if not,
   // try the next candidate. A change to one predicate can break another's proof, so repeat until
-  // stable. Candidates only ever advance, so this terminates.
+  // stable; but only a predicate that depends on one whose status changed can change its verdict, so
+  // only those are checked again. Candidates only ever advance, so this terminates.
+  let changedLast: Set<string> | null = null   // null: the first pass checks everything
   for (let changed = true; changed;) {
     changed = false
+    const changedNow = new Set<string>()
     for (const [p, entry] of pending) {
       const st = status.get(p)
       if (st?.kind !== 'definition') continue
+      if (changedLast && !changedLast.has(p) && ![...reachable(p)].some(q => changedLast!.has(q))) continue
       const kb = new KnowledgeBase(
         rules.filter(r => r.head.name !== p || r === st.clause),
         { definitions: status },
@@ -107,6 +111,7 @@ function analyse(rules: readonly Rule[]): Map<string, DefinitionStatus> {
       const failing = st.theorems.find(t => !follows(t, kb))
       if (!failing) continue
       changed = true
+      changedNow.add(p)
       entry.tried++
       const next = entry.candidates[entry.tried]
       status.set(p, next
@@ -118,6 +123,7 @@ function analyse(rules: readonly Rule[]): Map<string, DefinitionStatus> {
               : `none of its clauses implies all the others (${entry.candidates.length} alternatives)`,
           })
     }
+    changedLast = changedNow
   }
 
   return status

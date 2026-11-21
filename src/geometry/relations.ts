@@ -21,6 +21,9 @@
  *             (`distinct`): a lemma's hypothesis of it is met by two different names.
  *   mark      its drawing is a mark (a right angle's square): like an equality's ticks it is drawn
  *             wherever it is proven, not only where it is written.
+ *   reverse   for an equivalence, a reordering of a block that gives it the opposite value (`eq-turn`:
+ *             lines swapped, the turn back). A class keeps a block and its reverse as one member,
+ *             flipped (marks.ts), as it keeps an angle and the angle beside it.
  *   flipOf    an equivalence it is, with its second block flipped (`supp`, of `eq-angle`: a-b-c equals
  *             the angle beside d-e-f). Its facts join that equivalence's classes, the flipped block
  *             marked on its other side (marks.ts), and the closure is asked it to join two classes.
@@ -40,7 +43,7 @@
  * (extraction.ts), and how it is drawn from `draw`.
  */
 
-import { angle, area, spread } from './measure'
+import { angle, area, spread, turn, turnGap } from './measure'
 
 export type Point = [number, number]
 
@@ -81,10 +84,11 @@ export interface Relation {
   mark?: boolean
   propertyOf?: string
   flipOf?: string
+  reverse?: number[]
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
-  classMark?: { as: 'ticks' | 'arcs' | 'arrows' | 'hatch'; sign: string; prefix?: string }
+  classMark?: { as: 'ticks' | 'arcs' | 'arrows' | 'hatch' | 'turns'; sign: string; prefix?: string }
 }
 
 const d = (p: Point, q: Point) => Math.hypot(p[0] - q[0], p[1] - q[1])
@@ -181,6 +185,16 @@ const TABLE: Relation[] = [
       if (same(P[0], P[1]) || same(P[2], P[1]) || same(P[3], P[4]) || same(P[5], P[4])) return NaN
       return Math.abs(angle(P[0], P[1], P[2]) + angle(P[3], P[4], P[5]) - Math.PI)
     }),
+  },
+  {
+    // The turn from line a-b to line c-d equals the turn from line e-f to line g-h: directed, round a
+    // half turn (measure.ts `turn`). Placed by the planner: a line through a placed point at a known
+    // turn, or the circle on which a chord is seen at one. Marked with turning arrows (scene.ts).
+    name: 'eq-turn', arity: 8, depicted: true,
+    classMark: { as: 'turns', sign: '=', prefix: '↺' },
+    reverse: [2, 3, 0, 1],
+    read: (args, m) => m.measure('eq-turn', args),
+    ...measured(P => turnGap(turn(P[0], P[1], P[2], P[3]), turn(P[4], P[5], P[6], P[7]))),
   },
   {
     // The spread between lines a-b and c-d equals that between e-f and g-h.

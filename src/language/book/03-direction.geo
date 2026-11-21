@@ -231,3 +231,68 @@ midline a b c d e f x:
 
 ? parallel d e b c: midline a b c d e f x
 ? eq-lines d f b c: midline a b c d e f x
+
+# ══ Turns ════════════════════════════════════════════════════════════════════════════════════════
+#
+# The turn from one line to another: how far the first must turn, always the same way round, to lie
+# along the second. A turn is directed: the turn back is the other way. A half turn brings a line back
+# to itself, so lines that run the same way turn by nothing. Turns are about directions alone, so they
+# belong to Euclid's plane: that turns add up, as below, is the parallel postulate at work.
+
+# ── an equivalence on pairs of lines
+
+# The turn from line a-b to line c-d is the turn from line e-f to line g-h.
+eq-turn a b c d a b c d: -
+eq-turn e f g h a b c d: eq-turn a b c d e f g h
+eq-turn a b c d i j k l: eq-turn a b c d e f g h, eq-turn e f g h i j k l
+
+# A line read backwards is the same line.
+eq-turn b a c d e f g h: eq-turn a b c d e f g h
+eq-turn a b d c e f g h: eq-turn a b c d e f g h
+
+# ── equal points may be exchanged
+
+eq-turn x b c d e f g h: eq-turn a b c d e f g h, eq-point x a
+eq-turn a x c d e f g h: eq-turn a b c d e f g h, eq-point x b
+eq-turn a b x d e f g h: eq-turn a b c d e f g h, eq-point x c
+eq-turn a b c x e f g h: eq-turn a b c d e f g h, eq-point x d
+eq-turn a b c d x f g h: eq-turn a b c d e f g h, eq-point x e
+eq-turn a b c d e x g h: eq-turn a b c d e f g h, eq-point x f
+eq-turn a b c d e f x h: eq-turn a b c d e f g h, eq-point x g
+eq-turn a b c d e f g x: eq-turn a b c d e f g h, eq-point x h
+
+# ── turns are of directions
+
+# A turn depends only on which way its lines run: a line may be swapped for any line running its way,
+# itself named by other points included.
+eq-turn i j c d e f g h: eq-turn a b c d e f g h, parallel a b i j, distinct i j
+
+# Lines that run the same way turn by nothing.
+eq-turn a b c d e f e f: parallel a b c d, distinct e f
+
+# ── turns add
+
+# If a-b turns to c-d as e-f turns to g-h, then a-b turns to e-f as c-d turns to g-h: both say the
+# same four directions differ alike. With the equivalence, this is all of adding turns: a-b to c-d and
+# on to e-f is a-b to e-f.
+eq-turn a b e f c d g h: eq-turn a b c d e f g h
+
+# ── bridges to angles
+
+# A right angle: its arms turn to each other the same either way round, a quarter turn.
+eq-turn b a b c b c b a: right a b c
+
+# The base of an isosceles triangle: its legs turn to it as it turns back to them, the turns at b
+# and c mirror images. (I.5, directed.)
+eq-turn b a b c c b c a: eq-lines a b a c
+
+# ── propositions
+
+# Parallels are turned to alike by any line: corresponding angles, without sides.
+? eq-turn a b e f c d e f: parallel a b c d
+
+# Turning back undoes a turn.
+? eq-turn c d a b g h e f: eq-turn a b c d e f g h
+
+# Turns add: a-b to c-d and on to e-f is a-b to e-f.
+? eq-turn a b e f g h k l: eq-turn a b c d g h i j, eq-turn c d e f i j k l

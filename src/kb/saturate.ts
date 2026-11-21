@@ -52,6 +52,12 @@ export interface SaturateOptions {
    * clause firing, for the definitions analysis, which decides what is a definition.
    */
   abbreviate?: boolean
+  /**
+   * The predicates that will be asked about (by default the goal's): rules whose head cannot help
+   * derive one of them, `false` or the equality are not fired (`relevant`). A sound cut: what they
+   * would derive could only feed rules that are cut too.
+   */
+  relevant?: readonly string[]
 }
 
 export interface Prepared {
@@ -585,12 +591,51 @@ export class Saturation {
   }
 }
 
+/**
+ * The prepared rules cut to those that can help derive `names`: working back from them (and from
+ * `false` and the equality, which every check may ask and every fact may use), through the bodies of
+ * rules whose heads are needed. A predicate nothing is concluded from, such as `eq-turn` in the book,
+ * then costs nothing to a proof that does not ask for it.
+ */
+const relevantCache = new WeakMap<Prepared, Map<string, Prepared>>()
+export function relevant(prep: Prepared, names: readonly string[]): Prepared {
+  const key = [...new Set(names)].sort().join(' ')
+  let byKey = relevantCache.get(prep)
+  if (!byKey) relevantCache.set(prep, byKey = new Map())
+  const hit = byKey.get(key)
+  if (hit) return hit
+  const needed = new Set<string>(['false', ...names, ...(prep.structure.equality ? [prep.structure.equality] : [])])
+  const add = (n: string) => {
+    if (needed.has(n)) return false
+    needed.add(n)
+    return true
+  }
+  const all = [...prep.axioms, ...prep.rules]
+  for (let grew = true; grew;) {
+    grew = false
+    for (const n of [...needed]) {
+      const d = prep.defined.get(n)
+      if (d) for (const b of expandDefined(d.body, prep.defined)) grew = add(b.name) || grew
+    }
+    for (const r of all) if (needed.has(r.head.name)) for (const b of r.body) grew = add(b.name) || grew
+  }
+  const out: Prepared = {
+    ...prep,
+    axioms: prep.axioms.filter(r => needed.has(r.head.name)),
+    rules: prep.rules.filter(r => needed.has(r.head.name)),
+  }
+  byKey.set(key, out)
+  return out
+}
+
 export function saturate(
   kb: KnowledgeBase,
   seeds: readonly GroundPredicate[],
   opts: SaturateOptions = {},
 ): Saturation {
-  const sat = new Saturation(prepare(kb, opts.abbreviate ?? true), opts)
+  const prep = prepare(kb, opts.abbreviate ?? true)
+  const names = opts.relevant ?? (opts.goal ? [opts.goal.name] : null)
+  const sat = new Saturation(names ? relevant(prep, names) : prep, opts)
   for (const f of seeds) sat.assert(f)
   sat.run()
   return sat

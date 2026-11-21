@@ -149,6 +149,17 @@ function canonical(block: readonly string[], group: readonly number[][]): string
 }
 
 /**
+ * A block up to its symmetries and, for a relation with a reverse (`eq-turn`), up to reversal: the
+ * least form, and whether it is the reverse's (the block is then that member flipped).
+ */
+function canonicalUpToReverse(block: readonly string[], group: readonly number[][], reverse?: readonly number[]): [string[], boolean] {
+  const own = canonical(block, group)
+  if (!reverse) return [own, false]
+  const back = canonical(reverse.map(i => block[i]), group)
+  return back.join('\u0001') < own.join('\u0001') ? [back, true] : [own, false]
+}
+
+/**
  * Whichever way most members are is drawn as themselves (on a tie, the first member's way): a class
  * flipped as a whole is the same class.
  */
@@ -164,6 +175,7 @@ export function markClasses(known: readonly Equality[], equivalences: ReadonlyMa
   const out: MarkClass[] = []
   for (const [name, eq] of equivalences) {
     if (eq.k < 2) continue
+    const reverse = RELATIONS.get(name)?.reverse
     const uf = new ParityUnionFind()
     const members = new Map<string, MarkMember>()
     const edges: { a: string; b: string; source: MarkSource; flip: boolean }[] = []
@@ -171,9 +183,9 @@ export function markClasses(known: readonly Equality[], equivalences: ReadonlyMa
       if (e.name !== name || e.args.length !== 2 * eq.k) continue
       const blocks = [e.args.slice(0, eq.k), e.args.slice(eq.k)]
       if (blocks.some(b => new Set(b).size < b.length)) continue
-      const [ka, kb] = blocks.map(b => canonical(b, eq.blockGroup))
+      const [[ka, ra], [kb, rb]] = blocks.map(b => canonicalUpToReverse(b, eq.blockGroup, reverse))
       const [a, b] = [ka.join('\u0001'), kb.join('\u0001')]
-      const flip = !!e.flip
+      const flip = !!e.flip !== ra !== rb
       if (a === b && !flip) continue
       for (const [key, pts] of [[a, ka], [b, kb]] as const) {
         const m = members.get(key)
@@ -251,6 +263,8 @@ export function closureQueries(
     if (a.name !== b.name) continue
     out.push({ fact: { name: a.name, args: [...rep(a), ...rep(b)] }, pair: [i, j] })
     for (const f of flips) if (f.of === a.name) out.push({ fact: { name: f.name, args: [...rep(a), ...rep(b)] }, pair: [i, j], flip: true })
+    const reverse = RELATIONS.get(a.name)?.reverse
+    if (reverse) out.push({ fact: { name: a.name, args: [...rep(a), ...reverse.map(x => rep(b)[x])] }, pair: [i, j], flip: true })
   }
   classes.forEach((c, i) => {
     for (const p of properties) if (p.of === c.name) out.push({ fact: { name: p.name, args: [...rep(c)] }, property: { cls: i, relation: p.name } })

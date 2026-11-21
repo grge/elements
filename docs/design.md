@@ -178,6 +178,7 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
 | `supp a b c d e f` | its arms; its marks are equal angles' arcs, d-e-f's on its other side (*Marks*). Side by side along a straight line, no mark: the line says it |
+| `eq-turn a b c d e f g h` | nothing of its own; its marks are turning arrows where each pair of lines meets (*Marks*) |
 | `right a b c` | Byrne's small square at the vertex, and beneath it, fainter, its definition: a-b continued past b to its extension point, the right angle beside it squared too |
 | `parallel a b c d` | the segments a–b and c–d, their lines continuing faint, with arrows where the figure knows them parallel |
 | `triangle a b c` | its three sides, as segments; that the corners are not on one line is checked |
@@ -271,6 +272,14 @@ closure is asked supplements as well as equalities between classes, and joins th
 with a member both ways holds an angle equal to its own supplement, a right angle (`clash`); the
 closure's `right` draws it as squares. More than a geometry program usually shows: the arcs say which
 angle a supplement is equal to, not only that two angles make a line.
+
+**Equal turns are turning arrows.** Where a member's two lines meet, arcs turn from the first line to
+the second, the outermost ending in an arrowhead, as many as equal angles would have; both lines are
+drawn to the meeting, as far as the arcs. Which way it turns is what a turn says, so the arrow is the
+mark. A turn and the turn back are one member of a class, flipped (relations.ts `reverse`: the
+reordering of a block that gives the opposite value), as an angle and the angle beside it are: the
+chapter's lemma that turning back undoes a turn adds no second class. Lines that do not meet turn by
+nothing and have no place; a meeting off the page has none either.
 
 Some relations are marks too, not equalities: a right angle's square (`mark` in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:
 perpendicular a c d, distinct a c` puts a square at c on every figure that uses `perpendicular`. And a

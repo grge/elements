@@ -110,6 +110,12 @@ thales a b c o:
 
 ? right a b c: thales a b c o
 
+# The same, as turns (chapter 3): the arms at b turn to each other alike either way round. Each step
+# proves (the base turns of the isosceles triangles o-a-b and o-b-c, the diameter one line), but adding
+# the two turns needs a direction no line of the figure has, which rules over the figure's lines cannot
+# reach: it waits for turns to be added by a solver (roadmap, sums).
+? eq-turn b a b c b c b a: thales a b c o
+
 # Thales' converse: the midpoint of the hypotenuse is as far from the right angle as from its ends.
 #
 # Blocked by a point no hypothesis names (the rectangle's fourth corner), or by sums.

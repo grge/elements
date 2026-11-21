@@ -22,7 +22,7 @@ import { readdirSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { parseLemmas, parseRules, type Lemma } from '../src/language/parser'
 import { KnowledgeBase, unfold, type GroundPredicate } from '../src/kb/inference'
-import { Saturation, prepare } from '../src/kb/saturate'
+import { Saturation, prepare, relevant } from '../src/kb/saturate'
 import { FreshNames } from '../src/kb/names'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise } from '../src/geometry/construction'
@@ -56,7 +56,7 @@ Saturation.prototype.assert = function (f: GroundPredicate) {
 function saturateFrom(kb: KnowledgeBase, frontier: GroundPredicate[], goal: GroundPredicate) {
   derived = added = 0
   const t = performance.now()
-  const sat = new Saturation(prepare(kb), { goal, maxDerivations: 200_000 })
+  const sat = new Saturation(relevant(prepare(kb), [goal.name]), { goal, maxDerivations: 200_000 })
   for (const f of frontier) sat.assert(f)
   sat.run()
   return { ms: performance.now() - t, holds: sat.holds(goal), exhausted: sat.exhausted, derived, added }

@@ -94,6 +94,25 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    at the centre (III.26–29) and Euclid's tangent from a point (III.17) prove; the III.3 converse and
    the incircle need angle-angle-side; equal tangents need hypotenuse-leg; III.20–22 and III.31 need
    sums; intersecting chords (III.35–37) need ratio.
+   - Decided (November 2026): this is the big book, and its sums are of **turns**, not angles.
+     `eq-angle` stays undirected everywhere (the language of congruence; a Euclid book may come later
+     and means the same by it); `eq-turn a b c d e f g h` says the turn from line a-b to line c-d, the
+     same way round, equals that from e-f to g-h, round a half turn. Directed, it states the circle's
+     theorems without sides. Like every word of the plane it measures, marks and constructs.
+   - The word: done (November 2026). Chapter 3, after the postulate: its rules (an equivalence on
+     pairs of lines, a line swapped for any running its way, turns add), and bridges from right
+     angles, parallels and isosceles triangles. Measured, placed by the planner (a turned line through
+     a point; the circle on which a chord is seen at a turn), marked with turning arrows, a turn and
+     its reverse one class flipped. Saturation now cuts rules that cannot reach what is asked: nothing
+     is concluded from a turn, so proofs that ask none pay nothing (the book's checks unchanged). Not
+     stated: that lines turning by nothing are parallel, which would put `right`'s definition on a
+     cycle (definitions must not be recursive).
+   - Next: the solver. Rules over the figure's lines cannot add turns in general: III.31 as turns
+     (*Beyond the book*) has every step proved, the two isosceles triangles' base turns, but adding
+     them needs a direction no line of the figure has. The engine is to recognise from `eq-turn`'s
+     rules that turns are differences of directions, and a linear solver mod a half turn over the
+     lines' directions takes them (*Open questions*, sums). III.20 (the angle at the centre is double)
+     is the test of doubling round a half turn.
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
@@ -125,7 +144,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 |---|---|
 | 1, length | written |
 | 2, angle | written; spreads set aside |
-| 3, direction | written but for the midline (*Next*, 5) |
+| 3, direction | written, with the midline, and turns after the postulate (*Next*, 6) |
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
 | 5, circle | mostly content on chapters 1–4; the circumcentre waits on cases |
 | 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
@@ -143,11 +162,13 @@ cannot be written honestly without them, and designed as a whole.
   as equivalences are and solved by linear arithmetic over its classes. The alternative is Horn
   clauses through auxiliary constructions, as Euclid does. A hyperbolic area chapter (area as angle
   defect) needs sums too.
-  The leading plan (November 2026), with no new syntax: a relation such as `angle-add` gets its own
-  rules (the parts commute, equal parts swap in, the parts determine the whole, cancellation); the
-  engine proves from them that it is addition over an equivalence's classes; and a linear solver
-  attached to the store turns its facts into equations and shares merges with the union-find, as SMT
-  solvers share equalities. The step to accept deliberately: the solver sees sums no figure draws.
+  The plan (November 2026): sums are of turns (`eq-turn`, *Next*, 6). A turn is the difference of two
+  lines' directions, so its facts are linear equations mod a half turn; the engine is to prove from
+  `eq-turn`'s rules that it is such a difference (an equivalence closed under exchanging middles), and
+  a linear solver attached to the store turns its facts into equations and shares merges with the
+  union-find, as SMT solvers share equalities. No sum word is needed for the circle's theorems;
+  `add-turn` only if a theorem's turns do not chain. Undirected `add-angle`, with sides, is the Euclid
+  book's. The step to accept deliberately: the solver sees directions no line of the figure has.
   Named quantities (`∠bac + ∠abc = …`, a change of language) only if statements with points alone
   read badly. Built with step 3's store, if step 2 shows the need.
 - **Cases.** Horn clauses cannot split cases, and the least-model meaning depends on that. Waiting on

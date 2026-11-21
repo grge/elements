@@ -97,6 +97,14 @@ checked) and fires every other rule normally, so it computes the same closure as
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
 
+**Only rules that can help are fired** (November 2026, `relevant`): working back from what will be
+asked (the goal, or a closure's queries), `false` and the equality, through the bodies of rules whose
+heads are needed, a rule whose head is never needed is not fired. Sound: what it would derive could only
+feed rules that are cut too. Measured on the book it changes nothing, its relations being one web; it
+matters for a predicate nothing is concluded from, such as `eq-turn`, whose rules then cost nothing to
+a proof that asks for no turn. The definitions analysis likewise re-checks, after a change, only the
+predicates that depend on one whose status changed.
+
 **Definitions are abbreviations** in `saturate.ts` (November 2026): a defined predicate's facts are never
 stored. Its clauses (the definition and the theorems proven from it) do not fire; a rule that mentions
 one in its body would have it replaced by its definition, the definition's own points becoming new
@@ -223,6 +231,11 @@ Loci are built from points already placed: the line through two points of a coll
 about a placed centre whose radius is any placed segment of equal length (the compass carries a length;
 Euclid I.2 shows this is no stronger than the collapsing compass); the perpendicular bisector of two
 placed points the new point is equidistant from.
+
+Equal turns give two more (November 2026). A point whose line from a placed point must turn from a
+placed line as another pair of lines turns is on one line through that point (`turned`): directed,
+there is no second ray to choose. A point from which a placed chord is seen at a known turn is on one
+circle through the chord's ends (`seen`): the inscribed angle, directed, is the whole circle (III.21).
 
 Equal angles and supplements give loci too: a point whose angle at a placed vertex must equal a known
 angle lies on one of two rays from the vertex (either side of the placed arm), and a point making
