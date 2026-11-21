@@ -51,6 +51,9 @@ export interface LayoutSizes {
 
 export const SIZES: LayoutSizes = { nodeWidth: 194, nodeHeight: 58, columnGap: 38, rowGap: 10, laneHead: 40, lanePad: 18 }
 
+/** The arrowhead's length (the marker in WordGraph.vue). */
+export const ARROW = 11
+
 export function layoutWordGraph(input: GraphNodeIn[], laneOrder: string[], sizes: LayoutSizes = SIZES): GraphLayout {
   const { nodeWidth: W, nodeHeight: H, columnGap: GX, rowGap: GY, laneHead, lanePad } = sizes
   const byId = new Map(input.map(n => [n.id, n]))
@@ -124,8 +127,14 @@ export function layoutWordGraph(input: GraphNodeIn[], laneOrder: string[], sizes
     for (const d of deps(n)) {
       const b = nodes.get(d)!
       const x0 = a.x, y0 = a.y + H / 2, x1 = b.x + W, y1 = b.y + H / 2
-      const dx = Math.max(GX / 2, (x0 - x1) * 0.45)
-      edges.push({ from: n.id, to: d, d: `M${x0},${y0} C${x0 - dx},${y0} ${x1 + dx},${y1} ${x1},${y1}`, cross: n.lane !== byId.get(d)!.lane })
+      // The curve ends in a straight run as long as the arrowhead, so the head sits on a straight line
+      // however tight the bend before it.
+      const xe = x1 + ARROW
+      const dx = Math.max(GX / 2 - ARROW, (x0 - xe) * 0.45)
+      edges.push({
+        from: n.id, to: d, cross: n.lane !== byId.get(d)!.lane,
+        d: `M${x0},${y0} C${x0 - dx},${y0} ${xe + dx},${y1} ${xe},${y1} L${x1},${y1}`,
+      })
     }
   }
 

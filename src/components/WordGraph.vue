@@ -20,7 +20,7 @@
         <svg class="edges" :width="layout.width" :height="layout.height" aria-hidden="true">
           <defs>
             <marker v-for="m in ['plain', 'down', 'up']" :id="`${uid}-${m}`" :key="m" :class="m"
-              viewBox="0 0 8 8" refX="7.5" refY="4" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
+              viewBox="0 0 8 8" refX="7.5" refY="4" markerUnits="userSpaceOnUse" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
               <path d="M0,0 L8,4 L0,8 z" />
             </marker>
           </defs>
