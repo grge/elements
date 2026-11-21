@@ -99,6 +99,27 @@ eq-area a e c x w z:
 # The two halves a median cuts a triangle into: a-b-m and a-m-c, with m halving b-c.
 ? eq-area a b m a m c: midpoint m b c, triangle a b c
 
+# The complements (I.43): through a point k on the diagonal a-c of a parallelogram a-b-c-d, the
+# parallels to its sides cut it into two parallelograms about the diagonal and two complements,
+# e-b-f-k and h-k-g-d. The line e-k-g runs the way a-d does, from a-b to d-c, and h-k-f the way a-b
+# does, from a-d to b-c.
+complements a b c d k e f g h:
+    parallelogram a b c d
+    between a k c
+    between a e b
+    between d g c
+    between e k g
+    parallel e g a d
+    between a h d
+    between b f c
+    between h k f
+    parallel h f a b
+
+# The complements are equal, shown by their halves e-b-f and k-g-d. The diagonal halves the whole and
+# both parallelograms about it; take the halves of those two from the halves of the whole, and the
+# complements' halves are left (common notion 3).
+? eq-area e b f k g d: complements a b c d k e f g h
+
 # ══ Pythagoras ═══════════════════════════════════════════════════════════════════════════════════
 #
 # In a right triangle, the square on the side opposite the right angle equals the squares on the other

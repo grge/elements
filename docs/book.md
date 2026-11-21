@@ -249,9 +249,9 @@ seconds). Its three lemmas take 4 to 12 seconds; the rest of the chapter, 1 to 5
 carry hypotheses that only rule out degenerate figures (`distinct a e` in I.35, `distinct b x`
 in the windmill): the closure cannot argue that a point differs from another by contradiction.
 
-Left out: I.36, I.38 for bases apart and I.39–40 (the converses need same side), I.43, the
-complements (every step proves but the last cut, which needs three points apart that the closure
-cannot know apart: sixteen hypotheses for a lemma nothing else uses), I.44 (applying an area to a
+I.43, the complements, is in (November 2026): its last cut needs three points apart, which the
+convention that different names are different points now gives. Left out: I.36, I.38 for bases apart
+and I.39–40 (the converses need same side), I.44 (applying an area to a
 line, done by the planner's locus), I.48 and II.1–14 (sums).
 
 *Needs:* `eq-area` and `triangle` in the drawing layer (triangles drawn as their sides, equal areas

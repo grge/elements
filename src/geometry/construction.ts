@@ -195,13 +195,18 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
     const on = line.filter(q => q !== p && isPlaced.has(q)).sort((x, y) => rank(x) - rank(y))
     if (on.length >= 2) out.push({ kind: 'line', through: [on[0], on[1]] })
   }
-  // Parallels: p's line is known once its other point and the other line are placed.
+  // Parallels: p's line is known once the other line and one point of p's line are placed: its other
+  // point, or any placed point collinear with both (h-k-f, with h-f parallel to a-b: once k is placed,
+  // h and f are each on the parallel to a-b through k).
   for (const m of model.measures) {
     if (m.name !== 'parallel') continue
     const pairs: [string, string][] = [[m.args[0], m.args[1]], [m.args[2], m.args[3]]]
     for (const [mine, other] of [[pairs[0], pairs[1]], [pairs[1], pairs[0]]]) {
       if (!mine.includes(p) || other.includes(p)) continue
-      const through = mine[0] === p ? mine[1] : mine[0]
+      const partner = mine[0] === p ? mine[1] : mine[0]
+      const group = model.lines.find(l => l.includes(mine[0]) && l.includes(mine[1]))
+      const through = isPlaced.has(partner) ? partner
+        : group?.filter(q => q !== p && isPlaced.has(q)).sort((x, y) => rank(x) - rank(y))[0] ?? partner
       if (through === p || !isPlaced.has(through) || !other.every(q => isPlaced.has(q)) || other[0] === other[1]) continue
       // Through a point of the other line, the parallel is that line: placed already as a line locus.
       if (other.includes(through)) continue

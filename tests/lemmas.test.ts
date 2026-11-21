@@ -47,8 +47,10 @@ describe('the book', () => {
   for (const lemma of bookLemmas) {
     it(`✓ ? ${show(lemma)}`, async () => {
       await yieldToRunner()
-      // Derived, and no contradiction found by the full search (which may run out of budget).
-      const check = checkLemma(lemma, kb, undefined, { strict: true })
+      // Derived (as the page derives it: under the convention that different names are different
+      // points, where it must), and no contradiction found by the full search (which may run out of
+      // budget).
+      const check = checkLemma(lemma, kb, undefined, { strict: true, distinctNames: true })
       expect(['verified', 'unshown']).toContain(check.result)
       // A witness, as the app requires instead of the search.
       const { witness } = numericEvidence(lemma, kb)
