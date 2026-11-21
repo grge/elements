@@ -134,7 +134,7 @@ windmill a b c f d l x y:
 ? eq-area a b d f b c: windmill a b c f d l x y
 
 # f-b-c is half the square on a-b: it stands on f-b between the parallels f-b and g-a-c.
-? eq-area f b c f b a: square a b f g, between g a c, distinct a c
+? eq-area f b c f b a: square a b f g, between g a c
 
 # The square on a-b equals the rectangle on b-d that reaches the line through a parallel to b-d: their
 # halves a-b-f and l-b-d are equal, for l anywhere on that line. a-b-f is f-b-c (on f-b between
