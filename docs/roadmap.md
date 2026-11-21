@@ -130,6 +130,27 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      blocked by congruence and sides.
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
+   Chapter 5, planned (November 2026), in this order:
+   1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
+      them, no centre point: a new kind of drawing), placed (a point on the circle through three
+      placed points).
+   2. `cyclic` and III.21 (with its converse) move from chapter 3 to chapter 5; chapter 3 keeps turns.
+   3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
+      centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre
+      bisecting their angle. Turns in a circle: III.21 (axiom), III.22, III.31, III.32.
+   Decided with it:
+   - Angle-angle-side an axiom: the second half of I.26, whose first half (angle-side-angle) the book
+     already takes. Unlocks the III.3 converse and the incircle.
+   - Hypotenuse-leg an axiom of congruence: Euclid does not state it, and it follows only through
+     I.47 and length arithmetic, or a point not named. Unlocks equal tangents.
+   - III.32 (tangent and chord) with its proof's point named, the far end of the diameter at the
+     tangent point, as the midline names its points.
+   - III.14 (equal chords equally far from the centre) stated with the halves given; halving lengths
+     waits for length sums (*Open questions*, sums).
+   - III.20 waits for the Euclid book.
+   Measured before writing: III.1–3, III.17, III.26–29, III.22, III.31 and III.21's converse prove
+   today; the III.3 converse (AAS), equal tangents and their bisected angle (HL), III.32 (a point not
+   named) and III.14 (halving) do not.
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
 composing plans per definition, a change of logic (below, *Open questions*).
