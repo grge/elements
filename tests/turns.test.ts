@@ -72,6 +72,15 @@ describe('a pair of one point has no turn', () => {
   })
 }, 120_000)
 
+describe('rules see the turns the solver finds', () => {
+  // Two right angles standing on one side are equal quarter turns only by the solver; the converse
+  // of III.21 must still see them, or the circle through the four points is never found.
+  it('two right angles on a-b put a, b and their vertices on one circle', () => {
+    const [l] = parseLemmas('? cyclic a b d e: right a d b, right a e b, triangle a b d, triangle a b e')
+    expect(checkLemma(l, kb, 2_000_000, { distinctNames: true }).result).toBe('verified')
+  })
+}, 120_000)
+
 describe('the planner places points by turns', () => {
   const drawn = (text: string, free?: string[]) => {
     const rt = buildRuntimeState(kb, parseSource(text))

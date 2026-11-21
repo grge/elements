@@ -73,10 +73,10 @@ altitudes a b c d e h f:
 
 ? right c f a: altitudes a b c d e h f
 
-# As turns: c-f turns to f-a as f-a turns back, a quarter turn. Not proved. It once seemed to, through
-# a fault since fixed: a degenerate right angle (an arm of no length) became a turn equal to every
-# turn, and the engine then proved false things too (the angle at a corner right). The intended proof:
-# a-b-d-e and c-d-h-e are cyclic, their right angles standing on a-b and c-h, and turns are chased.
+# As turns: c-f turns to f-a as f-a turns back, a quarter turn. Proves: a-b-d-e and c-d-h-e are cyclic,
+# their right angles standing on a-b and c-h, and turns are chased round them; rules see turns the
+# solver finds. (It once seemed to prove through a fault since fixed: a degenerate right angle became
+# a turn equal to every turn, and false claims proved too.)
 ? eq-turn f c f a f a f c: altitudes a b c d e h f
 
 # Euler's line: the circumcentre o, the centroid g and the orthocentre h are collinear.
@@ -105,8 +105,10 @@ nine-point a b c d e f n k:
 
 ? circle n d k: nine-point a b c d e f n k
 
-# As turns: k sees d-e at the turn f does, which is to be on the circle through d, e and f. Not proved
-# (once seemed to, by the same fault as the altitudes).
+# As turns: k sees d-e at the turn f does, which is to be on the circle through d, e and f. Not proved:
+# its proof needs the midpoint of a right triangle's hypotenuse equally far from all three corners
+# (Thales' converse), which needs Apollonius' median law (a quadrance candidate). (It once seemed to
+# prove through the fault noted at the altitudes.)
 ? eq-turn k d k e f d f e: nine-point a b c d e f n k
 
 # ── circles
@@ -179,8 +181,10 @@ simson a b c o p d e f:
 
 ? collinear d e f: simson a b c o p d e f
 
-# As turns: d-e and d-f turn by nothing, one line. Not proved (once seemed to, by the same fault as the
-# altitudes). The intended proof: p-b-d-f and p-c-d-e are cyclic, by their right angles.
+# As turns: d-e and d-f turn by nothing, one line. Not proved: p-b-d-f and p-c-d-e are cyclic by their
+# right angles only if p is known off b-c and a-b, which needs two facts about lines the book does not
+# state (a line meets a circle at most twice; a point off a line is off it however the line is named).
+# With them it proves (measured). (It once seemed to prove through the fault noted at the altitudes.)
 ? eq-turn d e d f d e d e: simson a b c o p d e f
 
 # ── quadrilaterals

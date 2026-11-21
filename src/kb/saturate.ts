@@ -512,7 +512,15 @@ export class Saturation {
     }
 
     const e = this.st.equivalences.get(name)
-    if (e && args.length === 2 * e.k) { yield* this.matchEquivalence(name, e, args, s, mask); return }
+    if (e && args.length === 2 * e.k) {
+      // A solved relation's atom with every argument bound: whether it holds, solver included.
+      if (this.st.differences.has(name) && args.every(a => s.has(a))) {
+        if (this.holds({ name, args: args.map(a => s.get(a)!.v) })) yield s
+        return
+      }
+      yield* this.matchEquivalence(name, e, args, s, mask)
+      return
+    }
 
     const group = this.st.symmetries.get(name)
     for (const f of this.byName.get(name) ?? []) {
@@ -588,10 +596,14 @@ export class Saturation {
   private *join(body: readonly Predicate[], s: Subst): Generator<Subst> {
     this.work++
     if (body.length === 0) { yield s; return }
-    // Greedy: match the atom with the largest share of already-bound arguments next.
-    let best = 0, bestScore = -1
+    // Greedy: match the atom with the largest share of already-bound arguments next. An atom of a
+    // solved relation (a difference) waits until the others have bound its arguments, if they can:
+    // then it is asked of the solver too (`match`), which knows equalities no stored class has.
+    let best = 0, bestScore = -Infinity
     for (let i = 0; i < body.length; i++) {
-      const score = body[i].args.filter(a => s.has(a)).length / Math.max(1, body[i].args.length)
+      const bound = body[i].args.filter(a => s.has(a)).length
+      let score = bound / Math.max(1, body[i].args.length)
+      if (this.st.differences.has(body[i].name) && bound < body[i].args.length) score -= 1
       if (score > bestScore) { best = i; bestScore = score }
     }
     const rest = body.filter((_, i) => i !== best)

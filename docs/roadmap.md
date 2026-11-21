@@ -148,7 +148,13 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         abbreviation, its facts never stored. The contradiction was unsound turn rules: a degenerate
         right angle became a turn with a one-point line, equal to every turn (see step 6). Guarded and
         tested; the stress theorems' proofs went with it.
-      - **Why the altitudes, Simson and nine-point do not prove**, now that they are sound.
+      - **Why the altitudes, Simson and nine-point did not prove**, once sound: done (November 2026).
+        Rules saw only turns the store held, not those the solver finds, so the converse of III.21
+        never fired; now an atom of a solved relation waits until its arguments are bound and is then
+        asked of the solver (saturate.ts). The altitudes prove. The Simson line needs two facts of
+        incidence the book does not state (a line meets a circle at most twice; a point off a line is
+        off it however the line is named): with them it proves (measured), to be decided. The
+        nine-point circle needs Thales' converse, so Apollonius (*Candidates*).
       - **Return bridges for turns** (decided November 2026). Turns have bridges in (right angles,
         parallels, isosceles triangles) but none out, so what the solver proves stays in turn-language
         and theorems must be restated to meet it (the Simson line as "turns by nothing"). Wanted:
