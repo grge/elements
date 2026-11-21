@@ -57,7 +57,7 @@ describe('the book', () => {
       // is false, or there is a bug.
       const failing = check.facts.filter(f => relationOf(f) && f.args.every(a => !a.includes('#') && witness!.has(a)) && !holds(f, witness!))
       expect(failing.map(f => `${f.name} ${f.args.join(' ')}`)).toEqual([])
-    }, 30000)
+    }, 120_000)   // the full search for a contradiction runs to the budget of work (about 45 s at most)
   }
 })
 

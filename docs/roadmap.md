@@ -67,9 +67,15 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      draw their arcs; the note was likely marks waiting on a slow closure.
    - Disconnected parts of a figure are placed independently and can overlap (three triangles typed
      on the scratchpad). A layout question, not yet looked at.
-5. **Pay back what was done for speed.** Pythagoras with whole squares (five times the budget today);
-   guards whose only reason was the join, each rechecked; I.43, the complements; the midline of
-   chapter 3.
+5. **Pay back what was done for speed.**
+   - Pythagoras with whole squares: done (November 2026). The windmill gives its squares as
+     squares, `square a b f g` and `square c b d e`; its two lemmas prove in about 15 s each. The
+     budget of work now binds (2.5 million, saturate.ts `MAX_WORK`), the budget of derivations is a
+     safety valve. The cost: pages that run out take longer to give up (*Beyond the book* 81 s to
+     111 s), and the tests' full search for a contradiction runs to the budget (the lemma suite 154 s
+     to 303 s).
+   - Guards whose only reason was the join, each rechecked; I.43, the complements; the midline of
+     chapter 3.
 6. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
    axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
    proof that leans on `parallel` being an equivalence leans on I.30.

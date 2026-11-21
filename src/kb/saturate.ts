@@ -25,11 +25,12 @@ const OBJECT = '__object__'
 const SEP = '\u0001'
 
 /**
- * The default budget of work (`SaturateOptions.maxWork`), alongside the budget of derivations: about
- * what 200 000 derivations cost on the heaviest pages before definitions were abbreviated, so a
- * search that runs out gives up when it used to (the checker's, and the marks closure's).
+ * The default budget of work (`SaturateOptions.maxWork`): what a search may do before it gives up (the
+ * checker's, and the marks closure's). Work is in proportion to time, so this, not the budget of
+ * derivations, is what binds (the checker's derivations are a distant safety valve). Enough for
+ * Pythagoras with whole squares (2.1 million), and a page that runs out gives up in under a minute.
  */
-export const MAX_WORK = 4_000_000
+export const MAX_WORK = 2_500_000
 
 interface Binding { v: string; flex: boolean }
 type Subst = Map<string, Binding>

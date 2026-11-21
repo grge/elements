@@ -156,7 +156,7 @@ function withMissingHeadObjects(seeds: readonly GroundPredicate[], lemma: Lemma)
 export function checkLemma(
   lemma: Lemma,
   kb: KnowledgeBase,
-  maxDerivations = 200_000,
+  maxDerivations = 2_000_000,   // a safety valve: the budget of work binds (saturate.ts MAX_WORK)
   options: CheckOptions = {},
 ): CheckResponse {
   const seeds = withMissingHeadObjects(

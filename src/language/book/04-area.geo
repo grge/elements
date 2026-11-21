@@ -109,18 +109,15 @@ eq-area a e c x w z:
 
 # The windmill: Euclid's figure for Pythagoras, on a right triangle a-b-c with its right angle at a.
 #
-# Its squares are given by the parts the proof uses: the square on a-b by its corner at b, its side b-f
-# and its side through a, which runs along a-c; the square on b-c by its corner at b and its side b-d.
-# l is on the line through a parallel to b-d, which cuts the square on b-c in two (Euclid's l is where
-# it meets the far side). The squares stand outside the triangle, which is said with the points where
-# the windmill's lines cross: f-c crosses a-b at x, and a-d crosses b-c at y.
-windmill a b c f d l x y:
+# The square a-b-f-g on a-b, its side g-a running on along a-c (which makes the right angle at a), and
+# the square c-b-d-e on b-c. l is on the line through a parallel to b-d, which cuts the square on b-c
+# in two (Euclid's l is where it meets the far side). The squares stand outside the triangle, which is
+# said with the points where the windmill's lines cross: f-c crosses a-b at x, and a-d crosses b-c at y.
+windmill a b c f g d e l x y:
     triangle a b c
-    right a b f
-    eq-lines b a b f
-    parallel b f a c
-    right c b d
-    eq-lines b c b d
+    square a b f g
+    between g a c
+    square c b d e
     parallel b d a l
     between f x c
     between a x b
@@ -131,16 +128,15 @@ windmill a b c f d l x y:
 
 # The windmill's two triangles are equal: a-b-d and f-b-c have b-a = b-f and b-d = b-c, and their angles
 # at b are each a right angle and the angle a-b-c together.
-? eq-area a b d f b c: windmill a b c f d l x y
+? eq-area a b d f b c: windmill a b c f g d e l x y
 
 # f-b-c is half the square on a-b: it stands on f-b between the parallels f-b and g-a-c.
 ? eq-area f b c f b a: square a b f g, between g a c
 
 # The square on a-b equals the rectangle on b-d that reaches the line through a parallel to b-d: their
 # halves a-b-f and l-b-d are equal, for l anywhere on that line. a-b-f is f-b-c (on f-b between
-# parallels), which is a-b-d (the windmill), which is l-b-d (on b-d between parallels). Written with
-# whole squares the proof is the same, but takes the checker five times its budget.
-? eq-area a b f l b d: windmill a b c f d l x y
+# parallels), which is a-b-d (the windmill), which is l-b-d (on b-d between parallels).
+? eq-area a b f l b d: windmill a b c f g d e l x y
 
 # ══ Squaring a figure ════════════════════════════════════════════════════════════════════════════
 #
