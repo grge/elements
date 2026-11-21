@@ -262,6 +262,24 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    tried before their turns are asked), so the budget of work is now 3 million; engine efficiency is
    the next real limit (semi-naive evaluation, indexed joins, cheaper similarity matching).
 
+   **The rest of the build-out, before engine work and the reorganisation** (decided November 2026,
+   in this order):
+   1. Chapter 7, regular figures (the triangle, square, hexagon, pentagon and fifteen-gon in and about
+      a circle), with Euclid's ratio constructions as words (dividing a segment, the fourth
+      proportional, the golden section); and an exploration of Ceva and Menelaus (products of three
+      ratios, which `eq-ratio` cannot yet say), not a commitment to support them.
+   2. The quarter and Apollonius revisited: how the engine could discover quadrance laws with
+      coefficients (they would bring the nine-point circle, Thales' converse, III.14 in Euclid's form).
+   3. An exploration of conics: what a chapter would need, before the reorganisation decides its shape.
+   4. Every word of the plane a construction: `quad-sum` placed by the planner (the last that is not;
+      `right` is placed through its definition). Later each book chooses which count as its tools.
+      `eq-point` is not placed by design (different names, different points): a question for the
+      reorganisation.
+   Deferred past the reorganisation: signed area (its shape understood: a difference of areas on the
+   same lattice, with bridges from figures cut into parts), the mark for equal ratios, and the
+   interface work (givens the reader chooses, Byrne's fills, overlapping figures). Then engine work
+   (semi-naive evaluation, indexed joins, cheaper similarity), then the reorganisation.
+
 **Candidates**, tools we expect to adopt when a chapter needs them; not yet planned (November 2026):
 
 - **The quarter and Apollonius' median law**, quadrance's laws with coefficients, which one additive
