@@ -243,6 +243,13 @@ quad-sum b a b c a c: between a b d, distinct a b, distinct b d, eq-angle a b c 
 # where the angle form cannot: the right angle at the foot of a perpendicular, towards either end.
 quad-sum b a b c a c: eq-turn b a b c b c b a, triangle a b c
 
-# Hypotenuse-leg: two right triangles with the hypotenuse and a leg equal have the other legs equal.
-# Euclid does not state it; here it is Pythagoras twice, and taking away.
-? eq-lines b c e f: right a b c, right d e f, eq-lines a c d f, eq-lines a b d e
+# Two right triangles, at b and at e, with the hypotenuses equal and a leg equal.
+right-triangles a b c d e f:
+    right a b c
+    right d e f
+    eq-lines a c d f
+    eq-lines a b d e
+
+# Hypotenuse-leg: their other legs are equal too. Euclid does not state it; here it is Pythagoras
+# twice, and taking away.
+? eq-lines b c e f: right-triangles a b c d e f

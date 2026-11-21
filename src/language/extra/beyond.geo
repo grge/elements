@@ -153,17 +153,7 @@ chord-bisector o a b m:
 
 ? eq-lines a m m b: chord-bisector o a b m
 
-# Tangents from a point to a circle are equal.
-#
-# Proves: hypotenuse-leg, which Euclid would argue by comparing sizes, is Pythagoras twice in
-# quadrances, and taking away (chapter 4).
-tangents o t s p:
-    circle o t s
-    right o t p
-    right o s p
-    distinct t s
-
-? eq-lines p t p s: tangents o t s p
+# Tangents from a point to a circle are equal: now in the book (chapter 5, tangents), by quadrance.
 
 # The Simson line: the feet of the perpendiculars from a point p on the circumcircle to the sides are
 # collinear.
@@ -231,5 +221,13 @@ isosceles-trapezoid a b c d:
 # Equal chords are equally far from the centre (III.14), their halves given equal: Pythagoras in
 # quadrances. Proves, but has no figure: the planner cannot draw a chord with a given midpoint (d is c
 # doubled through n, a reflection it has no move for), so the midpoint is only checked, and fails.
-? eq-lines o m o n: circle o a b, circle o a c, circle o a d, eq-lines a m c n, midpoint m a b, midpoint n c d
+equal-chord-halves o a b c d m n:
+    circle o a b
+    circle o a c
+    circle o a d
+    eq-lines a m c n
+    midpoint m a b
+    midpoint n c d
+
+? eq-lines o m o n: equal-chord-halves o a b c d m n
 

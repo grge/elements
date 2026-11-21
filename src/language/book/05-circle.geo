@@ -36,16 +36,36 @@ cyclic a b c d: eq-turn c a c b d a d b, triangle a b c, triangle a b d
 
 # ══ Chords ═══════════════════════════════════════════════════════════════════════════════════════
 
+# A chord a-b of the circle about o, and its midpoint m.
+chord-midpoint o a b m:
+    circle o a b
+    midpoint m a b
+    distinct o m
+
 # The line from the centre to a chord's midpoint is perpendicular to it (III.1, III.3): the triangles
 # o-m-a and o-m-b have their sides equal.
-? right a m o: circle o a b, midpoint m a b, distinct o m
+? right a m o: chord-midpoint o a b m
 
-# And the perpendicular from the centre bisects the chord (III.3's converse): Pythagoras on both sides
-# of its foot, in quadrances, the quarter turn there reaching both ends whichever side of m they lie.
-? eq-lines a m m b: circle o a b, collinear a m b, right o m a, distinct o m
+# A chord a-b, and the foot m of the perpendicular from the centre to its line.
+chord-foot o a b m:
+    circle o a b
+    collinear a m b
+    right o m a
+    distinct o m
+
+# The perpendicular from the centre bisects the chord (III.3's converse): Pythagoras on both sides of
+# its foot, in quadrances, the quarter turn there reaching both ends whichever side of m they lie.
+? eq-lines a m m b: chord-foot o a b m
+
+# Two equal chords, a-b and c-d, of the circle about o.
+equal-chords o a b c d:
+    circle o a b
+    circle o a c
+    circle o a d
+    eq-lines a b c d
 
 # Equal chords stand on equal angles at the centre (III.26 to III.29): side-side-side.
-? eq-angle a o b c o d: circle o a b, circle o a c, circle o a d, eq-lines a b c d
+? eq-angle a o b c o d: equal-chords o a b c d
 
 # ══ Tangents ═════════════════════════════════════════════════════════════════════════════════════
 
@@ -61,31 +81,66 @@ tangent-from o e p b f:
 
 ? right o b p: tangent-from o e p b f
 
+# The two tangents from p to the circle about o, touching it at a and b.
+tangents o a b p:
+    circle o a b
+    right o a p
+    right o b p
+
 # Two tangents from one point are equal (hypotenuse-leg, by quadrance: Pythagoras twice).
-? eq-lines p a p b: circle o a b, right o a p, right o b p
+? eq-lines p a p b: tangents o a b p
 
 # And the line from that point to the centre halves the angle between them.
-? eq-angle a p o b p o: circle o a b, right o a p, right o b p
+? eq-angle a p o b p o: tangents o a b p
 
-# A point on the line halving an angle is as far from both its sides (the incircle's centre is such a
-# point for all three angles, IV.4): the feet of the perpendiculars from it make triangles with two
-# angles and a side equal (angle-angle-side).
-? eq-lines i e i f: eq-angle b a i i a c, between a e b, right i e a, between a f c, right i f a, triangle a b c
+# A point i on the line halving the angle at a of the triangle a-b-c, and the feet e and f of the
+# perpendiculars from it to the sides a-b and a-c.
+bisector-feet a b c i e f:
+    triangle a b c
+    eq-angle b a i i a c
+    between a e b
+    right i e a
+    between a f c
+    right i f a
+
+# It is as far from both sides (the incircle's centre is such a point for all three angles, IV.4): the
+# feet make triangles with two angles and a side equal (angle-angle-side).
+? eq-lines i e i f: bisector-feet a b c i e f
 
 # ══ Turns in a circle ═══════════════════════════════════════════════════════════════════════════
 
+# Four points a, b, c and d on the circle about o.
+inscribed o a b c d:
+    circle o a b
+    circle o a c
+    circle o a d
+
 # Angles in the same segment (III.21), the axiom above said of a circle about a centre.
-? eq-turn c a c b d a d b: circle o a b, circle o a c, circle o a d
+? eq-turn c a c b d a d b: inscribed o a b c d
 
 # The opposite angles of a quadrilateral in a circle (III.22), as turns: seen from b and from d, the
 # turn from the side to a to the side to c is the same. Euclid: the angles make two right angles; the
 # same, directed.
-? eq-turn b a b c d a d c: circle o a b, circle o a c, circle o a d
+? eq-turn b a b c d a d c: inscribed o a b c d
+
+# A point b on the semicircle on the diameter a-c, about o.
+semicircle a b c o:
+    circle o a b
+    circle o a c
+    between a o c
 
 # The angle in a semicircle is right (III.31): the turn at b to the diameter's ends is its own reverse.
-? eq-turn b a b c b c b a: circle o a b, circle o a c, between a o c
+? eq-turn b a b c b c b a: semicircle a b c o
+
+# The tangent a-t at a, a chord a-b, a point c of the circle; and e, the far end of the diameter
+# through a, the point the proof needs (named, as the midline names its points).
+tangent-chord o a b c t e:
+    circle o a b
+    circle o a c
+    right o a t
+    between a o e
+    circle o a e
 
 # The angle between a tangent and a chord is the angle in the other segment (III.32): the tangent a-t
-# turns to the chord a-b as the chord is seen from c. Its proof's point is named: e, the far end of the
-# diameter through a, so that a-b-e is the angle in a semicircle.
-? eq-turn a t a b c a c b: circle o a b, circle o a c, right o a t, between a o e, circle o a e
+# turns to the chord a-b as the chord is seen from c, a-b-e being the angle in a semicircle.
+? eq-turn a t a b c a c b: tangent-chord o a b c t e
