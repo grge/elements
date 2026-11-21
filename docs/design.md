@@ -178,6 +178,7 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
 | `supp a b c d e f` | its arms; its marks are equal angles' arcs, d-e-f's on its other side (*Marks*). Side by side along a straight line, no mark: the line says it |
+| `eq-ratio a b c d e f g h` | nothing yet: equal ratios have no mark decided |
 | `cyclic a b c d` | the circle through the four points, with no centre point (its centre is no point of the figure) |
 | `eq-turn a b c d e f g h` | nothing of its own; its marks are turning arrows where each pair of lines meets (*Marks*) |
 | `right a b c` | Byrne's small square at the vertex, and beneath it, fainter, its definition: a-b continued past b to its extension point, the right angle beside it squared too |

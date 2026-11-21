@@ -262,6 +262,19 @@ const TABLE: Relation[] = [
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
   },
   {
+    // a-b is to c-d as e-f is to g-h: equal ratios of lengths (chapter 6). Measured as a difference of
+    // logarithms, so the tolerance is relative; a segment of one point has no ratio (nothing to
+    // measure). Placed by the planner (a fourth proportional; the circle of Apollonius); draws nothing
+    // of its own (its mark is undecided).
+    name: 'eq-ratio', arity: 8, depicted: true,
+    read: (args, m) => m.measure('eq-ratio', args),
+    ...measured(P => {
+      const [ab, cd, ef, gh] = [d(P[0], P[1]), d(P[2], P[3]), d(P[4], P[5]), d(P[6], P[7])]
+      if ([ab, cd, ef, gh].some(x => x < 1e-12)) return NaN
+      return Math.abs(Math.log(ab / cd) - Math.log(ef / gh))
+    }),
+  },
+  {
     // a, b, c and d lie on one circle, its centre not named. Placed by the planner on the circle through
     // three placed points; drawn as that circle. Points named twice are one point: three points are on
     // a circle unless they are on a line, and two always are.

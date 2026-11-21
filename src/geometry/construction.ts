@@ -165,6 +165,16 @@ export type Locus =
   /** The circle through three placed points (cyclic: a fourth point on their circle). */
   | { kind: 'through'; points: [string, string, string] }
   /**
+   * The circle about `center` whose radius is the fourth proportional |times[0]|·|times[1]| / |over|
+   * (eq-ratio, one length unknown: Euclid VI.12).
+   */
+  | { kind: 'proportional'; center: string; times: [[string, string], [string, string]]; over: [string, string] }
+  /**
+   * The points whose distances to `from` and `to` are as |ratio[0]| to |ratio[1]|: the circle of
+   * Apollonius, or the perpendicular bisector when the ratio is one (eq-ratio, two lengths from p).
+   */
+  | { kind: 'apollonius'; from: string; to: string; ratio: [[string, string], [string, string]] }
+  /**
    * The line through `through` turned from the line `base` by the turn from line `turn[0..1]` to line
    * `turn[2..3]` (`sign` 1), or back by it (`sign` -1): a turn copied onto a line.
    */
@@ -299,6 +309,32 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
       }
     }
   }
+  // Equal ratios: a-b : c-d = e-f : g-h, as lengths L1·L4 = L2·L3. With p in one segment and the rest
+  // placed, p's segment has a known length (a circle about its other end); with p in two segments whose
+  // lengths stand as a ratio, the ratio of p's distances to their other ends is known (Apollonius).
+  for (const m of model.measures) {
+    if (m.name !== 'eq-ratio' || !m.args.every(q => q === p || isPlaced.has(q))) continue
+    const L = [0, 1, 2, 3].map(i => [m.args[2 * i], m.args[2 * i + 1]] as [string, string])
+    const mine = L.map((seg, i) => seg.includes(p) ? i : -1).filter(i => i >= 0)
+    const other = (seg: [string, string]) => seg[0] === p ? seg[1] : seg[0]
+    if (mine.some(i => L[i][0] === L[i][1] || (L[i][0] === p && L[i][1] === p))) continue
+    if (mine.length === 1) {
+      const i = mine[0]
+      // L1 = L2·L3/L4, L2 = L1·L4/L3, L3 = L1·L4/L2, L4 = L2·L3/L1.
+      const [t1, t2, o] = i === 0 ? [L[1], L[2], L[3]] : i === 1 ? [L[0], L[3], L[2]] : i === 2 ? [L[0], L[3], L[1]] : [L[1], L[2], L[0]]
+      if ([t1, t2, o].some(seg => seg[0] === seg[1])) continue
+      out.push({ kind: 'proportional', center: other(L[i]), times: [t1, t2], over: o })
+    } else if (mine.length === 2) {
+      // Lengths standing as a ratio: L1/L2 = L3/L4 and L1/L3 = L2/L4 (and their mirrors).
+      const [i, j] = mine
+      const pairs: Record<string, [number, number]> = { '0,1': [2, 3], '2,3': [0, 1], '0,2': [1, 3], '1,3': [0, 2] }
+      const rest = pairs[`${i},${j}`]
+      if (!rest) continue
+      const [u, v] = [other(L[i]), other(L[j])]
+      if (u === v || u === p || v === p) continue
+      out.push({ kind: 'apollonius', from: u, to: v, ratio: [L[rest[0]], L[rest[1]]] })
+    }
+  }
   // Four points on one circle: three placed, the fourth on their circle.
   for (const m of model.measures) {
     if (m.name !== 'cyclic' || m.args.filter(q => q === p).length !== 1) continue
@@ -362,7 +398,7 @@ function pivots(l: Locus): string[] {
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn', 'cyclic'].includes(m.name)).length
+    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn', 'cyclic', 'eq-ratio'].includes(m.name)).length
 }
 
 const DP_LIMIT = 18
@@ -583,6 +619,24 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
       const v = g(locus.at), d = sub(g(locus.to), v)
       return Math.hypot(...d) < 1e-12 ? null : { kind: 'line', p: v, d: [-d[1], d[0]] }
     }
+    case 'proportional': {
+      const len = ([x, y]: [string, string]) => dist(g(x), g(y))
+      const over = len(locus.over)
+      if (over < 1e-12) return null
+      const r = len(locus.times[0]) * len(locus.times[1]) / over
+      return r < 1e-12 ? null : { kind: 'circle', c: g(locus.center), r }
+    }
+    case 'apollonius': {
+      const len = ([x, y]: [string, string]) => dist(g(x), g(y))
+      const [u, v] = [g(locus.from), g(locus.to)]
+      const den = len(locus.ratio[1]), duv = dist(u, v)
+      if (den < 1e-12 || duv < 1e-12) return null
+      const k = len(locus.ratio[0]) / den
+      if (Math.abs(k - 1) < 1e-9) { const d = sub(v, u); return { kind: 'line', p: [(u[0] + v[0]) / 2, (u[1] + v[1]) / 2], d: [-d[1], d[0]] } }
+      // |pu| = k|pv|: centre (u - k²v)/(1 - k²), radius k|uv|/|1 - k²|.
+      const k2 = k * k
+      return { kind: 'circle', c: [(u[0] - k2 * v[0]) / (1 - k2), (u[1] - k2 * v[1]) / (1 - k2)], r: k * duv / Math.abs(1 - k2) }
+    }
     case 'through': {
       const [a, b, c] = locus.points.map(g)
       const found = circumcircle(a, b, c)
@@ -744,6 +798,8 @@ export function describeLocus(l: Locus): string {
     case 'thales': return `the circle on ${n(l.ends)}`
     case 'perpendicular': return `the perpendicular to ${n([l.at, l.to])} at ${n([l.at])}`
     case 'through': return `the circle through ${n(l.points)}`
+    case 'proportional': return `the circle about ${n([l.center])} with radius the fourth proportional to ${n(l.over)}, ${n(l.times[0])} and ${n(l.times[1])}`
+    case 'apollonius': return `the points whose distances to ${n([l.from])} and ${n([l.to])} are as ${n(l.ratio[0])} to ${n(l.ratio[1])}`
     case 'turned': return `the line through ${n([l.through])} turned ${l.sign > 0 ? 'from' : 'back from'} ${n(l.base)} as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
     case 'seen': return `the circle through ${n(l.ends)} on which ${n(l.ends)} is seen as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
   }

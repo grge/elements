@@ -77,7 +77,7 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 5. **Pay back what was done for speed.**
    - Pythagoras with whole squares: done (November 2026). The windmill gives its squares as
      squares, `square a b f g` and `square c b d e`; its two lemmas prove in about 15 s each. The
-     budget of work now binds (2.5 million, saturate.ts `MAX_WORK`), the budget of derivations is a
+     budget of work now binds (2.5 million then, 3 million since chapter 6, saturate.ts `MAX_WORK`), the budget of derivations is a
      safety valve. The cost: pages that run out take longer to give up (*Beyond the book* 81 s to
      111 s), and the tests' full search for a contradiction runs to the budget (the lemma suite 154 s
      to 303 s).
@@ -248,6 +248,20 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    lemma must stay ✓; *Beyond the book* is a regression set) and the index and graph views, which
    show the vocabulary and what rests on what.
 
+   Then chapter 6, ratio (November 2026), first draft: done. `eq-ratio a b c d e f g h` (a-b is to c-d
+   as e-f is to g-h) is a word of the plane: measured (a difference of logarithms), placed (a fourth
+   proportional: a circle of computed radius; the circle of Apollonius), drawing nothing of its own
+   yet (its mark undecided). Its rules make it, by what the engine proves, a difference over equal
+   lengths with a faithful rule: ratios are solved by the turns' lattice, with no new engine. Axioms:
+   the intercept theorem (VI.2) in four forms with its converse; similar triangles by turns, direct
+   and mirror (as III.21 is for the circle, no sides); and, in chapter 3, I.6 in turns. Proved: three
+   parallels cut lines proportionally, the midline (parallel and half as long) without named points,
+   the medians' one to two, crossing chords (III.35), the angle bisector (VI.3, its proof's point
+   named), the mean proportional (VI.13). The plain midline and Varignon in *Beyond the book* follow.
+   Similarity by turns costs: the windmill's proof went over its budget again (pairs of triangles
+   tried before their turns are asked), so the budget of work is now 3 million; engine efficiency is
+   the next real limit (semi-naive evaluation, indexed joins, cheaper similarity matching).
+
 **Candidates**, tools we expect to adopt when a chapter needs them; not yet planned (November 2026):
 
 - **The quarter and Apollonius' median law**, quadrance's laws with coefficients, which one additive
@@ -303,7 +317,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 | 3, direction | written, with the midline, and turns after the postulate (*Next*, 6) |
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
 | 5, circle | first draft (November 2026): chords, tangents, turns in a circle, with `cyclic`; III.14 waits for the quarter, III.20 for the Euclid book |
-| 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
+| 6, ratio | first draft (November 2026): `eq-ratio` (a difference of logarithms, solved as turns are), the intercept theorem, similarity by turns; parallels, the midline, the medians, crossing chords, the angle bisector, the mean proportional |
 | 7, regular figures | content, on all the above |
 
 ### Open questions

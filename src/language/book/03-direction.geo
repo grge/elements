@@ -310,6 +310,9 @@ eq-turn b a b c e d e f: eq-turn b a b c b c b a, triangle a b c, eq-turn e d e 
 # and c mirror images. (I.5, directed.)
 eq-turn b a b c c b c a: eq-lines a b a c, distinct a b, distinct b c
 
+# And back (I.6, directed): a triangle whose base turns are mirror images has its legs equal.
+eq-lines a b a c: eq-turn b a b c c b c a, triangle a b c
+
 # ── propositions
 
 # Parallels are turned to alike by any line: corresponding angles, without sides.

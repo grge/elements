@@ -75,8 +75,19 @@ Each taken as given here to get on; each worth asking whether it can become a th
 - **A line meets a circle at most twice** (chapter 2, *Chapter 1's debts*): Euclid's III.2 and III.10
   come near it; here an axiom, said with equal lengths because `circle` in a body would cycle its
   definition. (November 2026)
+- **The intercept theorem** (VI.2, chapter 6), four forms and the converse: Euclid proves it through
+  areas compared by Book V's theory, which the book does not have; signed area might make it a
+  theorem. (November 2026)
+- **Similar triangles by turns** (chapter 6), direct and mirror: VI.4 to VI.6 in Euclid, an axiom
+  here, the way III.21 is; with it, the intercept forms might follow, and some be dropped. (November
+  2026)
+- **I.6 in turns** (chapter 3): equal base turns make equal legs. Euclid's I.6 is undirected, a theorem
+  by I.4; here a bridge. (November 2026)
 - **All right angles turn alike**: Euclid's fourth postulate, directed; a postulate there too.
   (November 2026)
+
+- **The budget of work** rose to 3 million for chapter 6 (the windmill again). Each theory added has
+  pressed the windmill; the engine's efficiency, not the book, is the limit. (November 2026)
 
 ## Constructions
 

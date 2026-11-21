@@ -32,7 +32,7 @@ const SEP = '\u0001'
  * derivations, is what binds (the checker's derivations are a distant safety valve). Enough for
  * Pythagoras with whole squares (2.1 million), and a page that runs out gives up in under a minute.
  */
-export const MAX_WORK = 2_500_000
+export const MAX_WORK = 3_000_000
 
 interface Binding { v: string; flex: boolean }
 type Subst = Map<string, Binding>

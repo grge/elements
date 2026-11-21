@@ -263,6 +263,10 @@ about a placed centre whose radius is any placed segment of equal length (the co
 Euclid I.2 shows this is no stronger than the collapsing compass); the perpendicular bisector of two
 placed points the new point is equidistant from.
 
+Equal ratios (`eq-ratio`, November 2026) give two: with one length of the four unknown, a circle about
+its known end whose radius is the fourth proportional (`proportional`, VI.12); with two lengths from
+the point standing as a ratio, the circle of Apollonius (or the perpendicular bisector, the ratio one).
+
 Four points on one circle (`cyclic`, November 2026) put the fourth on the circle through the other
 three, once those are placed (`through`); the figure draws that circle with no centre point.
 

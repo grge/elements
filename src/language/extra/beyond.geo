@@ -11,8 +11,9 @@
 
 # The triangle midpoint theorem: the segment joining two sides' midpoints is parallel to the third.
 #
-# Blocked by a point no hypothesis names (the proof draws d-e doubled to f), and by sides (the second
-# parallelogram needs its diagonals' crossing). Chapter 3's midline gives both points, and proves.
+# Proves, by chapter 6: the midpoints cut the two sides in one ratio, and the intercept theorem's
+# converse makes d-e parallel to b-c. (Chapter 3's midline, without ratio, needs its proof's points
+# named; chapter 6's midsegment says it plainly, half as long too.)
 midline-plain a b c d e:
     triangle a b c
     midpoint d a b
@@ -185,7 +186,7 @@ simson a b c o p d e f:
 
 # Varignon: the midpoints of a quadrilateral's sides make a parallelogram.
 #
-# Blocked by the midline only: given it, this proves at once (parallels to one line are parallel).
+# Proves, by chapter 6's midline: both sides are parallel to the diagonal a-c, so to each other.
 varignon a b c d p q r s:
     triangle a b c
     triangle a c d

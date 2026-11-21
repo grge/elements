@@ -41,7 +41,7 @@ govern it, then builds the constructions and proves the results it makes possibl
 | 3 | Direction | parallel lines | the parallel through a point; alternate angles; the angle sum; parallelograms |
 | 4 | Area | equal area (of triangles) | Pythagoras; squaring a polygon, a triangle, a rectangle |
 | 5 | Circle | four points on one circle (`cyclic`), and turns in it | chords, tangents (`tangent-from`); angles in a circle as turns; the incircle's step |
-| 6 | Ratio | equal ratios | similar triangles; dividing segments; fourth and mean proportionals; the golden section |
+| 6 | Ratio | equal ratios (`eq-ratio`), solved as turns are | the intercept theorem; similar triangles by turns; the midline, the medians, crossing chords, the angle bisector, the mean proportional |
 | 7 | Regular figures | (uses all) | the triangle, square, hexagon, pentagon and fifteen-gon in a circle |
 
 This fits the engine: each new equality is a relation whose equivalence, symmetries and substitution

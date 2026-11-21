@@ -49,11 +49,13 @@ describe('turns in the book', () => {
     expect(equivalences.get('eq-turn')?.k).toBe(4)
   })
 
-  it('from a turn only turns, circles, (no turn) parallels and (a quarter turn) quadrances are concluded', () => {
+  it('what is concluded from a turn: turns, circles, parallels (no turn), quadrances (a quarter turn), equal legs (I.6), ratios (similar triangles)', () => {
     // So a proof that asks for none of them never fires their rules. The parallel comes back through
     // the solver: lines that turn by nothing run the same way (the difference's faithful rule).
-    const from = new Set(bookRules.filter(r => r.body.some(b => b.name === 'eq-turn' || b.name === 'cyclic')).map(r => r.head.name))
-    expect([...from].sort()).toEqual(['cyclic', 'eq-turn', 'parallel', 'quad-sum'])
+    // Definitions only say what a word is (a figure that has a turn in it): not conclusions.
+    const defined = new Set([...kb.definitions()].filter(([, d]) => d.kind === 'definition').map(([n]) => n))
+    const from = new Set(bookRules.filter(r => !defined.has(r.head.name) && r.body.some(b => b.name === 'eq-turn' || b.name === 'cyclic')).map(r => r.head.name))
+    expect([...from].sort()).toEqual(['cyclic', 'eq-lines', 'eq-ratio', 'eq-turn', 'parallel', 'quad-sum'])
     expect(analyseStructure(kb.allRules()).differences.get('eq-turn')?.faithful?.head.name).toBe('parallel')
   })
 })
