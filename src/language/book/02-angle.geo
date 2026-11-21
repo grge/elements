@@ -93,6 +93,13 @@ eq-angle b a c e d f: eq-lines b a e d, eq-lines b c e f, eq-angle a b c d e f
 eq-angle a b c d e f: eq-lines b a e d, eq-lines b c e f, eq-lines a c d f
 eq-lines b a e d: eq-angle a b c d e f, eq-angle b c a e f d, eq-lines b c e f, triangle a b c
 
+# Angle-angle-side, the second half of I.26: two angles and a side that is not between them, equal,
+# then the triangles are equal. An axiom here as angle-side-angle is (Euclid argues it by comparing
+# sizes). The side may be opposite either angle: opposite the first (b-c, opposite a), or the second
+# (a-c, opposite b).
+eq-lines a b d e: eq-angle b a c e d f, eq-angle a b c d e f, eq-lines b c e f, triangle a b c
+eq-lines b c e f: eq-angle b a c e d f, eq-angle a b c d e f, eq-lines a c d f, triangle a b c
+
 
 # ── supplements: two angles that together make a straight line, related without adding them
 
@@ -128,6 +135,10 @@ eq-angle a b c d e f:
     distinct d e
     distinct e h
     eq-angle d e f f e h
+
+# A right angle's arms are two lines: on one line an angle and the one beside it are nothing and two
+# right angles, never equal. Said through right's definition, so that right stays a definition.
+triangle a b c: between a b d, eq-angle a b c c b d, distinct a b, distinct b d, distinct b c, distinct a c, distinct c d
 
 # ══ Triangles ════════════════════════════════════════════════════════════════════════════════════
 

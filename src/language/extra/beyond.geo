@@ -143,8 +143,8 @@ thales-converse a b c o:
 
 # The perpendicular from the centre to a chord bisects it.
 #
-# Blocked by angle-angle-side (the second half of Euclid's I.26), which argues by comparing sizes: the
-# book takes side-side-side and angle-side-angle as axioms, but not this.
+# Proves, without angle-angle-side: Pythagoras in quadrances on both sides of the foot, reached from
+# the quarter turn there, which knows no sides (chapters 2 and 4).
 chord-bisector o a b m:
     circle o a b
     collinear a m b
