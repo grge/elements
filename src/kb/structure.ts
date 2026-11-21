@@ -50,7 +50,16 @@ export interface Structure {
  * linear equations in the pairs' values, which a solver may combine (saturate.ts). Turns are the
  * differences of lines' directions; `pairs` (parallel) says which lines have one direction.
  */
-export interface Difference { pairs: string | null }
+export interface Difference {
+  pairs: string | null
+  /**
+   * The rule, if the book states one, concluding the pairs' equivalence from a difference of nothing
+   * (`parallel a b c d: eq-turn a b c d a b a b, …`: lines that turn by nothing run the same way).
+   * The engine implements it through the solver (saturate.ts): pairs whose values the solver shows
+   * equal are asserted equivalent, when the rule's other atoms hold of them.
+   */
+  faithful: Rule | null
+}
 
 const MAX_SYMMETRY_ARITY = 5
 const MAX_BLOCK = 4
@@ -237,7 +246,18 @@ function analyse(rules: readonly Rule[]): Structure {
       const both = [...fragment, ...own(q), ...rules.filter(r => r.head.name === p && r.body.every(b => b.name === p || b.name === q) && !fragment.includes(r))]
       if (proves(both, [atom(p, x), atom(q, [x[0], x[1], 'y0', 'y1'])], atom(p, ['y0', 'y1', ...x.slice(2)]))) { pairs = q; break }
     }
-    differences.set(p, { pairs })
+    // Faithful: a rule q(a b c d) whose body says p(a b c d a b a b), the rest of its body about a, b,
+    // c and d only (their guards).
+    let faithful: Rule | null = null
+    if (pairs) {
+      for (const r of rules) {
+        if (r.head.name !== pairs || r.head.args.length !== 4) continue
+        const [a, b, c, d] = r.head.args
+        const zero = r.body.find(x => x.name === p && x.args.join(' ') === [a, b, c, d, a, b, a, b].join(' '))
+        if (zero && r.body.every(x => x === zero || x.args.every(v => [a, b, c, d].includes(v)))) { faithful = r; break }
+      }
+    }
+    differences.set(p, { pairs, faithful })
   }
 
   return { arity, equivalences, equality, congruent, symmetries, differences }

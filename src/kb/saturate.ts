@@ -124,6 +124,8 @@ export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
       defined.set(name, status.clause)
     }
   }
+  // A difference's faithful rule is implemented by its solver, not fired (structure.ts, `Difference`).
+  for (const d of structure.differences.values()) if (d.faithful) skip.add(d.faithful)
   const live = kb.allRules()
     .filter(r => !skip.has(r) && !defined.has(r.head.name))
     .map(r => r.body.some(b => defined.has(b.name)) ? { ...r, body: expandDefined(r.body, defined) } : r)
@@ -438,6 +440,14 @@ export class Saturation {
    * the rules, deliberately.
    */
   private differenceHolds(p: string, e: Equivalence, d: Difference, args: readonly string[]): boolean {
+    const cached = this.latticeFor(p, d)
+    const v: Vector = new Map()
+    if (!this.blockVector(d, cached.unknown, args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, args.slice(e.k), -1, v)) return false
+    return cached.lattice.contains(v)
+  }
+
+  /** A difference relation's equations as a lattice, at the store's current version. */
+  private latticeFor(p: string, d: Difference): { version: number; lattice: Lattice; unknown: Map<string, number> } {
     let cached = this.lattices.get(p)
     if (!cached || cached.version !== this.version) {
       const lattice = new Lattice(), unknown = new Map<string, number>()
@@ -453,9 +463,7 @@ export class Saturation {
       }
       this.lattices.set(p, cached = { version: this.version, lattice, unknown })
     }
-    const v: Vector = new Map()
-    if (!this.blockVector(d, cached.unknown, args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, args.slice(e.k), -1, v)) return false
-    return cached.lattice.contains(v)
+    return cached
   }
 
   /**
@@ -657,8 +665,37 @@ export class Saturation {
         }
         if (this.done()) return
       }
-      if (this.version === before) return
+      // The solvers' findings go back to the store after every round, not only at the end: a goal
+      // that needs them (collinear, from equal directions) may not wait for a quiet round.
+      const fed = this.feedBackDifferences()
+      if (this.done()) return
+      if (this.version === before && !fed) return
     }
+  }
+
+  /**
+   * For each difference whose faithful rule the book states: pairs the solver shows to have one value
+   * are asserted equivalent under the pairs' equivalence, where the rule's guards hold of them (lines
+   * that turn by nothing are parallel). True if anything changed.
+   */
+  private feedBackDifferences(): boolean {
+    let changed = false
+    for (const [p, d] of this.st.differences) {
+      if (!d.faithful || !d.pairs || !this.classesOf(p).members.size) continue
+      const cached = this.latticeFor(p, d)
+      const keys = [...cached.unknown.keys()]
+      const [a, b, c, dd] = d.faithful.head.args
+      const guards = d.faithful.body.filter(x => x.name !== p)
+      for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
+        const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
+        if (!cached.lattice.contains(v)) continue
+        const [x1, x2] = keys[i].split(SEP), [y1, y2] = keys[j].split(SEP)
+        const bind = new Map([[a, x1], [b, x2], [c, y1], [dd, y2]])
+        if (!guards.every(g => this.holds({ name: g.name, args: g.args.map(v2 => bind.get(v2) ?? v2) }))) continue
+        changed = this.assert({ name: d.pairs, args: [x1, x2, y1, y2] }) || changed
+      }
+    }
+    return changed
   }
 }
 
@@ -684,6 +721,13 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
   const all = [...prep.axioms, ...prep.rules]
   for (let grew = true; grew;) {
     grew = false
+    // A difference that feeds its pairs' equivalence back (its faithful rule, implemented by the
+    // solver rather than fired) is needed wherever that equivalence is, with the faithful rule's body.
+    for (const [p, d] of prep.structure.differences) {
+      if (!d.faithful || !d.pairs || !needed.has(d.pairs)) continue
+      for (const b of d.faithful.body) grew = add(b.name) || grew
+      grew = add(p) || grew
+    }
     for (const n of [...needed]) {
       const d = prep.defined.get(n)
       if (d) for (const b of expandDefined(d.body, prep.defined)) grew = add(b.name) || grew

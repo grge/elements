@@ -155,7 +155,21 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         incidence the book does not state (a line meets a circle at most twice; a point off a line is
         off it however the line is named): with them it proves (measured), to be decided. The
         nine-point circle needs Thales' converse, so Apollonius (*Candidates*).
-      - **Return bridges for turns** (decided November 2026). Turns have bridges in (right angles,
+      - **Return bridges for turns: the first done (November 2026).** Lines that turn by nothing are
+        parallel (`parallel a b c d: eq-turn a b c d a b a b, …`), the right-angle bridges restated
+        through `right`'s body so its definition stays off the cycle. The structure analysis
+        recognises that rule as the difference's *faithful* rule, and the engine implements it
+        through the solver rather than firing it: after every round, pairs the solver shows to run
+        one way are asserted parallel; relevance knows the link. The Simson line proves as Euclid
+        states it, `collinear d e f` (42 s). The cost, accepted: any proof that needs `parallel` now
+        lets the bridges into turns fire on every equal length, right angle and parallel, mostly for
+        nothing; the book bench 20 s to 44 s (chapter 4, which never uses turns, 16.5 s to 35.6 s),
+        the proofs the same. Making theories lazy (bridges in only on demand) would win it back.
+        The second, a quarter turn gives `right`, waits for consolidation: `right` is defined with a
+        point past its vertex, so concluding it needs such a point in the figure (Thales' has none);
+        `right` must first become open, or a quarter turn (ledger). Thales and the altitudes, stated
+        with `right`, wait with it.
+      - **Return bridges for turns** (decided November 2026), as planned: Turns have bridges in (right angles,
         parallels, isosceles triangles) but none out, so what the solver proves stays in turn-language
         and theorems must be restated to meet it (the Simson line as "turns by nothing"). Wanted:
         turning by nothing gives `parallel` (and so `collinear` through a shared point), and a

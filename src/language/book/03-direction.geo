@@ -272,8 +272,9 @@ eq-turn a b c d e f g x: eq-turn a b c d e f g h, eq-point x h
 # itself named by other points included.
 eq-turn i j c d e f g h: eq-turn a b c d e f g h, parallel a b i j
 
-# Lines that run the same way turn by nothing.
-eq-turn a b c d e f e f: parallel a b c d, distinct a b, distinct c d, distinct e f
+# Lines that run the same way turn by nothing; and lines that turn by nothing run the same way.
+eq-turn a b c d a b a b: parallel a b c d, distinct a b, distinct c d
+parallel a b c d: eq-turn a b c d a b a b, distinct a b, distinct c d
 
 # ── turns add
 
@@ -285,11 +286,21 @@ eq-turn a b e f c d g h: eq-turn a b c d e f g h
 # ── bridges to angles
 
 # A right angle: its arms turn to each other the same either way round, a quarter turn.
-eq-turn b a b c b c b a: right a b c, distinct b c
+eq-turn b a b c b c b a: between a b d, distinct a b, distinct b d, eq-angle a b c c b d, distinct b c
 
 # All right angles turn alike: each is a quarter turn, and round a half turn a quarter turn either way
 # is the same (Euclid's fourth postulate, directed).
-eq-turn b a b c e d e f: right a b c, right d e f, distinct b c, distinct e f
+eq-turn b a b c e d e f:
+    between a b x
+    distinct a b
+    distinct b x
+    eq-angle a b c c b x
+    distinct b c
+    between d e y
+    distinct d e
+    distinct e y
+    eq-angle d e f f e y
+    distinct e f
 
 # The base of an isosceles triangle: its legs turn to it as it turns back to them, the turns at b
 # and c mirror images. (I.5, directed.)
@@ -300,7 +311,7 @@ eq-turn b a b c c b c a: eq-lines a b a c, distinct a b, distinct b c
 # Four points on one circle: a, b, c and d are cyclic. Said without its centre, since the circles
 # a proof finds (two corners and the feet of two altitudes, standing on one side) have none the figure
 # names. A circle about a centre makes its points cyclic, in any order.
-cyclic a b c d: circle o a b, circle o a c, circle o a d
+cyclic a b c d: eq-lines o a o b, eq-lines o a o c, eq-lines o a o d
 cyclic b a c d: cyclic a b c d
 cyclic a c b d: cyclic a b c d
 cyclic a b d c: cyclic a b c d

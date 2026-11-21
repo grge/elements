@@ -49,9 +49,12 @@ describe('turns in the book', () => {
     expect(equivalences.get('eq-turn')?.k).toBe(4)
   })
 
-  it('from a turn only turns and circles are concluded, so a proof that asks for neither never fires their rules', () => {
+  it('from a turn only turns, circles and (no turn) parallels are concluded', () => {
+    // So a proof that asks for none of them never fires their rules. The parallel comes back through
+    // the solver: lines that turn by nothing run the same way (the difference's faithful rule).
     const from = new Set(bookRules.filter(r => r.body.some(b => b.name === 'eq-turn' || b.name === 'cyclic')).map(r => r.head.name))
-    expect([...from].sort()).toEqual(['cyclic', 'eq-turn'])
+    expect([...from].sort()).toEqual(['cyclic', 'eq-turn', 'parallel'])
+    expect(analyseStructure(kb.allRules()).differences.get('eq-turn')?.faithful?.head.name).toBe('parallel')
   })
 })
 

@@ -92,7 +92,8 @@ euler-line a b c o g h:
 # The nine-point circle: the foot k of the altitude from a is on the circle through the sides'
 # midpoints d, e and f.
 #
-# Blocked by angles in a circle (chapter 5), which need sums; and the search runs out of budget.
+# Blocked by Thales' converse (the midpoint of a hypotenuse is as far from all three corners), which
+# needs Apollonius' median law, a quadrance candidate.
 nine-point a b c d e f n k:
     triangle a b c
     midpoint d b c
@@ -166,7 +167,7 @@ tangents o t s p:
 # The Simson line: the feet of the perpendiculars from a point p on the circumcircle to the sides are
 # collinear.
 #
-# Blocked by angles in a circle (chapter 5), which need sums; and the search runs out of budget.
+# Proves, as stated below: through turns and the circles its right angles stand on (chapter 3).
 simson a b c o p d e f:
     circle o a b
     circle o a c
@@ -180,6 +181,8 @@ simson a b c o p d e f:
     right p f a
 
 ? collinear d e f: simson a b c o p d e f
+# Proves (42 s): the turn form below gives d-e and d-f turning by nothing, and the solver hands equal
+# directions back as parallels (chapter 3), so one line.
 
 # As turns: d-e and d-f turn by nothing, one line. Proves: p-b-d-f and p-c-d-e are cyclic by their
 # right angles, p being off b-c and a-b (a line meets the circumcircle at most twice, chapter 2), and

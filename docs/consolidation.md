@@ -34,6 +34,14 @@ appears in statements only because the engine needs it is a cost (the README: th
   (November 2026)
 - **`cyclic` is rules only**: not measured, drawn or placed. Chapter 5 makes it a word of the plane.
   (November 2026)
+- **`right` and the quarter turn**: a quarter turn cannot conclude `right`, because `right` is
+  defined with a point past its vertex, which a figure need not have (Thales' does not). So Thales and
+  the altitudes, stated with `right`, do not prove though their turn forms do. `right` open (its
+  supplement property kept as rules) or defined as a quarter turn would let them; either changes how
+  chapter 2 is built and how the planner draws right angles. (November 2026)
+- **Theories fire eagerly**: bridges into turns fire on every fact they can, wherever turns are
+  relevant, which since the return bridge is wherever `parallel` is: the book's checks doubled for
+  nothing proved. A theory consulted on demand would cost only where it helps. (November 2026)
 - **`right` does not give `triangle`**: nothing says a right angle's arms are not one line (true: on a
   line an angle and its supplement are 0 and two right angles, never equal), and forward rules cannot
   reach it except through a contradiction. It blocks the III.3 converse by quadrance, which needs o
