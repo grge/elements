@@ -109,6 +109,15 @@ bisector-feet a b c i e f:
 
 # ══ Turns in a circle ═══════════════════════════════════════════════════════════════════════════
 
+# Two right angles standing on one side put their vertices on one circle with its ends (the circle on
+# that side as diameter, III.31's converse): the right angles are alike quarter turns, so the side is
+# seen at one turn from both. The circles a proof of the altitudes finds are these.
+? cyclic a b d e: right a d b, right a e b, triangle a b d, triangle a b e
+
+# A quadrilateral whose opposite angles make two right angles is in a circle (III.22's converse): as
+# turns, the diagonal a-c is seen alike from b and from d.
+? cyclic a b c d: eq-turn b a b c d a d c, triangle a b c, triangle a d c
+
 # Four points a, b, c and d on the circle about o.
 inscribed o a b c d:
     circle o a b
