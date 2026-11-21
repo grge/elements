@@ -286,6 +286,18 @@ eq-turn b a b c b c b a: right a b c
 # and c mirror images. (I.5, directed.)
 eq-turn b a b c c b c a: eq-lines a b a c
 
+# ── turns in a circle
+
+# Angles in the same segment (III.21), as turns: from any point of a circle, a chord a-b is seen at
+# one turn. Directed, there is no "same segment": from the other arc the angle is the supplement, and
+# the turn is the same. Euclid proves it from the angle at the centre (III.20), halving the angle there,
+# which needs to know which side of the chord the centre lies. With turns that halving is not sound
+# (twice a quarter turn and twice no turn are both no turn), and sides cannot be said. So here it is
+# taken as an axiom of turns, as the full-angle method takes it: a theorem in Euclid, given here.
+# (Its converse, that equal turns put four points on a circle, would need a centre the figure does
+# not name.)
+eq-turn c a c b d a d b: circle o a b, circle o a c, circle o a d
+
 # ── propositions
 
 # Parallels are turned to alike by any line: corresponding angles, without sides.
@@ -296,3 +308,11 @@ eq-turn b a b c c b c a: eq-lines a b a c
 
 # Turns add: a-b to c-d and on to e-f is a-b to e-f.
 ? eq-turn a b e f g h k l: eq-turn a b c d g h i j, eq-turn c d e f i j k l
+
+# The opposite angles of a quadrilateral in a circle (III.22), as turns: seen from b and from d, the
+# turn from the side to a to the side to c is the same. Euclid: the angles make two right angles; the
+# same, directed.
+? eq-turn b a b c d a d c: circle o a b, circle o a c, circle o a d
+
+# The angle in a semicircle is right (III.31): the turn at b to the diameter's ends is its own reverse.
+? eq-turn b a b c b c b a: circle o a b, circle o a c, between a o c

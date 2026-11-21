@@ -113,12 +113,14 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      lattice of its classes' equations (lattice.ts): a turn follows when its equation is an integer
      combination of the known ones, sound round a half turn, where dividing is not. III.31 as turns
      proves (*Beyond the book*); adding turns went from 5 s of rules to nothing.
-   - Found: III.21, angles in the same segment as turns, does not follow: the isosceles base turns
-     give twice the turns equal, and halving is not sound round a half turn (two quarter turns make a
-     half turn; so do two nothings). Euclid's proof goes through the angle at the centre with sides;
-     a turns proof needs a point the figure does not name (the far end of a diameter), which is
-     parked. So III.21 is the next decision: an axiom (as the full-angle method takes it, and as the
-     planner's `seen` circle already assumes), or a wait. III.20 is the same question.
+   - III.21 an axiom of turns (decided November 2026). It cannot follow: the isosceles base turns give
+     twice the turns equal, and halving is not sound round a half turn (twice a quarter turn and twice
+     no turn are both no turn). Euclid's proof halves undirected angles, which is sound, but needs
+     sides. So, as the full-angle method does, chapter 3 takes it as an axiom, saying it is a theorem in
+     Euclid; III.22 and III.31 follow at once. Its converse (equal turns put four points on a circle)
+     waits: it would conclude a circle whose centre the figure does not name. III.20 waits for the
+     Euclid book. Next: the stress test's angle-chasing theorems restated as turns (orthocentre,
+     Simson, nine-point), the real test of the solver.
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
