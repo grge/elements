@@ -181,10 +181,10 @@ simson a b c o p d e f:
 
 ? collinear d e f: simson a b c o p d e f
 
-# As turns: d-e and d-f turn by nothing, one line. Not proved: p-b-d-f and p-c-d-e are cyclic by their
-# right angles only if p is known off b-c and a-b, which needs two facts about lines the book does not
-# state (a line meets a circle at most twice; a point off a line is off it however the line is named).
-# With them it proves (measured). (It once seemed to prove through the fault noted at the altitudes.)
+# As turns: d-e and d-f turn by nothing, one line. Proves: p-b-d-f and p-c-d-e are cyclic by their
+# right angles, p being off b-c and a-b (a line meets the circumcircle at most twice, chapter 2), and
+# turns are chased round them and the circumcircle. (It once seemed to prove through the fault noted at
+# the altitudes.)
 ? eq-turn d e d f d e d e: simson a b c o p d e f
 
 # ── quadrilaterals

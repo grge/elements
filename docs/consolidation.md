@@ -65,6 +65,9 @@ Each taken as given here to get on; each worth asking whether it can become a th
   Euclid's proof needs sides. (November 2026)
 - **Angle-angle-side and hypotenuse-leg** (planned for chapter 5, provisional): quadrance may make
   them theorems. (November 2026)
+- **A line meets a circle at most twice** (chapter 2, *Chapter 1's debts*): Euclid's III.2 and III.10
+  come near it; here an axiom, said with equal lengths because `circle` in a body would cycle its
+  definition. (November 2026)
 - **All right angles turn alike**: Euclid's fourth postulate, directed; a postulate there too.
   (November 2026)
 

@@ -79,6 +79,9 @@ triangle a d e: triangle a b c, between a d b, between a e c, distinct a d, dist
 # a, and b-c meets it only at b.
 triangle a b d: triangle a b c, between a y d, distinct b y, collinear b y c
 
+# A point off a line is off it however the line is named: c is off a-b, and d is on a-b, so c is off a-d.
+triangle c a d: triangle c a b, collinear a b d, distinct a d
+
 # Side-angle-side (Euclid I.4, an axiom here as in Hilbert): two sides and the angle between them
 # equal, then the third sides are equal, and so are the angles at a and d.
 eq-lines a c d f: eq-lines b a e d, eq-lines b c e f, eq-angle a b c d e f
@@ -200,6 +203,12 @@ copy-angle a b c e g d:
 ? eq-angle a b c d e g: copy-angle a b c e g d
 
 # ══ Chapter 1's debts ════════════════════════════════════════════════════════════════════════════
+
+# A line meets a circle at most twice: three different points equally far from one point are not on
+# one line (Euclid III.2 and III.10 come near it; taken as an axiom here). Said with equal lengths, not
+# with circle: a clause for triangle that mentioned circle would put circle's definition on a cycle,
+# through side-angle-side.
+triangle a b c: eq-lines o a o b, eq-lines o a o c, distinct a b, distinct b c, distinct a c
 
 # Reflection keeps a figure the same: the reflection q of p in the line a-b makes the same angles there.
 ? eq-angle p a b q a b: reflect a b p q
