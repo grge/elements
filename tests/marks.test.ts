@@ -10,7 +10,7 @@ import { parseSource } from '../src/language/parser'
 import { buildRuntimeState } from '../src/kb/runtime'
 import { extract } from '../src/geometry/extraction'
 import { drawFigure } from '../src/geometry/figure'
-import { markClasses, chain, closureQueries, mergeByClosure, equalities, settledClasses, type Equality } from '../src/geometry/marks'
+import { markClasses, chain, closureQueries, mergeByClosure, equalities, settledClasses, type Equality, type MarkClass } from '../src/geometry/marks'
 import { saturate } from '../src/kb/saturate'
 import { closureAnswers, assumedOf } from '../src/geometry/closure'
 import { buildModel, plan, realise } from '../src/geometry/construction'
@@ -240,5 +240,57 @@ describe('a page marks what it talks about', () => {
 
   it('a page whose own lemma concludes equal areas draws its hatching', async () => {
     expect((await relationsMarked('drop-corner a b c d e', 'drop-corner')).has('eq-area')).toBe(true)
+  })
+})
+
+describe('supplements are marked as equal angles, one of them on its other side', () => {
+  const stated = (args: string, flip = false): Equality => ({ name: 'eq-angle', args: args.split(' '), depth: 0, source: { kind: 'derived' }, ...(flip ? { flip: true } : {}) })
+  const show = (c: MarkClass) => c.members.map(m => `${m.points.join('')}${m.flipped ? '*' : ''}`).sort()
+
+  it('a supplement joins one class, its second angle flipped: two marks, not four', () => {
+    const [cls] = markClasses([stated('a b c d e f', true)], equivalences)
+    expect(show(cls)).toEqual(['abc', 'def*'])
+  })
+
+  it('an angle equal to one and supplementary to another: one class, the flipped one the fewer', () => {
+    const classes = markClasses([stated('a b c x y z'), stated('a b c d e f', true)], equivalences)
+    expect(classes).toHaveLength(1)
+    expect(show(classes[0])).toEqual(['abc', 'def*', 'xyz'])
+    // supplementary to two angles: those two are equal, and drawn as themselves; it is the flipped one
+    const [two] = markClasses([stated('a b c d e f', true), stated('a b c x y z', true)], equivalences)
+    expect(show(two)).toEqual(['abc*', 'def', 'xyz'])
+  })
+
+  it('an angle beside itself is a right angle: the class clashes', () => {
+    const [cls] = markClasses([stated('a b c x y z'), stated('a b c x y z', true)], equivalences)
+    expect(cls.clash).toBe(true)
+    expect(cls.members.some(m => m.flipped)).toBe(false)
+  })
+
+  it('reads supp facts, stated and proven, as flipped equal angles', () => {
+    const x = extract(kb, [{ name: 'supp', args: ['a', 'b', 'c', 'd', 'e', 'f'] }])
+    const known = equalities(x.outline, x.depicted, [], equivalences)
+    expect(known).toMatchObject([{ name: 'eq-angle', args: ['a', 'b', 'c', 'd', 'e', 'f'], flip: true }])
+  })
+
+  it('the closure joins classes as supplements, flipping the joined part', () => {
+    const classes = markClasses([stated('a b c d e f'), stated('p q r s t u')], equivalences)
+    const queries = closureQueries(classes, [], [{ name: 'supp', of: 'eq-angle' }])
+    expect(queries.map(q => q.fact.name)).toEqual(['eq-angle', 'supp'])
+    const merged = mergeByClosure(classes, queries, [false, true])
+    expect(merged).toHaveLength(1)
+    expect(merged[0].members.filter(m => m.flipped)).toHaveLength(2)
+    expect(merged[0].edges.filter(e => e.flip)).toHaveLength(1)
+  })
+
+  it('on the page: two supplements apart share arcs, one beside itself; side by side, no mark', () => {
+    const sceneOf = (text: string) => {
+      const { x, figure } = figureFor(text, [])
+      const { drawing } = realise(plan(buildModel(x.constraints)))
+      const t = computeRenderTransform({ coords: drawing.coords, energy: 0 }, 800, 600, 40, figure)!
+      return buildScene(figure, drawing.coords, t, 800, 600, 16)
+    }
+    expect(sceneOf('supp a b c d e f').arcs.filter(a => a.kind === 'arc')).toHaveLength(2)
+    expect(sceneOf('between a b d\nsupp a b c c b d').arcs.filter(a => a.kind === 'arc')).toHaveLength(0)
   })
 })

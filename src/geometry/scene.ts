@@ -35,7 +35,7 @@ export interface Scene {
    * square for a right angle, and the arrows along parallel lines (parallels share a number of
    * arrows, all pointing one way). SVG path data, with the level.
    */
-  arcs: { d: string; level: number; kind: 'arc' | 'square' | 'straight' | 'open' | 'arrow' }[]
+  arcs: { d: string; level: number; kind: 'arc' | 'square' | 'arrow' }[]
   /**
    * Triangles marked equal in area, hatched as Byrne colours them: triangles of one area share a
    * hatching (`n`: the first class one way, the second the other, then across and along), so where
@@ -78,7 +78,10 @@ export function buildScene(
 ): Scene {
   const tx = (x: number) => t.offsetX + (x - t.minX) * t.scale
   const ty = (y: number) => t.offsetY + (y - t.minY) * t.scale
-  const at = (p: string): Point | null => { const c = coords.get(p); return c ? [tx(c[0]), ty(c[1])] : null }
+  // Points on screen only: the far end of an arm continued past its vertex, for marking the angle
+  // beside an angle (a flipped member of a class of angles, marks.ts).
+  const virtual = new Map<string, Point>()
+  const at = (p: string): Point | null => { const v = virtual.get(p); if (v) return v; const c = coords.get(p); return c ? [tx(c[0]), ty(c[1])] : null }
   const reach = width + height
 
   // Depths: the shallowest element is level 0.
@@ -154,31 +157,12 @@ export function buildScene(
   // Directions (screen angles) taken at each point by what is drawn there, for placing its label.
   const taken = new Map<string, number[]>()
   const claim = (p: string, dir: number) => { let t = taken.get(p); if (!t) taken.set(p, t = []); t.push(dir) }
-  const angleAt = (na: string, nb: string, nc: string, n: number, kind: Scene['arcs'][number]['kind'], lv: number, facts: string[], mark: { mark: number; member: number } | null, through?: string) => {
+  const angleAt = (na: string, nb: string, nc: string, n: number, kind: Scene['arcs'][number]['kind'], lv: number, facts: string[], mark: { mark: number; member: number } | null) => {
     const [a, b, c] = [at(na), at(nb), at(nc)]
     if (!a || !b || !c) return
-    addSegment(nb, na, lv, facts); addSegment(nb, nc, lv, facts)
-    if (kind === 'straight' && through !== undefined) {
-      // From one outer arm through the shared arm to the other: the two angles as one straight angle.
-      const m = at(through)
-      if (!m) return
-      addSegment(nb, through, lv, facts)
-      const turn = (from: Point, to: Point) => {
-        let d = Math.atan2(to[1] - b[1], to[0] - b[0]) - Math.atan2(from[1] - b[1], from[0] - b[0])
-        while (d <= -Math.PI) d += 2 * Math.PI
-        while (d > Math.PI) d -= 2 * Math.PI
-        return d
-      }
-      const sweep = turn(a, m) + turn(m, c)
-      const reach = Math.min(...[a, m, c].map(p => Math.hypot(p[0] - b[0], p[1] - b[1])))
-      const r = Math.min(tick * 2.2, 0.45 * reach)
-      if (r < 2) return
-      const u0 = Math.atan2(a[1] - b[1], a[0] - b[0])
-      const p0 = [b[0] + r * Math.cos(u0), b[1] + r * Math.sin(u0)], p1 = [b[0] + r * Math.cos(u0 + sweep), b[1] + r * Math.sin(u0 + sweep)]
-      arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 ${Math.abs(sweep) > Math.PI ? 1 : 0} ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: lv, kind })
-      meta.arcs.push({ facts, mark })
-      return
-    }
+    // An arm continued past the vertex only on screen is drawn after the arcs, just far enough to meet them.
+    if (!virtual.has(na)) addSegment(nb, na, lv, facts)
+    if (!virtual.has(nc)) addSegment(nb, nc, lv, facts)
     const [ua, uc] = [Math.atan2(a[1] - b[1], a[0] - b[0]), Math.atan2(c[1] - b[1], c[0] - b[0])]
     const reachA = Math.hypot(a[0] - b[0], a[1] - b[1]), reachC = Math.hypot(c[0] - b[0], c[1] - b[1])
     // A mark in the angle claims the direction it points into: a label there would cover it.
@@ -197,6 +181,7 @@ export function buildScene(
     let sweep = uc - ua
     while (sweep <= -Math.PI) sweep += 2 * Math.PI
     while (sweep > Math.PI) sweep -= 2 * Math.PI
+    let outer = 0
     for (let i = 0; i < n; i++) {
       const r = Math.min(tick * 2.2 + i * tick * 0.75, 0.45 * Math.min(reachA, reachC))
       if (r < 2) continue
@@ -204,10 +189,54 @@ export function buildScene(
       const p1 = [b[0] + r * Math.cos(ua + sweep), b[1] + r * Math.sin(ua + sweep)]
       arcs.push({ d: `M ${p0[0]} ${p0[1]} A ${r} ${r} 0 0 ${sweep > 0 ? 1 : 0} ${p1[0]} ${p1[1]}`, level: lv, kind })
       meta.arcs.push({ facts, mark })
+      outer = r
+    }
+    // The continued arm, in full ink, from the vertex exactly to the outermost arc.
+    for (const [name, u] of [[na, ua], [nc, uc]] as const) {
+      if (!virtual.has(name) || outer < 2) continue
+      segments.push([b[0], b[1], b[0] + outer * Math.cos(u), b[1] + outer * Math.sin(u), lv])
+      meta.segments.push({ ends: [nb, name], facts: [...facts], mark: null })
     }
   }
-  // Angles drawn as themselves: a right angle's square, supplements as one straight angle or open arcs.
-  for (const a of figure.angles) angleAt(...a.points, 1, a.as, level(a.depth), a.facts, null, a.through)
+  // Angles drawn as themselves: a right angle's square.
+  for (const a of figure.angles) angleAt(...a.points, 1, a.as, level(a.depth), a.facts, null)
+
+  /**
+   * An angle a-b-c as drawn: itself, or (flipped) the angle beside it, between one arm and the other
+   * continued past b. Continued along a named point of the figure where there is one (the line is
+   * likely drawn there), else past b on screen only, drawn just as far as its arcs. Either arm
+   * may be continued: the two angles beside a-b-c are vertical angles, equal.
+   */
+  const asDrawn = (points: string[], flipped: boolean): [string, string, string] | null => {
+    const [na, nb, nc] = points
+    if (!flipped) return [na, nb, nc]
+    const [a, b, c] = [coords.get(na), coords.get(nb), coords.get(nc)]
+    if (!a || !b || !c) return null
+    const beyond = (arm: Point): string | null => {
+      const u = [arm[0] - b[0], arm[1] - b[1]], len = Math.hypot(u[0], u[1])
+      if (len < 1e-12) return null
+      for (const [name, p] of coords) {
+        if (name === nb) continue
+        const v = [p[0] - b[0], p[1] - b[1]], along = (v[0] * u[0] + v[1] * u[1]) / len
+        if (along < -1e-6 * len && Math.abs(v[0] * u[1] - v[1] * u[0]) / len < 1e-6 * len) return name
+      }
+      return null
+    }
+    const pc = beyond(c)
+    if (pc) return [na, nb, pc]
+    const pa = beyond(a)
+    if (pa) return [pa, nb, nc]
+    const far = `\u0002${nc}@${nb}`
+    const [sb, sc] = [at(nb)!, at(nc)!]
+    virtual.set(far, [2 * sb[0] - sc[0], 2 * sb[1] - sc[1]])
+    return [na, nb, far]
+  }
+  /** An angle on screen up to its arms' order: the same arcs would be drawn twice. */
+  const angleKey = ([na, nb, nc]: [string, string, string]) => {
+    const [a, b, c] = [at(na)!, at(nb)!, at(nc)!]
+    const dir = (p: Point) => Math.round(Math.atan2(p[1] - b[1], p[0] - b[0]) * 1000)
+    return `${nb}|${[dir(a), dir(c)].sort((x, y) => x - y).join(',')}`
+  }
 
   // Marks (marks.ts): each class of equal blocks with at least two members on screen (a mark must have
   // something to be equal to), marked as its relation says (relations.ts `classMark`). Classes of
@@ -232,12 +261,31 @@ export function buildScene(
         const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
         as.draw(member.points, {
           angle: (a, b, c, kind) => angleAt(a, b, c, 1, kind, level(member.depth), facts, { mark: ci, member: mi }),
-          line: () => {}, segment: () => {}, circle: () => {}, supplement: () => {}, sameLength: () => {},
+          line: () => {}, segment: () => {}, circle: () => {}, arms: () => {}, sameLength: () => {},
         })
       }
       return
     }
     const kind = RELATIONS.get(cls.name)?.classMark?.as
+    if (kind === 'arcs' && cls.k === 3) {
+      // Each angle as drawn (a flipped one beside itself), each place once: a class needs two places
+      // to be worth marking. Supplements side by side along a line are one place, and need no mark.
+      const places = new Map<string, { mi: number; points: [string, string, string] }>()
+      for (const mi of shown) {
+        const drawn = asDrawn(cls.members[mi].points, !!cls.members[mi].flipped)
+        if (!drawn) continue
+        const key = angleKey(drawn)
+        if (!places.has(key)) places.set(key, { mi, points: drawn })
+      }
+      if (places.size < 2) return
+      const n = ++counts.arcs
+      for (const { mi, points } of places.values()) {
+        const member = cls.members[mi]
+        const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
+        angleAt(points[0], points[1], points[2], n, 'arc', level(member.depth), facts, { mark: ci, member: mi })
+      }
+      return
+    }
     if (shown.length < 2 || !kind) return
     if (cls.k !== (kind === 'arcs' || kind === 'hatch' ? 3 : 2)) return
     const n = ++counts[kind]

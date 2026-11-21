@@ -79,11 +79,10 @@ describe('the figure', () => {
     expect(both.lines).toMatchObject([{ faint: false }])
   })
 
-  it('draws supplements side by side as one straight angle, others as open arcs, a right angle as a square', () => {
+  it('draws a supplement with its arms (its marks are equal angles, marks.ts), a right angle as a square', () => {
     const supp = figureOf([{ name: 'supp', args: ['a', 'b', 'c', 'c', 'b', 'd'] }])!
-    expect(supp.angles.map(a => `${a.points.join('')} ${a.as} ${a.through}`)).toEqual(['abd straight c'])
-    const apart = figureOf([{ name: 'supp', args: ['a', 'b', 'c', 'd', 'e', 'f'] }])!
-    expect(apart.angles.map(a => `${a.points.join('')} ${a.as}`)).toEqual(['abc open', 'def open'])
+    expect(supp.angles).toEqual([])
+    expect(supp.strokes.map(s => s.ends.join(''))).toEqual(['ba', 'bc', 'bc', 'bd'])
     const right = figureOf([{ name: 'right', args: ['a', 'b', 'c'] }])!
     expect(right.angles.map(a => `${a.points.join('')} ${a.as}`)).toEqual(['abc square'])
   })

@@ -20,6 +20,8 @@ import { assumedOf } from '../geometry/closure'
 
 /** Mark relations on one block (`right`, of an angle): asked of each class of marks. */
 const PROPERTIES = [...RELATIONS.values()].flatMap(r => r.mark && r.propertyOf ? [{ name: r.name, of: r.propertyOf }] : [])
+/** Relations that are an equivalence's flip (`supp`): the closure is asked them to join classes. */
+const FLIPS = [...RELATIONS.values()].flatMap(r => r.flipOf ? [{ name: r.name, of: r.flipOf }] : [])
 import type { ClosureRequest, ClosureResponse } from '../workers/closureWorker'
 
 export type Lane = 'page' | 'background'
@@ -103,7 +105,7 @@ const assumed = (x: Extraction) => assumedOf([...new Set(x.constraints.flatMap(f
  * otherwise only the classes that cannot change, with `settled: false` saying the rest are pending.
  */
 export function marksNow(kb: KnowledgeBase, x: Extraction, figure: Figure): { figure: Figure; settled: boolean } {
-  const queries = closureQueries(figure.marks, PROPERTIES)
+  const queries = closureQueries(figure.marks, PROPERTIES, FLIPS)
   if (!queries.length) return { figure, settled: true }
   const holds = recall(keyOf(kb, closureFacts(x), queries.map(q => q.fact)))
   if (holds) return { figure: { ...figure, marks: mergeByClosure(figure.marks, queries, holds) }, settled: true }
@@ -112,7 +114,7 @@ export function marksNow(kb: KnowledgeBase, x: Extraction, figure: Figure): { fi
 
 /** The figure with its marks merged by the closure, when it answers; the figure unmerged if it fails. */
 export async function mergedMarks(kb: KnowledgeBase, x: Extraction, figure: Figure, lane: Lane = 'page'): Promise<Figure> {
-  const queries = closureQueries(figure.marks, PROPERTIES)
+  const queries = closureQueries(figure.marks, PROPERTIES, FLIPS)
   if (!queries.length) return figure
   const facts = closureFacts(x)
   const holds = await ask(keyOf(kb, facts, queries.map(q => q.fact)), kb, facts, queries.map(q => q.fact), assumed(x), lane)

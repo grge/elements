@@ -457,7 +457,6 @@ watch([baseWitness, viewportWidth, viewportHeight, veilAt, () => props.floor], (
 /* Arrows along parallel lines: chevrons with a rounded tip. */
 .crisp .arc.arrow { stroke-linejoin: round; }
 /* Supplements not side by side: open, dotted arcs, which never mean equal. */
-.crisp .arc.open { stroke-dasharray: 0.1 7; stroke-linecap: round; }
 
 /* The route: the loci that placed the touched point. Not the figure, so drawn apart: thin, dashed,
    in the accent colour. */

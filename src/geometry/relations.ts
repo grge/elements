@@ -19,8 +19,11 @@
  *             Equalities draw nothing of their own: their marks come from the classes in marks.ts.
  *   byNames   holds in any figure by its convention that distinct names are distinct points
  *             (`distinct`): a lemma's hypothesis of it is met by two different names.
- *   mark      its drawing is a mark (a right angle's square, a supplement's arcs): like an equality's
- *             ticks it is drawn wherever it is proven, not only where it is written.
+ *   mark      its drawing is a mark (a right angle's square): like an equality's ticks it is drawn
+ *             wherever it is proven, not only where it is written.
+ *   flipOf    an equivalence it is, with its second block flipped (`supp`, of `eq-angle`: a-b-c equals
+ *             the angle beside d-e-f). Its facts join that equivalence's classes, the flipped block
+ *             marked on its other side (marks.ts), and the closure is asked it to join two classes.
  *   propertyOf for a mark on one block: the equivalence whose classes it is a property of, kept by
  *             their equality (`right`, of `eq-angle`: an angle equal to a right angle is right). A
  *             class of that equivalence the closure knows to have it is drawn with it; a class of
@@ -61,8 +64,8 @@ export interface Pen {
   circle(center: string, through: readonly string[]): void
   /** The angle a-b-c with its arms: Byrne's square for a right angle. */
   angle(a: string, b: string, c: string, as: 'square'): void
-  /** Two angles that together make a straight angle (figure.ts decides how: see Figure.angles). */
-  supplement(first: readonly [string, string, string], second: readonly [string, string, string]): void
+  /** The two arms of angle a-b-c, with no mark: what an angle is drawn with. */
+  arms(a: string, b: string, c: string): void
   /** Two lengths stated equal: circles about one centre with these radii are one circle. */
   sameLength(a: string, b: string, c: string, d: string): void
 }
@@ -77,6 +80,7 @@ export interface Relation {
   draw?(args: readonly string[], pen: Pen): void
   mark?: boolean
   propertyOf?: string
+  flipOf?: string
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
@@ -166,11 +170,13 @@ const TABLE: Relation[] = [
     }),
   },
   {
-    // Angles a-b-c and d-e-f together make a straight angle.
+    // Angles a-b-c and d-e-f together make a straight angle: a-b-c equals the angle beside d-e-f. Drawn
+    // with its arms; marked as equal angles, d-e-f's arcs on its other side (marks.ts). Two side by
+    // side along a straight line need no mark: the line says it.
     name: 'supp', arity: 6, depicted: true,
     read: (args, m) => m.measure('supp', args),
-    draw: ([a, b, c, d, e, f], pen) => pen.supplement([a, b, c], [d, e, f]),
-    mark: true,
+    draw: ([a, b, c, d, e, f], pen) => { pen.arms(a, b, c); pen.arms(d, e, f) },
+    flipOf: 'eq-angle',
     ...measured(P => {
       if (same(P[0], P[1]) || same(P[2], P[1]) || same(P[3], P[4]) || same(P[5], P[4])) return NaN
       return Math.abs(angle(P[0], P[1], P[2]) + angle(P[3], P[4], P[5]) - Math.PI)

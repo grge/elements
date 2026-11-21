@@ -177,7 +177,7 @@ residual. Its loci join the table when the planner moves onto it; a new geometri
 | `circle a b c` | the circle about a through b and c |
 | `eq-lines a b c d` | the segments a–b and c–d, with matching tick marks |
 | `eq-angle a b c d e f` | arcs at both vertices, with the arms |
-| `supp a b c d e f` | side by side (one vertex, one shared arm): one arc across both, a straight angle; otherwise a dotted arc at each, which never means equal |
+| `supp a b c d e f` | its arms; its marks are equal angles' arcs, d-e-f's on its other side (*Marks*). Side by side along a straight line, no mark: the line says it |
 | `right a b c` | Byrne's small square at the vertex, and beneath it, fainter, its definition: a-b continued past b to its extension point, the right angle beside it squared too |
 | `parallel a b c d` | the segments a–b and c–d, their lines continuing faint, with arrows where the figure knows them parallel |
 | `triangle a b c` | its three sides, as segments; that the corners are not on one line is checked |
@@ -258,8 +258,21 @@ triangles' sides are drawn. Hovering a hatched triangle reads its chain: `△def
 triangles overlap or tile a figure (the four halves of a parallelogram, made by its two diagonals)
 hatches the whole figure alike, which says less than it should; see the review notes.
 
-Some relations are marks too, not equalities: a right angle's square, a supplement's arcs (`mark`
-in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:
+**Supplements are equal angles, one on its other side.** `supp a b c d e f` says a-b-c equals the
+angle beside d-e-f (relations.ts `flipOf`: `supp` is `eq-angle` with its second block flipped). So a
+supplement joins the classes of equal angles, its second angle flipped: a class is a union-find with
+parity, each member in it as itself or flipped, and one class holds both, so a supplement gives two
+marks, not four. A flipped member's arcs go on its other side, between one arm and the other
+continued past the vertex: along a named point of the figure where one lies there (the parallels'
+alternate angle, through x on d-f continued), else continued on screen only, in full ink and just far enough to meet the arcs. Whichever way
+most of a class's members are is drawn as themselves. Two supplements side by side along a line are
+one place on screen, and a class needs two places to be marked: the straight line says it. The
+closure is asked supplements as well as equalities between classes, and joins them flipped. A class
+with a member both ways holds an angle equal to its own supplement, a right angle (`clash`); the
+closure's `right` draws it as squares. More than a geometry program usually shows: the arcs say which
+angle a supplement is equal to, not only that two angles make a line.
+
+Some relations are marks too, not equalities: a right angle's square (`mark` in the relation table). They are drawn wherever a ✓ lemma proves them, as ticks are: `? right a c d:
 perpendicular a c d, distinct a c` puts a square at c on every figure that uses `perpendicular`. And a
 class of equal angles the closure derives to be right is drawn as squares instead of arcs (see
 *Equality chains*).

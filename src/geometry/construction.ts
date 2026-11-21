@@ -876,7 +876,7 @@ function drawnBy(cp: ConstructionPlan): Drawn {
     segment: (a, c) => { out.segments.push([a, c]) },
     circle: (o, ps) => { out.circles.push({ center: o, through: [...ps] }) },
     angle: (a, b, c) => { out.segments.push([b, a], [b, c]) },
-    supplement: () => {},
+    arms: (a, b, c) => { out.segments.push([b, a], [b, c]) },
     sameLength: () => {},
   })
   return out

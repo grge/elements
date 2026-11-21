@@ -32,13 +32,8 @@ export interface Figure {
   strokes: ({ ends: [string, string] } & Made)[]
   /** Circles about a centre through their points; circles with the same centre and radius are one. */
   circles: ({ center: string; points: string[] } & Made)[]
-  /**
-   * Angles drawn as themselves (not as marks of equality): a right angle's square; two supplements
-   * sharing a vertex and an arm as one arc across both, from the outer arm through the shared one to
-   * the other outer arm (`through`), a straight angle; other supplements as open (dotted) arcs, which
-   * never mean equal.
-   */
-  angles: ({ points: [string, string, string]; as: 'square' | 'straight' | 'open'; through?: string } & Made)[]
+  /** Angles drawn as themselves (not as marks of equality): a right angle's square. */
+  angles: ({ points: [string, string, string]; as: 'square' } & Made)[]
   /** Classes of equal segments, equal angles (any recognised equivalence): what ticks and arcs mark. */
   marks: MarkClass[]
   /** The facts elements were made from, by key. */
@@ -121,14 +116,7 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
       },
       circle: (center, through) => onCircles.push({ center, through, depth, key }),
       angle: (a, b, c, as) => angles.push({ points: [a, b, c], as, depth, facts: [key] }),
-      supplement: ([a, b, c], [d, e, f]) => {
-        const shared = b === e ? [a, c].find(x => x === d || x === f) : undefined
-        if (shared !== undefined) {
-          const x = shared === a ? c : a, y = shared === d ? f : d
-          if (x !== y) { angles.push({ points: [x, b, y], as: 'straight', through: shared, depth, facts: [key] }); return }
-        }
-        angles.push({ points: [a, b, c], as: 'open', depth, facts: [key] }, { points: [d, e, f], as: 'open', depth, facts: [key] })
-      },
+      arms: (a, b, c) => strokes.push({ ends: [b, a], depth, facts: [key] }, { ends: [b, c], depth, facts: [key] }),
       sameLength: (a, b, c, d) => radii.union(segmentKey(a, b), segmentKey(c, d)),
     }
     relationOf(f)!.draw?.(f.args, pen)
