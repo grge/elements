@@ -155,7 +155,8 @@ chord-bisector o a b m:
 
 # Tangents from a point to a circle are equal.
 #
-# Blocked by hypotenuse-leg, which, like angle-angle-side, argues by comparing sizes.
+# Proves: hypotenuse-leg, which Euclid would argue by comparing sizes, is Pythagoras twice in
+# quadrances, and taking away (chapter 4).
 tangents o t s p:
     circle o t s
     right o t p

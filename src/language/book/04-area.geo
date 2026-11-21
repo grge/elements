@@ -207,3 +207,37 @@ rectangle-to-square a b c d e m h j k:
 # also the square on m-b and the rectangle together (II.5), so taking the square on m-b from both
 # leaves the square on b-h equal to the rectangle. Two sums and a difference of them is more than a
 # figure cut into its parts can say; it waits for the book to add.
+
+# ══ Quadrance ════════════════════════════════════════════════════════════════════════════════════
+#
+# The quadrance of a segment is its length squared (Wildberger's word). Quadrances add where lengths
+# do not: Pythagoras says the quadrances of a right triangle's legs make its hypotenuse's. So equal
+# lengths follow by adding and taking away quadrances, which the engine does with a solver once it has
+# recognised, from the rules below, that quad-sum is a sum (kb/structure.ts). quad-sum is machinery:
+# what follows is said in equal lengths, as Euclid says it.
+
+# quad-sum a b c d e f: the quadrances of a-b and c-d together make that of e-f. The parts may be
+# taken in either order, and each segment either way round.
+quad-sum c d a b e f: quad-sum a b c d e f
+quad-sum b a c d e f: quad-sum a b c d e f
+quad-sum a b d c e f: quad-sum a b c d e f
+quad-sum a b c d f e: quad-sum a b c d e f
+
+# A segment as long as a part, or as the whole, may stand for it.
+quad-sum x y c d e f: quad-sum a b c d e f, eq-lines a b x y
+quad-sum a b c d x y: quad-sum a b c d e f, eq-lines e f x y
+
+# The parts make one whole: two segments made of the same parts are equal. And taking away: two
+# segments that make the same whole with the same part are equal.
+eq-lines e f g h: quad-sum a b c d e f, quad-sum a b c d g h
+eq-lines c d g h: quad-sum a b c d e f, quad-sum a b g h e f
+
+# Pythagoras (I.47) in quadrances: a right angle at b makes the legs' quadrances the hypotenuse's.
+# This chapter's I.47 is for areas (the windmill); for quadrances it is taken here, as an axiom. Said
+# through right's definition (an angle equal to the one beside it along a line), not right: a clause
+# here that mentioned right would put right's definition on a cycle, through equal lengths.
+quad-sum b a b c a c: between a b d, distinct a b, distinct b d, eq-angle a b c c b d, distinct b c
+
+# Hypotenuse-leg: two right triangles with the hypotenuse and a leg equal have the other legs equal.
+# Euclid does not state it; here it is Pythagoras twice, and taking away.
+? eq-lines b c e f: right a b c, right d e f, eq-lines a c d f, eq-lines a b d e

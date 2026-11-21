@@ -41,7 +41,19 @@ export interface Structure {
    * = value(g h) - value(e f), with `pairs` the equivalence of pairs that have one value, if any.
    */
   differences: Map<string, Difference>
+  /** Relations that are sums of values (see below): `p(a b c d e f)` read as value(a b) + value(c d) = value(e f). */
+  sums: Map<string, Sum>
 }
+
+/**
+ * A relation of three pairs, read as a sum of their values: value(a b) + value(c d) = value(e f), the
+ * values constant on the classes of an equivalence of pairs (`values`). Recognised when its rules
+ * prove: the two parts may be exchanged; a pair of `values`-equivalent segments may stand for any
+ * pair; and the parts determine the whole (two sums of the same parts are equivalent). Quadrances
+ * (squared lengths, with equal lengths as `values`) are the case. Its facts are linear equations in
+ * the classes' values, which a solver combines (saturate.ts); equal values go back as `values` facts.
+ */
+export interface Sum { values: string }
 
 /**
  * An equivalence on blocks of two unordered pairs, closed under exchanging the middle pairs: if a-b
@@ -260,5 +272,25 @@ function analyse(rules: readonly Rule[]): Structure {
     differences.set(p, { pairs, faithful })
   }
 
-  return { arity, equivalences, equality, congruent, symmetries, differences }
+  // ── sums: three pairs, the third the sum of the first two ──
+  const sums = new Map<string, Sum>()
+  for (const [p, n] of arity) {
+    if (n !== 6 || equivalences.has(p)) continue
+    const x = consts('x', 6)
+    // Candidate value equivalences: one some rule for p substitutes by (its body one p, one q).
+    const named = new Set(rules.filter(r => r.head.name === p && r.body.length === 2 && r.body.some(b => b.name === p))
+      .flatMap(r => r.body.filter(b => b.name !== p).map(b => b.name)))
+    for (const [q, qe] of equivalences) {
+      if (qe.k !== 2 || !named.has(q)) continue
+      const fragment = rules.filter(r => (r.head.name === p || r.head.name === q) && r.body.every(b => b.name === p || b.name === q))
+      const ok =
+        proves(fragment, [atom(p, x)], atom(p, [x[2], x[3], x[0], x[1], x[4], x[5]])) &&
+        proves(fragment, [atom(p, x), atom(q, [x[0], x[1], 'y0', 'y1'])], atom(p, ['y0', 'y1', ...x.slice(2)])) &&
+        proves(fragment, [atom(p, x), atom(q, [x[4], x[5], 'y0', 'y1'])], atom(p, [...x.slice(0, 4), 'y0', 'y1'])) &&
+        proves(fragment, [atom(p, x), atom(p, [...x.slice(0, 4), 'y0', 'y1'])], atom(q, [x[4], x[5], 'y0', 'y1']))
+      if (ok) { sums.set(p, { values: q }); break }
+    }
+  }
+
+  return { arity, equivalences, equality, congruent, symmetries, differences, sums }
 }

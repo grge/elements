@@ -18,7 +18,7 @@
 
 import type { Predicate, Rule } from '../language/parser'
 import type { GroundPredicate, KnowledgeBase } from './inference'
-import { analyseStructure, type Difference, type Equivalence, type Structure } from './structure'
+import { analyseStructure, type Difference, type Equivalence, type Structure, type Sum } from './structure'
 import { Lattice, type Vector } from './lattice'
 import { fingerprint, Lru } from './rules'
 
@@ -401,7 +401,75 @@ export class Saturation {
       const d = this.st.differences.get(f.name)
       return d ? this.differenceHolds(f.name, e, d, f.args) : false
     }
-    return this.facts.has(this.factKey(f.name, this.canonArgs(f.name, f.args)))
+    if (this.facts.has(this.factKey(f.name, this.canonArgs(f.name, f.args)))) return true
+    const sum = this.st.sums.get(f.name)
+    return sum && f.args.length === 6 ? this.sumHolds(f.name, sum, f.args) : false
+  }
+
+  // ───────────────────────── sums: a solver ─────────────────────────
+
+  private sumLattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number>; pairOf: Map<string, [string, string]> }>()
+
+  /** A pair's value as an unknown's key: its class under the values' equivalence; null for one point (no length: value nothing). */
+  private sumValue(sum: Sum, a: string, b: string): string | null {
+    if (this.find(a) === this.find(b)) return null
+    const q = this.st.equivalences.get(sum.values)!
+    return this.tupleRoot(sum.values, this.tupleKey(sum.values, q, [a, b]))
+  }
+
+  /** value(a b) + value(c d) - value(e f), as a vector (a pair of one point adds nothing). */
+  private sumVector(sum: Sum, unknown: Map<string, number>, pairOf: Map<string, [string, string]> | null, args: readonly string[]): Vector {
+    const v: Vector = new Map()
+    ;[1, 1, -1].forEach((c, i) => {
+      const [a, b] = [args[2 * i], args[2 * i + 1]]
+      const key = this.sumValue(sum, a, b)
+      if (key === null) return
+      let k = unknown.get(key)
+      if (k === undefined) { unknown.set(key, k = unknown.size); pairOf?.set(key, [a, b]) }
+      const x = (v.get(k) ?? 0) + c
+      if (x === 0) v.delete(k)
+      else v.set(k, x)
+    })
+    return v
+  }
+
+  /** A sum relation's facts as a lattice of equations, at the store's current version. */
+  private sumLattice(p: string, sum: Sum) {
+    let cached = this.sumLattices.get(p)
+    if (!cached || cached.version !== this.version) {
+      const lattice = new Lattice(), unknown = new Map<string, number>(), pairOf = new Map<string, [string, string]>()
+      for (const f of this.byName.get(p) ?? []) lattice.add(this.sumVector(sum, unknown, pairOf, f.args))
+      this.sumLattices.set(p, cached = { version: this.version, lattice, unknown, pairOf })
+    }
+    return cached
+  }
+
+  /** Does a sum follow, by adding and subtracting the known ones (integer combinations: sound in any group)? */
+  private sumHolds(p: string, sum: Sum, args: readonly string[]): boolean {
+    const cached = this.sumLattice(p, sum)
+    return cached.lattice.contains(this.sumVector(sum, new Map(cached.unknown), null, args))
+  }
+
+  /**
+   * For each sum relation: pairs the solver shows to have one value are asserted equivalent under its
+   * values' equivalence (equal quadrances, equal lengths). The parts determine the whole is one of the
+   * rules the sum was recognised by; the solver takes it further, through values no pair has (as the
+   * turns' solver does). True if anything changed.
+   */
+  private feedBackSums(): boolean {
+    let changed = false
+    for (const [p, sum] of this.st.sums) {
+      if (!this.byName.get(p)?.length) continue
+      const cached = this.sumLattice(p, sum)
+      const keys = [...cached.unknown.keys()]
+      for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
+        if (this.sumValue(sum, ...cached.pairOf.get(keys[i])!) === this.sumValue(sum, ...cached.pairOf.get(keys[j])!)) continue
+        const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
+        if (!cached.lattice.contains(v)) continue
+        changed = this.assert({ name: sum.values, args: [...cached.pairOf.get(keys[i])!, ...cached.pairOf.get(keys[j])!] }) || changed
+      }
+    }
+    return changed
   }
 
   // ───────────────────────── differences: a solver ─────────────────────────
@@ -667,7 +735,8 @@ export class Saturation {
       }
       // The solvers' findings go back to the store after every round, not only at the end: a goal
       // that needs them (collinear, from equal directions) may not wait for a quiet round.
-      const fed = this.feedBackDifferences()
+      const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
+      const fed = fedDifferences || fedSums
       if (this.done()) return
       if (this.version === before && !fed) return
     }
@@ -723,6 +792,8 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
     grew = false
     // A difference that feeds its pairs' equivalence back (its faithful rule, implemented by the
     // solver rather than fired) is needed wherever that equivalence is, with the faithful rule's body.
+    // A sum feeds its values' equivalence back through its solver: needed wherever that is.
+    for (const [p, sum] of prep.structure.sums) if (needed.has(sum.values)) grew = add(p) || grew
     for (const [p, d] of prep.structure.differences) {
       if (!d.faithful || !d.pairs || !needed.has(d.pairs)) continue
       for (const b of d.faithful.body) grew = add(b.name) || grew

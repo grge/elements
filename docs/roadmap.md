@@ -176,7 +176,13 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         quarter turn gives `right`, so that the stress theorems prove as Euclid states them
         (`collinear d e f`, `right c f a`). Needs `right`'s definition cycle resolved first (ledger).
         Turns into equal angles need orientation, a sides question, and may stay out.
-      - **Quadrance as one discovered word** (decided November 2026): `quad-sum a b c d e f`,
+      - **Quadrance: done (November 2026).** `quad-sum`, recognised as a sum from its rules
+        (structure.ts), the integer lattice its solver, equal lengths fed back every round, Pythagoras
+        its bridge (chapter 4, an axiom for quadrances). Hypotenuse-leg is a theorem of chapter 4 now;
+        equal tangents, their bisected angle and III.14 with the halves given prove; their false
+        variants do not. The book's checks unchanged (bench 44.0 s to 44.6 s). The hypotenuse-leg
+        axiom planned for chapter 5 is not needed.
+      - **Quadrance as one discovered word** (decided November 2026), as planned: `quad-sum a b c d e f`,
         Q(a b) + Q(c d) = Q(e f), whose additivity the engine proves from its rules as it does for
         turns (swapping its first two pairs, equal lengths swapped in, cancellation); a rational
         solver over classes of equal lengths that feeds equal lengths back into the store; and
@@ -199,7 +205,7 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    decides the other):
    - Angle-angle-side an axiom: the second half of I.26, whose first half (angle-side-angle) the book
      already takes. Unlocks the III.3 converse and the incircle.
-   - Hypotenuse-leg an axiom of congruence: Euclid does not state it, and it follows only through
+   - ~~Hypotenuse-leg an axiom of congruence~~ (superseded: a theorem by quadrance, chapter 4): Euclid does not state it, and it follows only through
      I.47 and length arithmetic, or a point not named. Unlocks equal tangents.
    - III.32 (tangent and chord) with its proof's point named, the far end of the diameter at the
      tangent point, as the midline names its points.

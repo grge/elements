@@ -28,7 +28,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, are symmetric, or are differences |
 | `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure, with a solver for differences |
-| `src/kb/lattice.ts` | Integer combinations of linear equations: the solver for differences (turns) |
+| `src/kb/lattice.ts` | Integer combinations of linear equations: the solver for differences (turns) and sums (quadrances) |
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
 | `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
@@ -108,6 +108,16 @@ of them, reduced through rows in echelon form, each step an exact division. Inte
 sound in any abelian group, so round a half turn, where division is not (twice a turn being nothing
 leaves two turns). Nothing is asserted back: no rule concludes from `eq-turn`, so answering is enough.
 The step beyond the rules, taken deliberately: the solver adds values no pair of the figure has.
+
+**Sums are solved, and give equal values back** (November 2026). A relation of three pairs whose
+rules prove it a sum (its parts exchange; equal pairs stand in; the parts determine the whole:
+`quad-sum`, quadrances over equal lengths) has its facts read as equations value(a b) + value(c d) =
+value(e f), on the same integer lattice as turns; `holds` asks it, and after every round pairs it
+shows equal are asserted equal (`eq-lines`), so congruence and the rest use them. A difference's
+*faithful* rule (`parallel` from a turn of nothing) is implemented the same way: equal directions go
+back as parallels, the rule itself not fired. Relevance follows these links. And an atom of a solved
+relation in a rule's body waits until its arguments are bound, then asks the solver, so rules see
+what the solver knows.
 
 **Only rules that can help are fired** (November 2026, `relevant`): working back from what will be
 asked (the goal, or a closure's queries), `false` and the equality, through the bodies of rules whose
