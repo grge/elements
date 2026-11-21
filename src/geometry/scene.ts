@@ -4,7 +4,7 @@
  * fact draws, and the figure can say where an element came from.
  */
 
-import type { Figure } from './figure'
+import { circleAt, type Figure } from './figure'
 import { segmentKey } from './classes'
 import { factKey } from './extraction'
 import { RELATIONS } from './relations'
@@ -108,10 +108,9 @@ export function buildScene(
 
   const circles: number[][] = []
   for (const circle of figure.circles) {
-    const c = coords.get(circle.center)
-    const pts = circle.points.map(p => coords.get(p)).filter((p): p is Point => !!p)
-    if (!c || !pts.length) continue
-    const r = pts.reduce((s, p) => s + Math.hypot(p[0] - c[0], p[1] - c[1]), 0) / pts.length
+    const at = circleAt(circle, coords)
+    if (!at) continue
+    const [c, r] = [at.c, at.r]
     circles.push([tx(c[0]), ty(c[1]), r * t.scale, level(circle.depth)])
     meta.circles.push(circle.facts)
   }
@@ -261,7 +260,7 @@ export function buildScene(
         const facts = [...new Set(cls.edges.filter(e => e.from === mi || e.to === mi).flatMap(e => factsOf(e.source)))]
         as.draw(member.points, {
           angle: (a, b, c, kind) => angleAt(a, b, c, 1, kind, level(member.depth), facts, { mark: ci, member: mi }),
-          line: () => {}, segment: () => {}, circle: () => {}, arms: () => {}, sameLength: () => {},
+          line: () => {}, segment: () => {}, circle: () => {}, circleThrough: () => {}, arms: () => {}, sameLength: () => {},
         })
       }
       return

@@ -32,8 +32,8 @@ appears in statements only because the engine needs it is a cost (the README: th
   `eq-turn` → `right`). Perhaps `right` should be open, or a turn. (November 2026)
 - **`eq-spread`**: a word of the plane the book never uses. Keep for the ratio chapter, or drop.
   (November 2026)
-- **`cyclic` is rules only**: not measured, drawn or placed. Chapter 5 makes it a word of the plane.
-  (November 2026)
+- **`cyclic`**: a word of the plane since chapter 5's first step (measured, drawn, placed). Its
+  rules still live in chapter 3, to move to chapter 5 (planned). (November 2026)
 - **`right` and the quarter turn**: a quarter turn cannot conclude `right`, because `right` is
   defined with a point past its vertex, which a figure need not have (Thales' does not). So Thales and
   the altitudes, stated with `right`, do not prove though their turn forms do. `right` open (its

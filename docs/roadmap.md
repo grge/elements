@@ -206,9 +206,11 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         axiom of chapter 2, both forms, beside angle-side-angle.
       - **Angle-angle-side retested** with the fixes in (as planned): whether the III.3 converse follows by
         quadrance and the right-angle rule, or AAS stays an axiom.
-   1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
-      them, no centre point: a new kind of drawing), placed (a point on the circle through three
-      placed points).
+   1. `cyclic` a word of the plane: done (November 2026). Measured (three points on a line are on
+      no circle; a point named twice is one point), placed (the circle through three placed points),
+      drawn as that circle with no centre point. Turn marks at a vertex (two lines through one point,
+      `eq-turn c a c b …`) were never drawn: a block with a recurring point was taken for degenerate;
+      a block of lines now only when a line is one point (relations.ts `pairs`).
    2. `cyclic` and III.21 (with its converse) move from chapter 3 to chapter 5; chapter 3 keeps turns.
    3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
       centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre

@@ -182,7 +182,12 @@ export function markClasses(known: readonly Equality[], equivalences: ReadonlyMa
     for (const e of known) {
       if (e.name !== name || e.args.length !== 2 * eq.k) continue
       const blocks = [e.args.slice(0, eq.k), e.args.slice(eq.k)]
-      if (blocks.some(b => new Set(b).size < b.length)) continue
+      // A block with a point twice is degenerate (a segment of one point, an angle with no arm); a block
+      // of lines (relations.ts `pairs`) only when a line is one point.
+      const degenerate = (b: string[]) => RELATIONS.get(name)?.pairs
+        ? b.some((x, i) => i % 2 === 0 && x === b[i + 1])
+        : new Set(b).size < b.length
+      if (blocks.some(degenerate)) continue
       const [[ka, ra], [kb, rb]] = blocks.map(b => canonicalUpToReverse(b, eq.blockGroup, reverse))
       const [a, b] = [ka.join('\u0001'), kb.join('\u0001')]
       const flip = !!e.flip !== ra !== rb

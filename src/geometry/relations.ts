@@ -21,6 +21,8 @@
  *             (`distinct`): a lemma's hypothesis of it is met by two different names.
  *   mark      its drawing is a mark (a right angle's square): like an equality's ticks it is drawn
  *             wherever it is proven, not only where it is written.
+ *   pairs     its blocks are pairs of points (lines): a block is degenerate when a pair is one point,
+ *             not when a point recurs (`eq-turn c a c b …`, two lines through c, is a proper turn).
  *   reverse   for an equivalence, a reordering of a block that gives it the opposite value (`eq-turn`:
  *             lines swapped, the turn back). A class keeps a block and its reverse as one member,
  *             flipped (marks.ts), as it keeps an angle and the angle beside it.
@@ -43,7 +45,7 @@
  * (extraction.ts), and how it is drawn from `draw`.
  */
 
-import { angle, area, spread, turn, turnGap } from './measure'
+import { angle, area, circumcircle, spread, turn, turnGap } from './measure'
 
 export type Point = [number, number]
 
@@ -65,6 +67,8 @@ export interface Pen {
   segment(a: string, c: string, through: readonly string[]): void
   /** The circle about `center` through the points. */
   circle(center: string, through: readonly string[]): void
+  /** The circle through the points, its centre no point of the figure. */
+  circleThrough(points: readonly string[]): void
   /** The angle a-b-c with its arms: Byrne's square for a right angle. */
   angle(a: string, b: string, c: string, as: 'square'): void
   /** The two arms of angle a-b-c, with no mark: what an angle is drawn with. */
@@ -85,6 +89,7 @@ export interface Relation {
   propertyOf?: string
   flipOf?: string
   reverse?: number[]
+  pairs?: boolean
   byNames?(args: readonly string[]): boolean
   holds(ps: readonly Point[], tol: number): boolean
   residual?(ps: readonly Point[]): number
@@ -93,6 +98,23 @@ export interface Relation {
 
 const d = (p: Point, q: Point) => Math.hypot(p[0] - q[0], p[1] - q[1])
 const same = (p: Point, q: Point) => d(p, q) < 1e-12
+
+/**
+ * How far four points are from lying on one circle: the fourth's distance from the circle through the
+ * first three that make one. Null when there is nothing to measure (fewer than three different
+ * points); infinite when the different points are all on one line (on no circle).
+ */
+function concyclicGap(ps: readonly Point[]): number | null {
+  const distinct: Point[] = []
+  for (const p of ps) if (!distinct.some(q => same(p, q))) distinct.push(p)
+  if (distinct.length < 3) return null
+  for (let i = 0; i < distinct.length; i++) for (let j = i + 1; j < distinct.length; j++) for (let k = j + 1; k < distinct.length; k++) {
+    const circle = circumcircle(distinct[i], distinct[j], distinct[k])
+    if (!circle) continue
+    return Math.max(0, ...distinct.map(p => Math.abs(d(p, circle.c) - circle.r)))
+  }
+  return Infinity
+}
 
 /** Angles and spreads hold to this, in radians or as a spread: they do not scale with the figure. */
 const MEASURE_TOL = 1e-7
@@ -193,6 +215,7 @@ const TABLE: Relation[] = [
     name: 'eq-turn', arity: 8, depicted: true,
     classMark: { as: 'turns', sign: '=', prefix: '↺' },
     reverse: [2, 3, 0, 1],
+    pairs: true,
     read: (args, m) => m.measure('eq-turn', args),
     ...measured(P => turnGap(turn(P[0], P[1], P[2], P[3]), turn(P[4], P[5], P[6], P[7]))),
   },
@@ -237,6 +260,16 @@ const TABLE: Relation[] = [
     draw: ([a, b, c], pen) => pen.angle(a, b, c, 'square'),
     mark: true, propertyOf: 'eq-angle',
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
+  },
+  {
+    // a, b, c and d lie on one circle, its centre not named. Placed by the planner on the circle through
+    // three placed points; drawn as that circle. Points named twice are one point: three points are on
+    // a circle unless they are on a line, and two always are.
+    name: 'cyclic', arity: 4, depicted: true,
+    read: (args, m) => m.measure('cyclic', args),
+    draw: (args, pen) => pen.circleThrough(args),
+    holds: (ps, tol) => { const r = concyclicGap(ps); return r === null || r <= tol },
+    residual: ps => concyclicGap(ps) ?? 0,
   },
   {
     // The quadrances (squared lengths) of a-b and c-d together make that of e-f. Measured only: not

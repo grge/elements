@@ -6,6 +6,7 @@
  *   supp a b c d e f           angles a-b-c and d-e-f together make a straight angle
  *   eq-area a b c d e f        triangle a-b-c has the area of triangle d-e-f (unsigned)
  *   eq-turn a b c d e f g h    the turn from line a-b to line c-d equals that from e-f to g-h
+ *   cyclic a b c d             a, b, c and d lie on one circle
  *
  * The spread between two lines is Wildberger's: the squared cross product of their directions over
  * the product of their squared lengths, in effect sin² of the angle between them. It does not tell an
@@ -42,6 +43,17 @@ export function turn(a: Point, b: Point, c: Point, d: Point): number {
 export function turnGap(s: number, t: number): number {
   const d = Math.abs(s - t) % Math.PI
   return Math.min(d, Math.PI - d)
+}
+
+/** The circle through three points: its centre and radius; null if they are on one line (or two are one). */
+export function circumcircle(a: Point, b: Point, c: Point): { c: Point; r: number } | null {
+  const d = 2 * (a[0] * (b[1] - c[1]) + b[0] * (c[1] - a[1]) + c[0] * (a[1] - b[1]))
+  const scale = Math.max(Math.hypot(b[0] - a[0], b[1] - a[1]), Math.hypot(c[0] - a[0], c[1] - a[1]), 1e-12)
+  if (Math.abs(d) < 1e-9 * scale * scale) return null
+  const sq = (p: Point) => p[0] * p[0] + p[1] * p[1]
+  const ux = (sq(a) * (b[1] - c[1]) + sq(b) * (c[1] - a[1]) + sq(c) * (a[1] - b[1])) / d
+  const uy = (sq(a) * (c[0] - b[0]) + sq(b) * (a[0] - c[0]) + sq(c) * (b[0] - a[0])) / d
+  return { c: [ux, uy], r: Math.hypot(a[0] - ux, a[1] - uy) }
 }
 
 /** The signed area of triangle a-b-c: positive when a, b, c turn anticlockwise (y up). */

@@ -3,7 +3,7 @@
  */
 
 import type { WitnessModel } from './solver'
-import type { Figure } from './figure'
+import { circleAt, type Figure } from './figure'
 
 export interface RenderTransform {
   minX: number
@@ -37,12 +37,10 @@ export function computeRenderTransform(
   const py = [...coords.values()].map(([, y]) => y)
   const ax = [...px], ay = [...py]
   for (const circle of figure?.circles ?? []) {
-    const c = witness.coords.get(circle.center)
-    const onCircle = [...circle.points].map(p => witness.coords.get(p)).filter((p): p is [number, number] => !!p)
-    if (!c || !onCircle.length) continue
-    const r = onCircle.reduce((sum, [qx, qy]) => sum + Math.hypot(qx - c[0], qy - c[1]), 0) / onCircle.length
-    ax.push(c[0] - r, c[0] + r)
-    ay.push(c[1] - r, c[1] + r)
+    const at = circleAt(circle, witness.coords)
+    if (!at) continue
+    ax.push(at.c[0] - at.r, at.c[0] + at.r)
+    ay.push(at.c[1] - at.r, at.c[1] + at.r)
   }
   const [pMinX, pMaxX] = [Math.min(...px), Math.max(...px)]
   const [pMinY, pMaxY] = [Math.min(...py), Math.max(...py)]

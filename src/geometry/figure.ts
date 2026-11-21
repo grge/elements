@@ -15,6 +15,7 @@ import { analyseStructure } from '../kb/structure'
 import { factKey, type DrawableFact, type Extraction } from './extraction'
 import { relationOf, RELATIONS, type Pen } from './relations'
 import { UnionFind, mergeLines, segmentKey } from './classes'
+import { circumcircle, type Point } from './measure'
 import { equalities, markClasses, provenMarks, type MarkClass } from './marks'
 
 /** Every element says which facts made it, by key (extraction.ts `factKey`). */
@@ -30,8 +31,11 @@ export interface Figure {
   lines: ({ points: string[]; faint: boolean } & Made)[]
   /** Finite straight lines, drawn at full strength. */
   strokes: ({ ends: [string, string] } & Made)[]
-  /** Circles about a centre through their points; circles with the same centre and radius are one. */
-  circles: ({ center: string; points: string[] } & Made)[]
+  /**
+   * Circles about a centre through their points; circles with the same centre and radius are one. A
+   * circle with no centre (`null`) is the circle through its points (`cyclic`).
+   */
+  circles: ({ center: string | null; points: string[] } & Made)[]
   /** Angles drawn as themselves (not as marks of equality): a right angle's square. */
   angles: ({ points: [string, string, string]; as: 'square' } & Made)[]
   /** Classes of equal segments, equal angles (any recognised equivalence): what ticks and arcs mark. */
@@ -102,7 +106,7 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
   const groups: ({ points: Set<string>; faint: boolean } & Made)[] = []
   const strokes: Figure['strokes'] = []
   const angles: Figure['angles'] = []
-  const onCircles: { center: string; through: readonly string[]; depth: number; key: string }[] = []
+  const onCircles: { center: string | null; through: readonly string[]; depth: number; key: string }[] = []
   const radii = new UnionFind()
   for (const f of facts) {
     const key = factKey(f)
@@ -115,6 +119,7 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
         groups.push({ points: new Set(through), faint: true, depth, facts: [key] })
       },
       circle: (center, through) => onCircles.push({ center, through, depth, key }),
+      circleThrough: points => onCircles.push({ center: null, through: points, depth, key }),
       angle: (a, b, c, as) => angles.push({ points: [a, b, c], as, depth, facts: [key] }),
       arms: (a, b, c) => strokes.push({ ends: [b, a], depth, facts: [key] }, { ends: [b, c], depth, facts: [key] }),
       sameLength: (a, b, c, d) => radii.union(segmentKey(a, b), segmentKey(c, d)),
@@ -131,7 +136,8 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
   const byKey = new Map<string, Figure['circles'][number]>()
   for (const c of onCircles) {
     if (!c.through.length) continue
-    const key = `${c.center}\u0002${radii.find(segmentKey(c.center, c.through[0]))}`
+    // A circle through its points alone is one with any other through the same points.
+    const key = c.center === null ? `\u0003${[...new Set(c.through)].sort().join(' ')}` : `${c.center}\u0002${radii.find(segmentKey(c.center, c.through[0]))}`
     const circle = byKey.get(key) ?? { center: c.center, points: [], depth: c.depth, facts: [] }
     for (const p of c.through) if (!circle.points.includes(p)) circle.points.push(p)
     circle.depth = Math.min(circle.depth, c.depth)
@@ -140,4 +146,23 @@ export function figureOf(depicted: readonly (GroundPredicate & { depth?: number;
   }
 
   return { points, lines, strokes, circles: [...byKey.values()], angles, marks, sources, provenBy: new Map() }
+}
+
+/**
+ * A circle of the figure at given positions: its centre and radius. About a centre, the mean distance
+ * of its points; through its points alone, the circle through three of them not on one line. Null if
+ * there is none.
+ */
+export function circleAt(circle: { center: string | null; points: readonly string[] }, coords: ReadonlyMap<string, Point>): { c: Point; r: number } | null {
+  const pts = circle.points.map(p => coords.get(p)).filter((p): p is Point => !!p)
+  if (circle.center !== null) {
+    const c = coords.get(circle.center)
+    if (!c || !pts.length) return null
+    return { c, r: pts.reduce((sum, p) => sum + Math.hypot(p[0] - c[0], p[1] - c[1]), 0) / pts.length }
+  }
+  for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) for (let k = j + 1; k < pts.length; k++) {
+    const found = circumcircle(pts[i], pts[j], pts[k])
+    if (found) return found
+  }
+  return null
 }

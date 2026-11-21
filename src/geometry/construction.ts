@@ -33,7 +33,7 @@
 
 import type { GroundPredicate } from '../kb/inference'
 import { displayName, isAuxiliary } from '../kb/names'
-import { angle as angleAt, area as areaOf, turn as turnOf } from './measure'
+import { angle as angleAt, area as areaOf, circumcircle, turn as turnOf } from './measure'
 import { relationOf, type ModelReader } from './relations'
 import { UnionFind, mergeLines, segmentKey, segmentEnds } from './classes'
 
@@ -162,6 +162,8 @@ export type Locus =
   | { kind: 'thales'; ends: [string, string] }
   /** The line through `at` perpendicular to the line from `at` to `to`. */
   | { kind: 'perpendicular'; at: string; to: string }
+  /** The circle through three placed points (cyclic: a fourth point on their circle). */
+  | { kind: 'through'; points: [string, string, string] }
   /**
    * The line through `through` turned from the line `base` by the turn from line `turn[0..1]` to line
    * `turn[2..3]` (`sign` 1), or back by it (`sign` -1): a turn copied onto a line.
@@ -297,6 +299,13 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
       }
     }
   }
+  // Four points on one circle: three placed, the fourth on their circle.
+  for (const m of model.measures) {
+    if (m.name !== 'cyclic' || m.args.filter(q => q === p).length !== 1) continue
+    const others = [...new Set(m.args.filter(q => q !== p))]
+    if (others.length !== 3 || !others.every(q => isPlaced.has(q))) continue
+    out.push({ kind: 'through', points: [others[0], others[1], others[2]] })
+  }
   for (const cls of model.lengths) {
     const complete = cls.filter(([a, b]) => isPlaced.has(a) && isPlaced.has(b))
     const others = cls
@@ -353,7 +362,7 @@ function pivots(l: Locus): string[] {
 
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn'].includes(m.name)).length
+    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn', 'cyclic'].includes(m.name)).length
 }
 
 const DP_LIMIT = 18
@@ -574,6 +583,11 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
       const v = g(locus.at), d = sub(g(locus.to), v)
       return Math.hypot(...d) < 1e-12 ? null : { kind: 'line', p: v, d: [-d[1], d[0]] }
     }
+    case 'through': {
+      const [a, b, c] = locus.points.map(g)
+      const found = circumcircle(a, b, c)
+      return found ? { kind: 'circle', c: found.c, r: found.r } : null
+    }
     case 'turned': {
       const [a, b] = locus.base.map(g), [e, f, h, k] = locus.turn.map(g)
       const t = turnOf(e, f, h, k), d = sub(b, a)
@@ -729,6 +743,7 @@ export function describeLocus(l: Locus): string {
     case 'area': return `a parallel to ${n(l.base)} at the height that gives the area of ${n(l.area)}`
     case 'thales': return `the circle on ${n(l.ends)}`
     case 'perpendicular': return `the perpendicular to ${n([l.at, l.to])} at ${n([l.at])}`
+    case 'through': return `the circle through ${n(l.points)}`
     case 'turned': return `the line through ${n([l.through])} turned ${l.sign > 0 ? 'from' : 'back from'} ${n(l.base)} as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
     case 'seen': return `the circle through ${n(l.ends)} on which ${n(l.ends)} is seen as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
   }
@@ -934,7 +949,7 @@ function spread(coords: Map<string, Point>): number {
 }
 
 /** What a figure draws through its points, from the relation table's `draw` (figure.ts draws the same). */
-interface Drawn { segments: [string, string][]; lines: string[][]; circles: { center: string; through: string[] }[] }
+interface Drawn { segments: [string, string][]; lines: string[][]; circles: { center: string | null; through: string[] }[] }
 
 function drawnBy(cp: ConstructionPlan): Drawn {
   const out: Drawn = { segments: [], lines: [], circles: [] }
@@ -942,6 +957,7 @@ function drawnBy(cp: ConstructionPlan): Drawn {
     line: ps => { out.lines.push([...ps]) },
     segment: (a, c) => { out.segments.push([a, c]) },
     circle: (o, ps) => { out.circles.push({ center: o, through: [...ps] }) },
+    circleThrough: ps => { out.circles.push({ center: null, through: [...ps] }) },
     angle: (a, b, c) => { out.segments.push([b, a], [b, c]) },
     arms: (a, b, c) => { out.segments.push([b, a], [b, c]) },
     sameLength: () => {},
@@ -980,7 +996,7 @@ export function legibility(cp: ConstructionPlan, coords: Map<string, Point>, why
   // The points the figure shows: named ones, and auxiliary ones a drawn line or circle passes through
   // (a right angle's extension point).
   const drawn = drawnBy(cp)
-  const onDrawn = new Set([...drawn.segments.flat(), ...drawn.lines.flat(), ...drawn.circles.flatMap(c => [c.center, ...c.through])])
+  const onDrawn = new Set([...drawn.segments.flat(), ...drawn.lines.flat(), ...drawn.circles.flatMap(c => [...(c.center ? [c.center] : []), ...c.through])])
   const named = [...coords.keys()].filter(p => !isAuxiliary(p) || onDrawn.has(p))
   if (named.length < 2) return 1
   const pairs: [string, number][] = []
@@ -1008,8 +1024,10 @@ export function legibility(cp: ConstructionPlan, coords: Map<string, Point>, why
       near(2 * toLine(q, at(line[0]), at(line[line.length - 1])), `${p} near line ${line.join('')}`)
     }
     for (const { center, through } of drawn.circles) {
-      if (p === center || through.includes(p) || !shown([center, ...through])) continue
-      near(Math.abs(dist(q, at(center)) - dist(at(through[0]), at(center))), `${p} near circle ${center}`)
+      if (p === center || through.includes(p) || !shown([...(center ? [center] : []), ...through])) continue
+      if (center) { near(Math.abs(dist(q, at(center)) - dist(at(through[0]), at(center))), `${p} near circle ${center}`); continue }
+      const cc = through.length >= 3 ? circumcircle(at(through[0]), at(through[1]), at(through[2])) : null
+      if (cc) near(Math.abs(dist(q, cc.c) - cc.r), `${p} near circle ${through.join('')}`)
     }
   }
   // A figure should look like any figure of its facts, not a special one: two finite straight lines

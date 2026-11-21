@@ -263,6 +263,9 @@ about a placed centre whose radius is any placed segment of equal length (the co
 Euclid I.2 shows this is no stronger than the collapsing compass); the perpendicular bisector of two
 placed points the new point is equidistant from.
 
+Four points on one circle (`cyclic`, November 2026) put the fourth on the circle through the other
+three, once those are placed (`through`); the figure draws that circle with no centre point.
+
 Equal turns give two more (November 2026). A point whose line from a placed point must turn from a
 placed line as another pair of lines turns is on one line through that point (`turned`): directed,
 there is no second ray to choose. A point from which a placed chord is seen at a known turn is on one
