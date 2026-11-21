@@ -16,6 +16,9 @@ import { turn, type Point } from '../src/geometry/measure'
 import { holds } from '../src/geometry/relations'
 import { analyseStructure } from '../src/kb/structure'
 import { bookRules } from './book'
+import { checkLemma } from '../src/kb/checker'
+import { parseLemmas, parseRules } from '../src/language/parser'
+import { readFileSync } from 'node:fs'
 
 const kb = new KnowledgeBase(bookRules)
 const deg = Math.PI / 180
@@ -51,6 +54,23 @@ describe('turns in the book', () => {
     expect([...from].sort()).toEqual(['cyclic', 'eq-turn'])
   })
 })
+
+describe('a pair of one point has no turn', () => {
+  // A degenerate right angle (right o m m: an arm of no length) once became a turn with a one-point
+  // line, which equals every turn, and through "all right angles turn alike" glued every quarter turn
+  // to it: the right angle at m made the angle at a right, and the hypotheses contradictory.
+  it('the right angle at m does not make the angle at a right, nor its hypotheses contradictory', () => {
+    const [atA, atM] = parseLemmas('? eq-turn a o a m a m a o: right o m a, distinct o m\n? eq-turn m o m a m a m o: right o m a, distinct o m')
+    expect(checkLemma(atA, kb, 2_000_000, { distinctNames: true }).result).toBe('not-provable')
+    expect(checkLemma(atM, kb, 2_000_000, { distinctNames: true }).result).toBe('verified')
+  })
+
+  it('so the altitudes figure does not make the angle at a corner right (it once did)', () => {
+    const rules = [...bookRules, ...parseRules(readFileSync(new URL('../src/language/extra/beyond.geo', import.meta.url), 'utf8'))]
+    const [corner] = parseLemmas('? eq-turn a b a c a c a b: altitudes a b c d e h f')
+    expect(checkLemma(corner, new KnowledgeBase(rules), 2_000_000, { distinctNames: true }).result).not.toBe('verified')
+  })
+}, 120_000)
 
 describe('the planner places points by turns', () => {
   const drawn = (text: string, free?: string[]) => {

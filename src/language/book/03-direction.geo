@@ -262,13 +262,18 @@ eq-turn a b c d e f x h: eq-turn a b c d e f g h, eq-point x g
 eq-turn a b c d e f g x: eq-turn a b c d e f g h, eq-point x h
 
 # ── turns are of directions
+#
+# A pair of one point names no line, so it has no turn; a turn said of one would be equal to every turn
+# (nothing to measure), and with the equivalence would make every two turns equal. So every rule
+# below that could name such a pair says its points are distinct. Rules that only move turns about
+# (above, and the exchange below) keep proper turns proper.
 
 # A turn depends only on which way its lines run: a line may be swapped for any line running its way,
 # itself named by other points included.
 eq-turn i j c d e f g h: eq-turn a b c d e f g h, parallel a b i j
 
 # Lines that run the same way turn by nothing.
-eq-turn a b c d e f e f: parallel a b c d, distinct e f
+eq-turn a b c d e f e f: parallel a b c d, distinct a b, distinct c d, distinct e f
 
 # ── turns add
 
@@ -280,15 +285,15 @@ eq-turn a b e f c d g h: eq-turn a b c d e f g h
 # ── bridges to angles
 
 # A right angle: its arms turn to each other the same either way round, a quarter turn.
-eq-turn b a b c b c b a: right a b c
+eq-turn b a b c b c b a: right a b c, distinct b c
 
 # All right angles turn alike: each is a quarter turn, and round a half turn a quarter turn either way
 # is the same (Euclid's fourth postulate, directed).
-eq-turn b a b c e d e f: right a b c, right d e f
+eq-turn b a b c e d e f: right a b c, right d e f, distinct b c, distinct e f
 
 # The base of an isosceles triangle: its legs turn to it as it turns back to them, the turns at b
 # and c mirror images. (I.5, directed.)
-eq-turn b a b c c b c a: eq-lines a b a c
+eq-turn b a b c c b c a: eq-lines a b a c, distinct a b, distinct b c
 
 # ── turns in a circle
 
@@ -309,7 +314,7 @@ cyclic a b d e: cyclic a b c d, cyclic a b c e, triangle a b c
 # which needs to know which side of the chord the centre lies. With turns that halving is not sound
 # (twice a quarter turn and twice no turn are both no turn), and sides cannot be said. So here it is
 # taken as an axiom of turns, as the full-angle method takes it: a theorem in Euclid, given here.
-eq-turn c a c b d a d b: cyclic a b c d
+eq-turn c a c b d a d b: cyclic a b c d, distinct c a, distinct c b, distinct d a, distinct d b
 
 # And its converse (III.21's, which Euclid leaves unsaid until III.22 and the circle through three
 # points): where a chord is seen at one turn from two points off its line, the four are on a circle.

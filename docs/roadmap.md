@@ -128,7 +128,11 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      concludes `cyclic` (below), since a circle about a centre would need one the figure names.
      III.20 waits for the Euclid book.
    - The stress test as turns (November 2026): the altitudes, the Simson line and the nine-point
-     circle prove, in 2 to 15 s. They needed two more things: all right angles turn alike (the
+     circle seemed to prove, in 2 to 15 s, but did not: the turn bridges let a degenerate right angle
+     (an arm of no length: `right a b b` holds) become a turn with a one-point line, which equals every
+     turn, and the equivalence then glued every turn together; false claims proved as well. Fixed
+     (every turn rule that could name a one-point pair says its points are distinct; regression
+     tests); the three are not proved now, and why is the next question. They needed two more things: all right angles turn alike (the
      fourth postulate, directed), and `cyclic a b c d`, four points on one circle with no centre
      named, an open word so that III.21's converse can conclude it (the circles a proof finds have
      no centre the figure names; the prover cannot make one, though the planner can place it).
@@ -139,11 +143,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
    Chapter 5, planned (November 2026), in this order:
    0. Before the chapter, in order:
-      - **Two engine fixes.** Rules whose body repeats a variable inside an equivalence's tuples
-        (`eq-turn b a b c b c b a`) never match: silent incompleteness, found while prototyping
-        quadrance. And a contradiction ("o and a one point") from a rule that a right angle's arms are
-        two lines (`triangle a b c` from `right`'s body) together with the turn bridges: an unsound
-        rule in a degenerate case or an engine bug, to be traced before anything rests on it.
+      - **Two engine fixes: done (November 2026), neither in the engine.** The "matcher gap" was a
+        misdiagnosis: the test word had one clause, and a lone clause is a definition, read as an
+        abbreviation, its facts never stored. The contradiction was unsound turn rules: a degenerate
+        right angle became a turn with a one-point line, equal to every turn (see step 6). Guarded and
+        tested; the stress theorems' proofs went with it.
+      - **Why the altitudes, Simson and nine-point do not prove**, now that they are sound.
       - **Return bridges for turns** (decided November 2026). Turns have bridges in (right angles,
         parallels, isosceles triangles) but none out, so what the solver proves stays in turn-language
         and theorems must be restated to meet it (the Simson line as "turns by nothing"). Wanted:

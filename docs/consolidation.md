@@ -39,6 +39,10 @@ appears in statements only because the engine needs it is a cost (the README: th
   reach it except through a contradiction. It blocks the III.3 converse by quadrance, which needs o
   off the chord's line at m. A rule `triangle a b c: right a b c` (or `right` made open, its
   properties stated) would do. (November 2026)
+- **`right a b b` holds**: the definition asks a ≠ b and the point past the vertex ≠ b, not c ≠ b,
+  so a degenerate angle (an arm of no length) is right. It made the turn bridges unsound until each was
+  guarded. Perhaps `right` should ask c ≠ b; and degenerate angles in `eq-angle`'s classes may carry the
+  same risk (a measure that "holds" when there is nothing to measure is not an equality). (November 2026)
 - **`supp`**: an equal angle on the other side (marks.ts flips it). With turns, a supplement is a
   reversed turn; perhaps `supp` is redundant in the big book. (November 2026)
 
