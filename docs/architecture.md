@@ -26,8 +26,9 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 | `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file; `extra/`, chapters after the book that are not part of it (the stress test), whose lemmas are checked on their pages but never taken as proven for marks |
 | `src/kb/inference.ts` | `KnowledgeBase`, `unfoldTree` and `unfold`, and `forwardClosure` (the plain reference engine) |
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
-| `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, or are symmetric |
-| `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure |
+| `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, are symmetric, or are differences |
+| `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure, with a solver for differences |
+| `src/kb/lattice.ts` | Integer combinations of linear equations: the solver for differences (turns) |
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
 | `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
@@ -96,6 +97,17 @@ canonical argument order. It skips exactly those rules the structure already imp
 checked) and fires every other rule normally, so it computes the same closure as the plain
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
+
+**Differences are solved** (November 2026). An equivalence the structure analysis proves to be a
+difference (two unordered pairs per block, closed under exchanging the middle pairs: `eq-turn`) is
+read as equations value(c d) − value(a b) = value(g h) − value(e f), the values of pairs being the
+classes of the pairs' equivalence when one substitutes (`parallel`: lines of one direction). When its
+union-find does not have a fact, `holds` asks a lattice (`lattice.ts`) built from its classes'
+equations at the store's current version: the fact follows if its equation is an integer combination
+of them, reduced through rows in echelon form, each step an exact division. Integer combinations are
+sound in any abelian group, so round a half turn, where division is not (twice a turn being nothing
+leaves two turns). Nothing is asserted back: no rule concludes from `eq-turn`, so answering is enough.
+The step beyond the rules, taken deliberately: the solver adds values no pair of the figure has.
 
 **Only rules that can help are fired** (November 2026, `relevant`): working back from what will be
 asked (the goal, or a closure's queries), `false` and the equality, through the bodies of rules whose

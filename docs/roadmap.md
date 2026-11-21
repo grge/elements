@@ -107,12 +107,18 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      is concluded from a turn, so proofs that ask none pay nothing (the book's checks unchanged). Not
      stated: that lines turning by nothing are parallel, which would put `right`'s definition on a
      cycle (definitions must not be recursive).
-   - Next: the solver. Rules over the figure's lines cannot add turns in general: III.31 as turns
-     (*Beyond the book*) has every step proved, the two isosceles triangles' base turns, but adding
-     them needs a direction no line of the figure has. The engine is to recognise from `eq-turn`'s
-     rules that turns are differences of directions, and a linear solver mod a half turn over the
-     lines' directions takes them (*Open questions*, sums). III.20 (the angle at the centre is double)
-     is the test of doubling round a half turn.
+   - The solver: done (November 2026). The engine proves from `eq-turn`'s rules that it is a
+     difference (an equivalence of two unordered pairs, closed under exchanging middles, with
+     `parallel` the lines of one direction: structure.ts, nothing named), and `holds` asks an integer
+     lattice of its classes' equations (lattice.ts): a turn follows when its equation is an integer
+     combination of the known ones, sound round a half turn, where dividing is not. III.31 as turns
+     proves (*Beyond the book*); adding turns went from 5 s of rules to nothing.
+   - Found: III.21, angles in the same segment as turns, does not follow: the isosceles base turns
+     give twice the turns equal, and halving is not sound round a half turn (two quarter turns make a
+     half turn; so do two nothings). Euclid's proof goes through the angle at the centre with sides;
+     a turns proof needs a point the figure does not name (the far end of a diameter), which is
+     parked. So III.21 is the next decision: an axiom (as the full-angle method takes it, and as the
+     planner's `seen` circle already assumes), or a wait. III.20 is the same question.
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 

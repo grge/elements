@@ -265,7 +265,7 @@ eq-turn a b c d e f g x: eq-turn a b c d e f g h, eq-point x h
 
 # A turn depends only on which way its lines run: a line may be swapped for any line running its way,
 # itself named by other points included.
-eq-turn i j c d e f g h: eq-turn a b c d e f g h, parallel a b i j, distinct i j
+eq-turn i j c d e f g h: eq-turn a b c d e f g h, parallel a b i j
 
 # Lines that run the same way turn by nothing.
 eq-turn a b c d e f e f: parallel a b c d, distinct e f

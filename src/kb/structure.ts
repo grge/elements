@@ -36,7 +36,21 @@ export interface Structure {
   congruent: Map<string, boolean[]>
   /** Per predicate (not an equivalence): permutations of its arguments it is invariant under. */
   symmetries: Map<string, number[][]>
+  /**
+   * Equivalences that are differences (see below): `p(a b c d e f g h)` read as value(c d) - value(a b)
+   * = value(g h) - value(e f), with `pairs` the equivalence of pairs that have one value, if any.
+   */
+  differences: Map<string, Difference>
 }
+
+/**
+ * An equivalence on blocks of two unordered pairs, closed under exchanging the middle pairs: if a-b
+ * is to c-d as e-f is to g-h, then a-b is to e-f as c-d is to g-h. That is what a difference of values
+ * is (c-d minus a-b equals g-h minus e-f, so g-h minus c-d equals e-f minus a-b), and so its facts are
+ * linear equations in the pairs' values, which a solver may combine (saturate.ts). Turns are the
+ * differences of lines' directions; `pairs` (parallel) says which lines have one direction.
+ */
+export interface Difference { pairs: string | null }
 
 const MAX_SYMMETRY_ARITY = 5
 const MAX_BLOCK = 4
@@ -202,5 +216,29 @@ function analyse(rules: readonly Rule[]): Structure {
     if (group.length > 1) symmetries.set(p, group)
   }
 
-  return { arity, equivalences, equality, congruent, symmetries }
+  // ── differences: block equivalences of two unordered pairs, closed under exchanging middles ──
+  const differences = new Map<string, Difference>()
+  const pairSwaps = [[1, 0, 2, 3], [0, 1, 3, 2]]
+  for (const [p, e] of equivalences) {
+    if (e.k !== 4 || !pairSwaps.every(sw => e.blockGroup.some(g => g.join(',') === sw.join(',')))) continue
+    const fragment = own(p)
+    const x = consts('x', 8)
+    if (!proves(fragment, [atom(p, x)], atom(p, [x[0], x[1], x[4], x[5], x[2], x[3], x[6], x[7]]))) continue
+    // The pairs' equivalence: one whose members may replace the first pair (and so, by the
+    // equivalence and the exchange, any pair).
+    let pairs: string | null = null
+    // Only an equivalence some rule for p substitutes by (its body one fact of p and one of q) can be
+    // it: trying others means refuting them, an exhaustive closure each (eq-lines, which a bridge to
+    // turns names, took a minute and a half).
+    const named = new Set(rules.filter(r => r.head.name === p && r.body.length === 2 && r.body.some(b => b.name === p))
+      .flatMap(r => r.body.filter(b => b.name !== p).map(b => b.name)))
+    for (const [q, qe] of equivalences) {
+      if (q === p || qe.k !== 2 || !named.has(q)) continue
+      const both = [...fragment, ...own(q), ...rules.filter(r => r.head.name === p && r.body.every(b => b.name === p || b.name === q) && !fragment.includes(r))]
+      if (proves(both, [atom(p, x), atom(q, [x[0], x[1], 'y0', 'y1'])], atom(p, ['y0', 'y1', ...x.slice(2)]))) { pairs = q; break }
+    }
+    differences.set(p, { pairs })
+  }
+
+  return { arity, equivalences, equality, congruent, symmetries, differences }
 }

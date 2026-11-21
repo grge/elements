@@ -18,7 +18,8 @@
 
 import type { Predicate, Rule } from '../language/parser'
 import type { GroundPredicate, KnowledgeBase } from './inference'
-import { analyseStructure, type Equivalence, type Structure } from './structure'
+import { analyseStructure, type Difference, type Equivalence, type Structure } from './structure'
+import { Lattice, type Vector } from './lattice'
 import { fingerprint, Lru } from './rules'
 
 const OBJECT = '__object__'
@@ -393,10 +394,68 @@ export class Saturation {
     if (f.name === this.eq && f.args.length === 2) return this.find(f.args[0]) === this.find(f.args[1])
     const e = this.st.equivalences.get(f.name)
     if (e && f.args.length === 2 * e.k) {
-      return this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(0, e.k)))
-        === this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(e.k)))
+      if (this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(0, e.k)))
+        === this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(e.k)))) return true
+      const d = this.st.differences.get(f.name)
+      return d ? this.differenceHolds(f.name, e, d, f.args) : false
     }
     return this.facts.has(this.factKey(f.name, this.canonArgs(f.name, f.args)))
+  }
+
+  // ───────────────────────── differences: a solver ─────────────────────────
+
+  /** Per difference relation: its equations as a lattice, built at a version of the store. */
+  private lattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number> }>()
+
+  /** The value of a pair, as an unknown's key: its class under the pairs' equivalence. Null for a pair of one point. */
+  private pairValue(d: Difference, a: string, b: string): string | null {
+    if (this.find(a) === this.find(b)) return null
+    const q = d.pairs ? this.st.equivalences.get(d.pairs) : undefined
+    if (d.pairs && q) return this.tupleRoot(d.pairs, this.tupleKey(d.pairs, q, [a, b]))
+    const [x, y] = [this.find(a), this.find(b)]
+    return x < y ? `${x}${SEP}${y}` : `${y}${SEP}${x}`
+  }
+
+  /** A block a b c d as an equation's side: value(c d) - value(a b). Null if a pair is one point. */
+  private blockVector(d: Difference, unknown: Map<string, number>, block: readonly string[], sign: number, into: Vector): boolean {
+    const from = this.pairValue(d, block[0], block[1]), to = this.pairValue(d, block[2], block[3])
+    if (from === null || to === null) return false
+    for (const [key, c] of [[to, sign], [from, -sign]] as const) {
+      let i = unknown.get(key)
+      if (i === undefined) unknown.set(key, i = unknown.size)
+      const x = (into.get(i) ?? 0) + c
+      if (x === 0) into.delete(i)
+      else into.set(i, x)
+    }
+    return true
+  }
+
+  /**
+   * Does a difference follow by adding and subtracting the known ones (structure.ts, `Difference`)?
+   * Every class of the relation says its members are equal: each member minus the first is an
+   * equation, and the question is whether the asked one is an integer combination of them. The
+   * solver sees values no pair of the figure has (the sum of two turns); that is the step it adds to
+   * the rules, deliberately.
+   */
+  private differenceHolds(p: string, e: Equivalence, d: Difference, args: readonly string[]): boolean {
+    let cached = this.lattices.get(p)
+    if (!cached || cached.version !== this.version) {
+      const lattice = new Lattice(), unknown = new Map<string, number>()
+      for (const members of this.classesOf(p).members.values()) {
+        const blocks = [...members].map(key => key.split(SEP))
+        const first = blocks.find(b => this.blockVector(d, unknown, b, 1, new Map()))
+        if (!first) continue
+        for (const b of blocks) {
+          if (b === first) continue
+          const v: Vector = new Map()
+          if (this.blockVector(d, unknown, b, 1, v) && this.blockVector(d, unknown, first, -1, v)) lattice.add(v)
+        }
+      }
+      this.lattices.set(p, cached = { version: this.version, lattice, unknown })
+    }
+    const v: Vector = new Map()
+    if (!this.blockVector(d, cached.unknown, args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, args.slice(e.k), -1, v)) return false
+    return cached.lattice.contains(v)
   }
 
   /**
