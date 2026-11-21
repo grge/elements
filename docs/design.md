@@ -80,6 +80,18 @@ at a time: a card for each predicate, in the order the chapter defines them, wit
 figure (computed in idle time and cached), its name and its arguments. Opening a construction shows its
 definition with the propositions about it, each checked.
 
+**Index.** The contents can instead be browsed as an index (*chapters | index*, remembered): a table of
+every word the knowledge base mentions, the book's, the extra chapters', the user's, and the plane's
+words the book never uses, with what each can do and where that comes from. A solid accent dot: the plane
+knows it itself (the relation table). A ring: through its definition, listing the words it unfolds to.
+A solid ink square: proved from its rules (structure.ts). The columns: chapter; defined or open;
+constructs (the planner reads it), draws, marks; measured (itself, via its definition, only as a
+hypothesis when unfolding brings in points a claim lacks, or not at all); convention (`distinct`'s
+names apart); discovered (the equality, equivalences, symmetries). Searchable (a word's exact name also
+finds the words built on it), sortable by any heading (a third click returns to the book's order) and
+filterable by any column. A word with a page opens it. It makes visible which words carry declared
+powers and which earn theirs from the rules (vocabulary.ts).
+
 **Equal segments** that a figure states are drawn with bold tick marks, the same number on segments of
 the same length. The figure's own circles count their radii as equal segments, so the equilateral
 triangle's two circles draw its three sides, one tick each, as Byrne would.

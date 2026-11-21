@@ -126,7 +126,20 @@
     <transition name="fade">
       <nav v-if="contentsOpen" class="contents" @click.self="contentsOpen = false">
         <div class="contents-inner">
-          <button class="entry scratch" @click="go(() => ws.openScratchpad())">Scratch</button>
+          <div class="contents-head">
+            <button class="entry scratch" @click="go(() => ws.openScratchpad())">Scratch</button>
+            <div class="views" role="radiogroup" aria-label="Browse by">
+              <button role="radio" :class="{ current: browse === 'chapters' }" :aria-checked="browse === 'chapters'" @click="setBrowse('chapters')">chapters</button>
+              <button role="radio" :class="{ current: browse === 'index' }" :aria-checked="browse === 'index'" @click="setBrowse('index')">index</button>
+            </div>
+          </div>
+          <WordIndex
+            v-if="browse === 'index'"
+            :rows="indexRows" :thumbnail="name => thumbnails.get(name)"
+            :current="ws.mode.value === 'predicate' ? ws.selectedPred.value : undefined"
+            @open="(name, ns) => go(() => ws.openPredicate(name, ns))"
+          />
+          <template v-else>
           <div class="chapters" role="tablist" aria-label="Chapters">
             <button
               v-for="g in groups" :key="g.ns" role="tab" class="chapter-tab"
@@ -146,6 +159,7 @@
             </button>
             <button v-if="shownGroup.ns === 'user'" class="card add" @click="addUser">+ new predicate</button>
           </div>
+          </template>
         </div>
       </nav>
     </transition>
@@ -166,6 +180,8 @@ import { provenance, type ElementRef } from '../geometry/provenance'
 import type { GroundPredicate } from '../kb/inference'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
+import WordIndex, { type IndexRow } from '../components/WordIndex.vue'
+import { vocabulary } from '../geometry/vocabulary'
 import { useThumbnails } from '../composables/useThumbnails'
 import { describeFact, describeLocus, type Step } from '../geometry/construction'
 import { displayName } from '../kb/names'
@@ -283,8 +299,29 @@ watch(contentsOpen, open => {
   const here = ws.mode.value === 'predicate' ? ws.selectedNamespace.value : ''
   shownChapter.value = groups.value.some(g => g.ns === here) ? here : groups.value[0].ns
 })
-watch([contentsOpen, shownGroup, () => ws.kb.value], () => {
-  if (contentsOpen.value && shownGroup.value) request(ws.kb.value, shownGroup.value.items)
+// Or as an index: every word the knowledge base knows, with what it can do (vocabulary.ts).
+const browse = ref<'chapters' | 'index'>(stored('elements.browse') === 'index' ? 'index' : 'chapters')
+function setBrowse(b: 'chapters' | 'index') {
+  browse.value = b
+  store('elements.browse', b)
+}
+const indexRows = computed<IndexRow[]>(() => {
+  const preds = ws.predicates.value
+  const title = new Map<string, string>([...ws.chapters.map(c => [c.id, c.title] as [string, string]), ['user', 'Your predicates']])
+  return vocabulary(ws.kb.value).map(w => {
+    const i = preds.findIndex(p => p.name === w.name)
+    const p = preds[i]
+    return {
+      ...w, page: p?.namespace, doc: p?.doc,
+      chapter: p ? title.get(p.namespace) ?? p.namespace : w.used ? 'no clauses' : 'unused',
+      rank: i >= 0 ? i : preds.length + 1,
+    }
+  }).sort((a, b) => a.rank - b.rank)
+})
+watch([contentsOpen, browse, shownGroup, () => ws.kb.value], () => {
+  if (!contentsOpen.value) return
+  if (browse.value === 'index') request(ws.kb.value, indexRows.value.filter(r => r.page).map(r => ({ name: r.name, args: r.args })))
+  else if (shownGroup.value) request(ws.kb.value, shownGroup.value.items)
 })
 
 const namespaceLabel = computed(() =>
@@ -742,6 +779,16 @@ const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
 .entry:hover { color: var(--accent); }
 .entry.scratch { font-size: 2.2rem; margin-bottom: 1.2rem; }
 
+.contents-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1.2rem; }
+.contents-head .entry.scratch { margin-bottom: 0; }
+.views { display: inline-flex; border: 2px solid var(--ink); }
+.views button {
+  background: none; border: 0; padding: 0.25rem 0.9rem; cursor: pointer; color: var(--ink);
+  font: 0.8rem var(--font-mono); letter-spacing: 0.15em; text-transform: uppercase;
+}
+.views button + button { border-left: 2px solid var(--ink); }
+.views button.current { background: var(--ink); color: var(--paper); }
+.views button:not(.current):hover { color: var(--accent); }
 .chapters { display: flex; flex-wrap: wrap; gap: 0.4rem 1.6rem; margin-bottom: 1.6rem; }
 .chapter-tab {
   background: none; border: 0; padding: 0 0 0.25rem; cursor: pointer; color: var(--soft);
