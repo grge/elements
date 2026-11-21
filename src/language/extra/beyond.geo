@@ -225,3 +225,11 @@ isosceles-trapezoid a b c d:
 # Hyperbolic geometry: a triangle's angles sum to less than two right angles, and through a point off
 # a line pass many lines that do not meet it. Neither can be said: sums cannot be written, and the
 # figure layer is the Euclidean plane, whose figures refute the second.
+
+# ── chapter 5's debts
+
+# Equal chords are equally far from the centre (III.14), their halves given equal: Pythagoras in
+# quadrances. Proves, but has no figure: the planner cannot draw a chord with a given midpoint (d is c
+# doubled through n, a reflection it has no move for), so the midpoint is only checked, and fails.
+? eq-lines o m o n: circle o a b, circle o a c, circle o a d, eq-lines a m c n, midpoint m a b, midpoint n c d
+

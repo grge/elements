@@ -302,34 +302,13 @@ eq-turn b a b c e d e f:
     eq-angle d e f f e y
     distinct e f
 
+# And so of turns alone: a turn its own reverse is no turn or a quarter turn; between lines that are
+# not one line it is a quarter turn, and all quarter turns are alike.
+eq-turn b a b c e d e f: eq-turn b a b c b c b a, triangle a b c, eq-turn e d e f e f e d, triangle d e f
+
 # The base of an isosceles triangle: its legs turn to it as it turns back to them, the turns at b
 # and c mirror images. (I.5, directed.)
 eq-turn b a b c c b c a: eq-lines a b a c, distinct a b, distinct b c
-
-# ── turns in a circle
-
-# Four points on one circle: a, b, c and d are cyclic. Said without its centre, since the circles
-# a proof finds (two corners and the feet of two altitudes, standing on one side) have none the figure
-# names. A circle about a centre makes its points cyclic, in any order.
-cyclic a b c d: eq-lines o a o b, eq-lines o a o c, eq-lines o a o d
-cyclic b a c d: cyclic a b c d
-cyclic a c b d: cyclic a b c d
-cyclic a b d c: cyclic a b c d
-
-# Three points not on a line fix a circle: two that share them are one.
-cyclic a b d e: cyclic a b c d, cyclic a b c e, triangle a b c
-
-# Angles in the same segment (III.21), as turns: from any point of a circle, a chord a-b is seen at
-# one turn. Directed, there is no "same segment": from the other arc the angle is the supplement, and
-# the turn is the same. Euclid proves it from the angle at the centre (III.20), halving the angle there,
-# which needs to know which side of the chord the centre lies. With turns that halving is not sound
-# (twice a quarter turn and twice no turn are both no turn), and sides cannot be said. So here it is
-# taken as an axiom of turns, as the full-angle method takes it: a theorem in Euclid, given here.
-eq-turn c a c b d a d b: cyclic a b c d, distinct c a, distinct c b, distinct d a, distinct d b
-
-# And its converse (III.21's, which Euclid leaves unsaid until III.22 and the circle through three
-# points): where a chord is seen at one turn from two points off its line, the four are on a circle.
-cyclic a b c d: eq-turn c a c b d a d b, triangle a b c, triangle a b d
 
 # ── propositions
 
@@ -341,11 +320,3 @@ cyclic a b c d: eq-turn c a c b d a d b, triangle a b c, triangle a b d
 
 # Turns add: a-b to c-d and on to e-f is a-b to e-f.
 ? eq-turn a b e f g h k l: eq-turn a b c d g h i j, eq-turn c d e f i j k l
-
-# The opposite angles of a quadrilateral in a circle (III.22), as turns: seen from b and from d, the
-# turn from the side to a to the side to c is the same. Euclid: the angles make two right angles; the
-# same, directed.
-? eq-turn b a b c d a d c: circle o a b, circle o a c, circle o a d
-
-# The angle in a semicircle is right (III.31): the turn at b to the diameter's ends is its own reverse.
-? eq-turn b a b c b c b a: circle o a b, circle o a c, between a o c

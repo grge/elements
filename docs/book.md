@@ -40,7 +40,7 @@ govern it, then builds the constructions and proves the results it makes possibl
 | 2 | Angle | equal angles (`eq-angle`) | congruence; the isosceles triangle; bisecting angles and segments; perpendiculars; copying angles |
 | 3 | Direction | parallel lines | the parallel through a point; alternate angles; the angle sum; parallelograms |
 | 4 | Area | equal area (of triangles) | Pythagoras; squaring a polygon, a triangle, a rectangle |
-| 5 | Circle | (uses 1–4) | centre, chords, tangents; inscribed angles; circumcircle and incircle |
+| 5 | Circle | four points on one circle (`cyclic`), and turns in it | chords, tangents (`tangent-from`); angles in a circle as turns; the incircle's step |
 | 6 | Ratio | equal ratios | similar triangles; dividing segments; fourth and mean proportionals; the golden section |
 | 7 | Regular figures | (uses all) | the triangle, square, hexagon, pentagon and fifteen-gon in a circle |
 

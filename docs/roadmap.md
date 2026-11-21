@@ -211,7 +211,15 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
       drawn as that circle with no centre point. Turn marks at a vertex (two lines through one point,
       `eq-turn c a c b …`) were never drawn: a block with a recurring point was taken for degenerate;
       a block of lines now only when a line is one point (relations.ts `pairs`).
-   2. `cyclic` and III.21 (with its converse) move from chapter 3 to chapter 5; chapter 3 keeps turns.
+   2. `cyclic` and III.21 (with its converse) move from chapter 3 to chapter 5; chapter 3 keeps turns:
+      done (November 2026).
+   3. The chapter, first draft: done (November 2026). Chords (III.1–3, the III.3 converse by quadrance,
+      III.26–29), tangents (III.17 as `tangent-from`, equal tangents, their angle halved, the incircle's
+      step by angle-angle-side), turns in a circle (III.21, III.22, III.31, III.32 with the diameter's
+      far end named). III.32 needed all quarter turns alike, said of turns alone (chapter 3): a turn its
+      own reverse is no turn or a quarter turn. III.14 proves but has no figure (the planner cannot
+      draw a chord with a given midpoint: a reflection through a point), so it waits in *Beyond the
+      book*; that move is wanted.
    3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
       centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre
       bisecting their angle. Turns in a circle: III.21 (axiom), III.22, III.31, III.32.
@@ -291,7 +299,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 | 2, angle | written; spreads set aside |
 | 3, direction | written, with the midline, and turns after the postulate (*Next*, 6) |
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
-| 5, circle | mostly content on chapters 1–4; the circumcentre waits on cases |
+| 5, circle | first draft (November 2026): chords, tangents, turns in a circle, with `cyclic`; III.14 waits for a planner move, III.20 for the Euclid book |
 | 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
 | 7, regular figures | content, on all the above |
 
