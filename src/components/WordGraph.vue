@@ -40,8 +40,13 @@
           @focus="focus = n.id" @blur="focus = null"
           @click="n.page && emit('open', n.id, n.page)"
         >
-          <span class="node-name">{{ n.id }}</span>
-          <span class="node-args">{{ n.args.join(' ') }}</span>
+          <span class="node-thumb">
+            <FigureThumb v-if="n.page" :thumbnail="thumbnail(n.id)" />
+          </span>
+          <span class="node-text">
+            <span class="node-name">{{ n.id }}</span>
+            <span class="node-args">{{ n.args.join(' ') }}</span>
+          </span>
         </button>
       </div>
     </div>
@@ -50,6 +55,8 @@
 
 <script setup lang="ts">
 import { computed, ref, useId } from 'vue'
+import FigureThumb from './FigureThumb.vue'
+import type { Thumbnail } from '../composables/useThumbnails'
 import { layoutWordGraph, SIZES, type PlacedEdge } from './wordGraphLayout'
 import type { IndexRow } from './WordIndex.vue'
 import type { Namespace } from '../composables/useKB'
@@ -59,6 +66,8 @@ const props = defineProps<{
   /** Lanes in order: [id, title]. A row's lane is its page's namespace, or 'none'. */
   lanes: [string, string][]
   current?: string
+  /** A word's thumbnail, read when drawn, so the graph follows them as they are computed. */
+  thumbnail: (name: string) => Thumbnail | null | undefined
 }>()
 const emit = defineEmits<{ open: [name: string, ns: Namespace] }>()
 const uid = `graph-${useId()}`
@@ -154,16 +163,25 @@ marker.up path { fill: var(--ink); opacity: 1; }
 
 .node {
   position: absolute; box-sizing: border-box; overflow: hidden;
-  display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 0.1rem;
-  padding: 0 0.7rem; text-align: left; cursor: default;
+  display: flex; align-items: stretch; gap: 0.55rem;
+  padding: 0 0.6rem 0 0; text-align: left; cursor: default;
   background: var(--paper); color: var(--ink); border: 0;
   box-shadow: inset 0 0 0 2px var(--ink);
   transition: opacity 0.12s, transform 0.12s;
 }
 .node.openable { cursor: pointer; }
+/* The word's figure, a small window of paper at its left, inside the frame. */
+.node-thumb {
+  flex: none; width: 54px; margin: 2px 0 2px 2px; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--ink) 6%, var(--paper));
+  --dg-ink: var(--ink); --dg-accent: var(--accent); --dg-paper: var(--paper);
+}
+.node-thumb :deep(.figure-thumb) { width: 100%; height: 100%; }
+.node-text { display: flex; flex-direction: column; justify-content: center; gap: 0.1rem; min-width: 0; }
+.node.leaf .node-thumb { margin: 0; }
 .node-name {
-  max-width: 100%; padding-right: 0.6rem; overflow-wrap: anywhere;
-  font: 900 0.74rem/1.12 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em;
+  max-width: 100%; padding-right: 0.5rem;
+  font: 900 0.68rem/1.12 var(--font-display); text-transform: uppercase; letter-spacing: 0.03em;
 }
 .node-args { font: 0.68rem var(--font-mono); letter-spacing: 0.2em; color: var(--accent); white-space: nowrap; overflow: hidden; max-width: 100%; }
 

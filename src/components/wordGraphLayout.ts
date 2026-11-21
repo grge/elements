@@ -43,7 +43,7 @@ export interface LayoutSizes {
   lanePad: number
 }
 
-export const SIZES: LayoutSizes = { nodeWidth: 172, nodeHeight: 52, columnGap: 54, rowGap: 10, laneHead: 40, lanePad: 18 }
+export const SIZES: LayoutSizes = { nodeWidth: 194, nodeHeight: 58, columnGap: 38, rowGap: 10, laneHead: 40, lanePad: 18 }
 
 export function layoutWordGraph(input: GraphNodeIn[], laneOrder: string[], sizes: LayoutSizes = SIZES): GraphLayout {
   const { nodeWidth: W, nodeHeight: H, columnGap: GX, rowGap: GY, laneHead, lanePad } = sizes

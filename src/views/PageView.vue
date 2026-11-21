@@ -125,7 +125,7 @@
 
     <transition name="fade">
       <nav v-if="contentsOpen" class="contents" @click.self="contentsOpen = false">
-        <div class="contents-inner">
+        <div class="contents-inner" :class="{ wide: browse === 'graph' }">
           <div class="contents-head">
             <button class="entry scratch" @click="go(() => ws.openScratchpad())">Scratch</button>
             <div class="views" role="radiogroup" aria-label="Browse by">
@@ -142,7 +142,7 @@
           />
           <WordGraph
             v-else-if="browse === 'graph'"
-            :rows="indexRows" :lanes="graphLanes"
+            :rows="indexRows" :lanes="graphLanes" :thumbnail="name => thumbnails.get(name)"
             :current="ws.mode.value === 'predicate' ? ws.selectedPred.value : undefined"
             @open="(name, ns) => go(() => ws.openPredicate(name, ns))"
           />
@@ -332,7 +332,7 @@ const indexRows = computed<IndexRow[]>(() => {
 })
 watch([contentsOpen, browse, shownGroup, () => ws.kb.value], () => {
   if (!contentsOpen.value) return
-  if (browse.value === 'index') request(ws.kb.value, indexRows.value.filter(r => r.page).map(r => ({ name: r.name, args: r.args })))
+  if (browse.value !== 'chapters') request(ws.kb.value, indexRows.value.filter(r => r.page).map(r => ({ name: r.name, args: r.args })))
   else if (shownGroup.value) request(ws.kb.value, shownGroup.value.items)
 })
 
@@ -784,6 +784,7 @@ const status = computed(() => elementInfo.value?.text ?? unreadNote.value)
   scrollbar-width: thin; scrollbar-color: var(--soft) transparent;
 }
 .contents-inner { padding: 2rem 2.5rem 4rem; max-width: 1400px; }
+.contents-inner.wide { max-width: none; }
 .entry {
   display: block; background: none; border: 0; padding: 0.1rem 0; cursor: pointer; color: var(--ink);
   font: 900 1.5rem var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; text-align: left;
