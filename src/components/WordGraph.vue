@@ -5,7 +5,7 @@
       <span><i class="key leaf" /> open: rests on nothing</span>
       <span><i class="key defined" /> defined</span>
       <span><i class="key plane" /> a word of the plane</span>
-      <span class="hint">Hover a word to trace what it rests on <i class="swatch down" /> and what rests on it <i class="swatch up" /></span>
+      <span class="hint">Arrows between chapters show on hover. Hover a word to trace what it rests on <i class="swatch down" /> and what rests on it <i class="swatch up" /></span>
     </p>
 
     <div class="scroller">
@@ -20,7 +20,7 @@
         <svg class="edges" :width="layout.width" :height="layout.height" aria-hidden="true">
           <defs>
             <marker v-for="m in ['plain', 'down', 'up']" :id="`${uid}-${m}`" :key="m" :class="m"
-              viewBox="0 0 8 8" refX="7.5" refY="4" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              viewBox="0 0 8 8" refX="7.5" refY="4" markerUnits="userSpaceOnUse" markerWidth="9" markerHeight="9" orient="auto-start-reverse">
               <path d="M0,0 L8,4 L0,8 z" />
             </marker>
           </defs>
@@ -119,10 +119,12 @@ function edgeClass(e: PlacedEdge): string {
   if (up.value.has(e.from) && (e.to === f || up.value.has(e.to))) return 'up'
   return 'dim'
 }
-// Lit arrows drawn last, over the rest.
+// Arrows within a chapter always; arrows between chapters only on a trace through them, so the long
+// cables down to chapter 1 appear for the word being traced, not all at once. Lit arrows drawn last.
 const orderedEdges = computed(() => {
+  const shown = layout.value.edges.filter(e => !e.cross || edgeClass(e) === 'down' || edgeClass(e) === 'up')
   const rank = (e: PlacedEdge) => { const c = edgeClass(e); return c === 'dim' ? 0 : c === '' ? 1 : 2 }
-  return [...layout.value.edges].sort((a, b) => rank(a) - rank(b))
+  return shown.sort((a, b) => rank(a) - rank(b))
 })
 </script>
 

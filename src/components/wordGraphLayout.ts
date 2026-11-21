@@ -20,7 +20,13 @@ export interface GraphNodeIn {
 
 export interface PlacedNode { id: string; x: number; y: number; column: number }
 export interface PlacedLane { id: string; y: number; height: number }
-export interface PlacedEdge { from: string; to: string; d: string }
+export interface PlacedEdge {
+  from: string
+  to: string
+  d: string
+  /** Between chapters: from a word in one lane to a word in another. */
+  cross: boolean
+}
 
 export interface GraphLayout {
   nodes: Map<string, PlacedNode>
@@ -119,7 +125,7 @@ export function layoutWordGraph(input: GraphNodeIn[], laneOrder: string[], sizes
       const b = nodes.get(d)!
       const x0 = a.x, y0 = a.y + H / 2, x1 = b.x + W, y1 = b.y + H / 2
       const dx = Math.max(GX / 2, (x0 - x1) * 0.45)
-      edges.push({ from: n.id, to: d, d: `M${x0},${y0} C${x0 - dx},${y0} ${x1 + dx},${y1} ${x1},${y1}` })
+      edges.push({ from: n.id, to: d, d: `M${x0},${y0} C${x0 - dx},${y0} ${x1 + dx},${y1} ${x1},${y1}`, cross: n.lane !== byId.get(d)!.lane })
     }
   }
 

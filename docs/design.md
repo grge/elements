@@ -96,7 +96,7 @@ powers and which earn theirs from the rules (vocabulary.ts).
 definition uses (head to body); an open word rests on nothing and sits in the first column as a solid
 block of ink, and a defined word one column right of the deepest word it uses, so every arrow points
 left. Chapters are lanes, top to bottom; a word sits in its chapter's lane, near the words it uses
-there. Each word shows its figure, as the contents cards do. An accent dot marks a word of the plane. Hovering a word traces everything it rests on (accent)
+there. Each word shows its figure, as the contents cards do. An accent dot marks a word of the plane. Arrows within a chapter are always drawn; arrows between chapters only along a trace, so the long cables down to chapter 1 appear for the word in hand. Hovering a word traces everything it rests on (accent)
 and everything that rests on it (ink), and fades the rest; a word with a page opens it. Only
 definitions draw arrows: an open word's rules (side-angle-side concluding `eq-lines`) are theorems
 about it, not what it means. The layout is our own (wordGraphLayout.ts), deterministic, with no
