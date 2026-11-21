@@ -80,7 +80,11 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    - Guards whose only reason was the join: rechecked (November 2026). Congruence, the shear and the
      median lose their `triangle` guards: the same verdicts, no false fact in any witness, no slower.
      Cutting from a corner keeps its guards: without them the book's checks take six times as long.
-   - The midline of chapter 3.
+   - The midline of chapter 3: done (November 2026). In the chapter, with its proof's two points in
+     the figure (d-e doubled to f, and where d-c and b-f cross), since a lemma can only name points
+     the figure has; both halves (parallel, and half as long) follow under the convention, in 12 to 23
+     s. The bare statement stays in *Beyond the book* (`midline-plain`) as the case of points not
+     named. Step 5 is done.
 6. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
    axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
    proof that leans on `parallel` being an equivalence leans on I.30.

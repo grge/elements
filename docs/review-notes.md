@@ -392,7 +392,7 @@ is refuted by a figure, rightly: its hypotheses also describe a parallelogram.
 
 | Theorem | Draws | Holds | Blocked by |
 |---|---|---|---|
-| midline (midpoints' segment parallel to the base) | yes | yes | non-degeneracy; a point the hypotheses do not name (f, on the parallel through c); sides (the diagonals' crossing). Proves step by step given all three (measured) |
+| midline (midpoints' segment parallel to the base) | yes | yes | (in chapter 3 since, with the proof's points given) non-degeneracy; a point the hypotheses do not name (f, on the parallel through c); sides (the diagonals' crossing). Proves step by step given all three (measured) |
 | centroid (medians concur) | yes | yes | the midline, and points not named |
 | circumcentre on the perpendicular bisector | yes | yes | non-degeneracy of the construction's own points (the vesicas'), and sides: `circumcentre` says o is on the line through the vesica points, not between them, and which side of them it lies on decides the angle. Proves with the construction written out, o between, and its points distinct (measured) |
 | orthocentre (altitudes concur) | yes | yes | points not named (the triangle through the corners parallel to the sides), or circle theorems |

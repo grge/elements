@@ -11,15 +11,14 @@
 
 # The triangle midpoint theorem: the segment joining two sides' midpoints is parallel to the third.
 #
-# Blocked by a point no hypothesis names (the textbook proof draws the parallel to a-b through c,
-# meeting d-e continued at f), and by sides (the parallelogram it makes needs its diagonals'
-# crossing). Given both, it proves step by step.
-midline a b c d e:
+# Blocked by a point no hypothesis names (the proof draws d-e doubled to f), and by sides (the second
+# parallelogram needs its diagonals' crossing). Chapter 3's midline gives both points, and proves.
+midline-plain a b c d e:
     triangle a b c
     midpoint d a b
     midpoint e a c
 
-? parallel d e b c: midline a b c d e
+? parallel d e b c: midline-plain a b c d e
 
 # The medians meet in one point: those from a and b meet at g, and the third passes through it.
 #

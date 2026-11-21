@@ -211,3 +211,23 @@ square a b c d:
 
 ? eq-lines b c c d: square a b c d
 ? eq-lines c d d a: square a b c d
+
+# ══ The midline ══════════════════════════════════════════════════════════════════════════════════
+
+# The midline of a triangle a-b-c: d and e halve a-b and a-c, and d-e runs the way b-c does, half as
+# long. Its proof draws two more points, and they are part of the figure here, since a lemma's
+# hypotheses can only name points the figure has: d-e doubled to f, and x, where d-c and b-f cross.
+# e halves both a-c and d-f, so a-d-c-f is a parallelogram (its diagonals halve each other), and c-f
+# runs the way a-d does and as long. So c-f also runs the way d-b does and as long, and d-b-c-f is a
+# parallelogram too (I.33, with its diagonals crossing at x).
+midline a b c d e f x:
+    triangle a b c
+    midpoint d a b
+    midpoint e a c
+    between d e f
+    eq-lines d e e f
+    between d x c
+    between b x f
+
+? parallel d e b c: midline a b c d e f x
+? eq-lines d f b c: midline a b c d e f x

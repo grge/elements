@@ -135,7 +135,7 @@ the angle bisector as loci, so that figures stated with equal angles construct (
 angle's square mark;
 symmetry recognition for six-place relations such as `supp` (it stops at five today).
 
-### 3. Direction  *(exists: `book/03-direction.geo`; all but the midline)*
+### 3. Direction  *(exists: `book/03-direction.geo`)*
 
 `parallel a b c d`: the lines a-b and c-d have the same direction, parallel or one line. Taking the
 same line as parallel to itself makes `parallel` an equivalence, like `eq-lines` and `eq-angle`, so
@@ -173,7 +173,7 @@ with a crossing that picks the far side, and is also the translation of a segmen
 I.31 (parallel and equal), I.34 (opposite sides and angles), I.33, and the diagonals bisecting each
 other.
 
-**Not yet: the midline.** Its proof goes through I.33 on a second parallelogram, and lemmas do not
+**The midline, in (November 2026)**, with its proof's two points in its figure: d-e doubled to f, and where the second parallelogram's diagonals cross. It follows under the convention that different names are different points, once the engine was fast enough. What follows was written before. Its proof goes through I.33 on a second parallelogram, and lemmas do not
 yet become rules, so the closure redoes that reasoning. Three rules now derive most of the
 non-degeneracy it needs (chapter 2: a point between b and d is not a corner off b-d; points on two
 sides from a corner make a triangle with it; chapter 3: a parallel through a point off a line stays
