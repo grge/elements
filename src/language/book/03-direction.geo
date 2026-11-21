@@ -282,6 +282,10 @@ eq-turn a b e f c d g h: eq-turn a b c d e f g h
 # A right angle: its arms turn to each other the same either way round, a quarter turn.
 eq-turn b a b c b c b a: right a b c
 
+# All right angles turn alike: each is a quarter turn, and round a half turn a quarter turn either way
+# is the same (Euclid's fourth postulate, directed).
+eq-turn b a b c e d e f: right a b c, right d e f
+
 # The base of an isosceles triangle: its legs turn to it as it turns back to them, the turns at b
 # and c mirror images. (I.5, directed.)
 eq-turn b a b c c b c a: eq-lines a b a c

@@ -46,6 +46,10 @@ circumcentre-bisector a b c o m:
 
 ? right a m o: circumcentre-bisector a b c o m
 
+# As turns: still blocked. The quarter turn at m comes from congruent triangles o-m-a and o-m-c and the
+# sides of the circumcentre's construction, which turns do not touch.
+? eq-turn m a m o m o m a: circumcentre-bisector a b c o m
+
 # The altitudes meet in one point: those from a and b meet at h, and the line from c through h, meeting
 # a-b at f, is perpendicular to it.
 #
@@ -68,6 +72,11 @@ altitudes a b c d e h f:
     distinct a f
 
 ? right c f a: altitudes a b c d e h f
+
+# As turns: c-f turns to f-a as f-a turns back, a quarter turn. Proves with a word for four points on
+# one circle (no centre named), concluded from equal turns: a-b-d-e and c-d-h-e are on circles, their
+# right angles standing on a-b and c-h. Without it, that converse of III.21 cannot be said.
+? eq-turn f c f a f a f c: altitudes a b c d e h f
 
 # Euler's line: the circumcentre o, the centroid g and the orthocentre h are collinear.
 #
@@ -94,6 +103,10 @@ nine-point a b c d e f n k:
     right a k b
 
 ? circle n d k: nine-point a b c d e f n k
+
+# As turns: k sees d-e at the turn f does, which is to be on the circle through d, e and f. Proves as
+# the altitudes do, given a word for four points on a circle.
+? eq-turn k d k e f d f e: nine-point a b c d e f n k
 
 # ── circles
 
@@ -164,6 +177,10 @@ simson a b c o p d e f:
     right p f a
 
 ? collinear d e f: simson a b c o p d e f
+
+# As turns: d-e and d-f turn by nothing, one line. Proves as the altitudes do, given a word for four
+# points on a circle: p-b-d-f and p-c-d-e are, by their right angles.
+? eq-turn d e d f d e d e: simson a b c o p d e f
 
 # ── quadrilaterals
 
