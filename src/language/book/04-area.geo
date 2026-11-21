@@ -238,11 +238,6 @@ eq-lines c d g h: quad-sum a b c d e f, quad-sum a b g h e f
 # here that mentioned right would put right's definition on a cycle, through equal lengths.
 quad-sum b a b c a c: between a b d, distinct a b, distinct b d, eq-angle a b c c b d, distinct b c
 
-# And from a quarter turn (chapter 3): lines through b turning to each other alike either way round,
-# with a, b and c not on one line, make a right angle at b. A turn knows no sides, so this reaches
-# where the angle form cannot: the right angle at the foot of a perpendicular, towards either end.
-quad-sum b a b c a c: eq-turn b a b c b c b a, triangle a b c
-
 # Hypotenuse-leg: two right triangles with the hypotenuse and a leg equal have the other legs equal.
 # Euclid does not state it; here it is Pythagoras twice, and taking away.
 ? eq-lines b c e f: right a b c, right d e f, eq-lines a c d f, eq-lines a b d e

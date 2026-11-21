@@ -42,6 +42,11 @@ appears in statements only because the engine needs it is a cost (the README: th
 - **Theories fire eagerly**: bridges into turns fire on every fact they can, wherever turns are
   relevant, which since the return bridge is wherever `parallel` is: the book's checks doubled for
   nothing proved. A theory consulted on demand would cost only where it helps. (November 2026)
+- **`right` does not give `triangle`**: nothing says a right angle's arms are not one line (true: on a
+  line an angle and its supplement are 0 and two right angles, never equal), and forward rules cannot
+  reach it except through a contradiction. It blocks the III.3 converse by quadrance, which needs o
+  off the chord's line at m. A rule `triangle a b c: right a b c` (or `right` made open, its
+  properties stated) would do. (November 2026)
 - **`right a b b` holds**: the definition asks a ≠ b and the point past the vertex ≠ b, not c ≠ b,
   so a degenerate angle (an arm of no length) is right. It made the turn bridges unsound until each was
   guarded. Perhaps `right` should ask c ≠ b; and degenerate angles in `eq-angle`'s classes may carry the
@@ -66,9 +71,8 @@ Each taken as given here to get on; each worth asking whether it can become a th
   (before November 2026)
 - **III.21** as an axiom of turns, and its converse: halving is unsound round a half turn, and
   Euclid's proof needs sides. (November 2026)
-- **Angle-angle-side** (chapter 2, both forms), the second half of I.26, beside angle-side-angle:
-  needed for the incircle (the equal parts are angles, which quadrance cannot reach). Hypotenuse-leg
-  is a theorem by quadrance (chapter 4), and the III.3 converse no longer needs AAS. (November 2026)
+- **Angle-angle-side and hypotenuse-leg** (planned for chapter 5, provisional): quadrance may make
+  them theorems. (November 2026)
 - **A line meets a circle at most twice** (chapter 2, *Chapter 1's debts*): Euclid's III.2 and III.10
   come near it; here an axiom, said with equal lengths because `circle` in a body would cycle its
   definition. (November 2026)

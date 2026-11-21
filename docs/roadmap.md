@@ -192,12 +192,7 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
         whole's quadrance: the linear shadow of the triple-quad formula, a law of its own) and
         Apollonius' median law, so III.14 with halves derived and Thales' converse wait. Declaring a
         word's linear form instead was weighed and refused: the rules are the meaning.
-      - **Angle-angle-side: done (November 2026).** The III.3 converse proves without it, by quadrance
-        across the foot of the perpendicular: two small rules, a right angle's arms are two lines
-        (chapter 2) and Pythagoras from a quarter turn (chapter 4). The incircle's step (a point of an
-        angle's bisector is as far from both sides) needs it: its equal parts are angles. So AAS is an
-        axiom of chapter 2, both forms, beside angle-side-angle.
-      - **Angle-angle-side retested** with the fixes in (as planned): whether the III.3 converse follows by
+      - **Angle-angle-side retested** with the fixes in: whether the III.3 converse follows by
         quadrance and the right-angle rule, or AAS stays an axiom.
    1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
       them, no centre point: a new kind of drawing), placed (a point on the circle through three
