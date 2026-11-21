@@ -85,7 +85,7 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      the figure has; both halves (parallel, and half as long) follow under the convention, in 12 to 23
      s. The bare statement stays in *Beyond the book* (`midline-plain`) as the case of points not
      named. Step 5 is done.
-6. **Sums, before chapter 5** (decided November 2026). Book III's heart (the angle at the centre,
+6. **Sums, before chapter 5.** Done for angles (November 2026): turns, their solver, III.21 and `cyclic`, below. Sums of areas (II.14, I.48) are not differences of directions and are deferred (*Open questions*, sums). Decided November 2026: Book III's heart (the angle at the centre,
    angles in a segment, cyclic quadrilaterals, the semicircle) rests on the angle sum (I.32), and so do
    most of the stress test's open theorems. How sums work will set how chapter 5 is phrased, whether
    angle-angle-side is an axiom or a theorem (it follows from I.32 and angle-side-angle), and whether
@@ -183,7 +183,9 @@ cannot be written honestly without them, and designed as a whole.
   a linear solver attached to the store turns its facts into equations and shares merges with the
   union-find, as SMT solvers share equalities. No sum word is needed for the circle's theorems;
   `add-turn` only if a theorem's turns do not chain. Undirected `add-angle`, with sides, is the Euclid
-  book's. The step to accept deliberately: the solver sees directions no line of the figure has.
+  book's. Built for angles (*Next*, 6). Still open: sums of areas (II.14, I.48) and of lengths (half
+  of equal chords is equal: III.14), which are not differences of directions; the lattice could take
+  them if an area or length relation is recognised as additive, but what makes one so is undecided. The step to accept deliberately: the solver sees directions no line of the figure has.
   Named quantities (`∠bac + ∠abc = …`, a change of language) only if statements with points alone
   read badly. Built with step 3's store, if step 2 shows the need.
 - **Cases.** Horn clauses cannot split cases, and the least-model meaning depends on that. Waiting on
