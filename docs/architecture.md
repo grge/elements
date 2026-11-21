@@ -43,7 +43,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 | `src/geometry/vocabulary.ts` | Every word the knowledge base mentions, with what it can do and where each capability comes from: the relation table, its definition, or its rules (the contents' index) |
 | `src/geometry/view.ts`, `scene.ts` | Fitting a figure to the screen; the figure in screen coordinates (shared by the diagram and the thumbnails) |
 | `src/composables/` | `useKB` (bundled + user clauses), `useWorkspace` (page state), `useVerification` (talks to the checking worker), `useClosure` (the closure worker, its answers remembered across visits), `useThumbnails` (contents miniatures) |
-| `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure), `FigureThumb` (a miniature), `WordIndex` (the contents as an index) |
+| `src/components/` | `CodeEditor` (CodeMirror), `GeometryDiagram` (the figure), `FigureThumb` (a miniature), `WordIndex` (the contents as an index), `WordGraph` and `wordGraphLayout` (the contents as the graph of what each definition rests on) |
 | `src/views/PageView.vue` | The page: masthead, source, figure, contents, themes |
 | `src/workers/lemmaCheckWorker.ts` | Checks `?` lines off the main thread |
 | `src/workers/closureWorker.ts` | Saturates a figure's facts off the main thread, for merging its marks |

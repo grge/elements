@@ -51,6 +51,8 @@ export interface WordRow {
   measured: { source: Measure; detail: string[] }
   /** Held by the checker's convention that different names are different points. */
   convention: boolean
+  /** The words its definition's body uses, in order: what it rests on. Empty for an open word. */
+  dependsOn: string[]
   /** Structure the engine proves from the rules. */
   discovered: ('the equality' | 'equivalence' | 'symmetric')[]
 }
@@ -136,6 +138,7 @@ export function vocabulary(kb: KnowledgeBase): WordRow[] {
       constructs, draws, marks, measured,
       convention: !!own?.byNames,
       discovered,
+      dependsOn: defined ? unique(def.clause.body.map(b => b.name).filter(n => n !== name && !RESERVED.has(n))) : [],
     })
   }
   return rows

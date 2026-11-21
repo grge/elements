@@ -92,6 +92,16 @@ finds the words built on it), sortable by any heading (a third click returns to 
 filterable by any column. A word with a page opens it. It makes visible which words carry declared
 powers and which earn theirs from the rules (vocabulary.ts).
 
+**Graph.** The third way to browse: what each word rests on. Each defined word points to the words its
+definition uses (head to body); an open word rests on nothing and sits in the first column as a solid
+block of ink, and a defined word one column right of the deepest word it uses, so every arrow points
+left. Chapters are lanes, top to bottom; a word sits in its chapter's lane, near the words it uses
+there. An accent dot marks a word of the plane. Hovering a word traces everything it rests on (accent)
+and everything that rests on it (ink), and fades the rest; a word with a page opens it. Only
+definitions draw arrows: an open word's rules (side-angle-side concluding `eq-lines`) are theorems
+about it, not what it means. The layout is our own (wordGraphLayout.ts), deterministic, with no
+library.
+
 **Equal segments** that a figure states are drawn with bold tick marks, the same number on segments of
 the same length. The figure's own circles count their radii as equal segments, so the equilateral
 triangle's two circles draw its three sides, one tick each, as Byrne would.

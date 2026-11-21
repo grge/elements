@@ -131,11 +131,18 @@
             <div class="views" role="radiogroup" aria-label="Browse by">
               <button role="radio" :class="{ current: browse === 'chapters' }" :aria-checked="browse === 'chapters'" @click="setBrowse('chapters')">chapters</button>
               <button role="radio" :class="{ current: browse === 'index' }" :aria-checked="browse === 'index'" @click="setBrowse('index')">index</button>
+              <button role="radio" :class="{ current: browse === 'graph' }" :aria-checked="browse === 'graph'" @click="setBrowse('graph')">graph</button>
             </div>
           </div>
           <WordIndex
             v-if="browse === 'index'"
             :rows="indexRows" :thumbnail="name => thumbnails.get(name)"
+            :current="ws.mode.value === 'predicate' ? ws.selectedPred.value : undefined"
+            @open="(name, ns) => go(() => ws.openPredicate(name, ns))"
+          />
+          <WordGraph
+            v-else-if="browse === 'graph'"
+            :rows="indexRows" :lanes="graphLanes"
             :current="ws.mode.value === 'predicate' ? ws.selectedPred.value : undefined"
             @open="(name, ns) => go(() => ws.openPredicate(name, ns))"
           />
@@ -181,6 +188,7 @@ import type { GroundPredicate } from '../kb/inference'
 import GeometryDiagram from '../components/GeometryDiagram.vue'
 import FigureThumb from '../components/FigureThumb.vue'
 import WordIndex, { type IndexRow } from '../components/WordIndex.vue'
+import WordGraph from '../components/WordGraph.vue'
 import { vocabulary } from '../geometry/vocabulary'
 import { useThumbnails } from '../composables/useThumbnails'
 import { describeFact, describeLocus, type Step } from '../geometry/construction'
@@ -299,9 +307,13 @@ watch(contentsOpen, open => {
   const here = ws.mode.value === 'predicate' ? ws.selectedNamespace.value : ''
   shownChapter.value = groups.value.some(g => g.ns === here) ? here : groups.value[0].ns
 })
-// Or as an index: every word the knowledge base knows, with what it can do (vocabulary.ts).
-const browse = ref<'chapters' | 'index'>(stored('elements.browse') === 'index' ? 'index' : 'chapters')
-function setBrowse(b: 'chapters' | 'index') {
+// Or as an index: every word the knowledge base knows, with what it can do (vocabulary.ts); or as the
+// graph of what each word's definition rests on, in lanes by chapter.
+type Browse = 'chapters' | 'index' | 'graph'
+const savedBrowse = stored('elements.browse')
+const browse = ref<Browse>(savedBrowse === 'index' || savedBrowse === 'graph' ? savedBrowse : 'chapters')
+const graphLanes = computed<[string, string][]>(() => [...ws.chapters.map(c => [c.id, c.title] as [string, string]), ['user', 'Your predicates']])
+function setBrowse(b: Browse) {
   browse.value = b
   store('elements.browse', b)
 }
