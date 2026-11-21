@@ -40,17 +40,16 @@ triangle d e f: triangle a b c, eq-area a b c d e f
 # Congruent triangles (Euclid's common notion 4: things that coincide are equal): two sides and the
 # angle between them equal, which side-side-side and angle-side-angle (chapter 2) also give.
 eq-area a b c d e f:
-    triangle a b c
     eq-angle a b c d e f
     eq-lines b a e d
     eq-lines b c e f
 
 # Triangles on one base between the same parallels (I.37): a-b-c and a-b-d, with c-d parallel to a-b.
-eq-area a b c a b d: triangle a b c, parallel a b c d
+eq-area a b c a b d: parallel a b c d
 
 # A median halves a triangle (I.38, for bases side by side): with b the midpoint of a-d, the halves
 # c-a-b and c-b-d of the triangle c-a-d have equal bases under one apex.
-eq-area c a b c b d: triangle c a d, between a b d, eq-lines a b b d
+eq-area c a b c b d: between a b d, eq-lines a b b d
 
 # Euclid proves these two from parallelograms (I.35, I.36), by cutting and pasting pieces that depend on
 # where the apexes fall: a split into cases the engine cannot make. So they are axioms here. Equal bases
@@ -61,7 +60,9 @@ eq-area c a b c b d: triangle c a d, between a b d, eq-lines a b b d
 
 # Common notions 2 and 3, for areas: a point e between b and c cuts the triangle a-b-c into a-b-e and
 # a-e-c. Triangles cut into equal pieces are equal; from equal triangles, equal pieces taken away leave
-# equal pieces.
+# equal pieces. The cut point apart from the ends, and a true triangle, are said for the engine's sake:
+# without them these two rules make the book's checks six times slower (November 2026), though they
+# derive nothing false.
 eq-area a b c x y z:
     between b e c
     distinct b e

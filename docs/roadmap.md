@@ -77,7 +77,10 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    - I.43, the complements: done (November 2026). It follows under the convention that different
      names are different points; its figure needed the planner to take a parallel through any
      placed point collinear with its pair (h-k-f parallel to a-b, through k), which it now does.
-   - Guards whose only reason was the join, each rechecked; the midline of chapter 3.
+   - Guards whose only reason was the join: rechecked (November 2026). Congruence, the shear and the
+     median lose their `triangle` guards: the same verdicts, no false fact in any witness, no slower.
+     Cutting from a corner keeps its guards: without them the book's checks take six times as long.
+   - The midline of chapter 3.
 6. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
    axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
    proof that leans on `parallel` being an equivalence leans on I.30.
