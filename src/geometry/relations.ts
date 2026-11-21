@@ -239,6 +239,14 @@ const TABLE: Relation[] = [
     ...measured(([a, b, c]) => same(a, b) || same(c, b) ? NaN : Math.abs(angle(a, b, c) - Math.PI / 2)),
   },
   {
+    // The quadrances (squared lengths) of a-b and c-d together make that of e-f. Measured only: not
+    // drawn, and not read by the planner (a construction by it is a candidate: roadmap). Compared as
+    // lengths, so the tolerance is a length: the hypotenuse against the root of the legs' quadrances.
+    name: 'quad-sum', arity: 6, depicted: false,
+    holds: ([a, b, c, e, f, g], tol) => Math.abs(Math.sqrt(d(a, b) ** 2 + d(c, e) ** 2) - d(f, g)) <= tol,
+    residual: ([a, b, c, e, f, g]) => Math.abs(d(a, b) ** 2 + d(c, e) ** 2 - d(f, g) ** 2),
+  },
+  {
     // Not read: the drawing takes distinct names for distinct points. Evaluated as a claim.
     name: 'eq-point', arity: 2, depicted: false,
     holds: ([a, b], tol) => d(a, b) <= tol,

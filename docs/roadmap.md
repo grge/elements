@@ -228,6 +228,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 - **The quarter and Apollonius' median law**, quadrance's laws with coefficients, which one additive
   word cannot express (*Next*, 7, step 0). Would prove III.14 with the halves derived and Thales'
   converse. Wanted: a way the engine could discover them from rules, not a declared linear form.
+- **Quadrance in figures**: `quad-sum` is measured (November 2026) but not placed or drawn. A
+  construction: a point with Q(p a) + Q(c d) = Q(e f) is on a circle about a whose radius is a right
+  triangle's leg (ruler and compass); with Q(p a) + Q(p b) fixed, on a circle about the midpoint of
+  a-b (Apollonius). Placing it would also let numeric evidence check the rules that take `quad-sum` as
+  a hypothesis, which it cannot now. Drawing it: perhaps Byrne's squares on the segments (his I.47),
+  or Wildberger's own way of showing quadrance in diagrams; both to be looked at closely first.
 - **Signed area**: area with a direction, additive and free of sides as turns are, on the same
   lattice. For the deferred sums of areas (II.14, I.48). Wildberger's quadrea (16 times area squared)
   is quadratic, not the tool for sums.

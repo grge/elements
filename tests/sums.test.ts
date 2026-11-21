@@ -10,6 +10,8 @@ import { analyseStructure } from '../src/kb/structure'
 import { checkLemma } from '../src/kb/checker'
 import { parseLemmas } from '../src/language/parser'
 import { bookRules } from './book'
+import { holds } from '../src/geometry/relations'
+import { numericEvidence } from '../src/geometry/evidence'
 
 const kb = new KnowledgeBase(bookRules)
 const check = (text: string) => checkLemma(parseLemmas(text)[0], kb, 2_000_000, { distinctNames: true }).result
@@ -38,3 +40,16 @@ describe('equal lengths by adding and taking away quadrances', () => {
     expect(check('? eq-lines b c e f: right a b c, right d e f, eq-lines a c d f, eq-lines a b e f')).not.toBe('verified')
   })
 }, 120_000)
+
+describe('the plane measures quadrance', () => {
+  it('3, 4 and 5: the legs make the hypotenuse; not the other way round', () => {
+    const at = new Map<string, [number, number]>([['a', [0, 0]], ['b', [3, 0]], ['c', [3, 4]]])
+    expect(holds({ name: 'quad-sum', args: 'a b b c a c'.split(' ') }, at)).toBe(true)
+    expect(holds({ name: 'quad-sum', args: 'a b a c b c'.split(' ') }, at)).toBe(false)
+  })
+
+  it('so the Pythagoras bridge is checked on figures, as every rule can be', () => {
+    const r = bookRules.find(r => r.head.name === 'quad-sum' && r.body.some(b => b.name === 'eq-angle'))!
+    expect(numericEvidence({ head: r.head, hypotheses: r.body }, kb, 30).kind).toBe('holds')
+  })
+})
