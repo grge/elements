@@ -8,6 +8,13 @@ keep what was built and why).
 
 ## Next
 
+**The phase: the book as a probe** (November 2026). We work through the book chapter by chapter, and
+where one hits a wall we add the tool it needs (turns, their solver, `cyclic`). So the book's shape is
+provisional: names, which chapter a thing lives in, which words are of the plane, which are defined and
+which rules are axioms. All of that is settled once, in a consolidation at the end (*Consolidation*,
+below), not along the way. Until then, what we would revisit goes in the ledger,
+[consolidation.md](consolidation.md), with why.
+
 In order. Each is worth doing on its own, and each is measured with `scripts/bench.ts`. Done: figures
 as witnesses (November 2026; architecture.md, *The knowledge base*), which took the book's checks to a
 fifth of their time; branches chosen by backtracking, in pages and evidence alike (architecture.md,
@@ -131,6 +138,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
    Chapter 5, planned (November 2026), in this order:
+   0. Quadrance first (*Candidates*): prototyped outside the book and measured on the chapter's
+      blocked theorems, since it may make hypotenuse-leg, the III.3 converse and III.14 theorems.
    1. `cyclic` a word of the plane: measured (four points on one circle), drawn (the circle through
       them, no centre point: a new kind of drawing), placed (a point on the circle through three
       placed points).
@@ -138,7 +147,7 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    3. The chapter in three parts. The circle's own facts: radius, chords, the perpendicular from the
       centre (III.1–3, III.26–29). Tangents: III.16–17, equal tangents, the line to the centre
       bisecting their angle. Turns in a circle: III.21 (axiom), III.22, III.31, III.32.
-   Decided with it:
+   Decided with it (the first two provisional until quadrance is measured):
    - Angle-angle-side an axiom: the second half of I.26, whose first half (angle-side-angle) the book
      already takes. Unlocks the III.3 converse and the incircle.
    - Hypotenuse-leg an axiom of congruence: Euclid does not state it, and it follows only through
@@ -151,6 +160,35 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    Measured before writing: III.1–3, III.17, III.26–29, III.22, III.31 and III.21's converse prove
    today; the III.3 converse (AAS), equal tangents and their bisected angle (HL), III.32 (a point not
    named) and III.14 (halving) do not.
+
+8. **Consolidation**, at the end of the probe. The book reorganised as a whole: names, where each
+   thing lives, which words are of the plane, which are defined, which rules are axioms and which
+   theorems, which construction words are descriptions and which are problems. Worked from the
+   ledger ([consolidation.md](consolidation.md)). Two things make it safe: the tests (every book
+   lemma must stay ✓; *Beyond the book* is a regression set) and the index and graph views, which
+   show the vocabulary and what rests on what.
+
+**Candidates**, tools we expect to adopt when a chapter needs them; not yet planned (November 2026):
+
+- **Quadrance** (Wildberger): squared length. Lengths' arithmetic is linear in quadrances, over the
+  reals, so dividing is sound (unlike turns). A word saying quadrances add, a linear solver as for
+  turns, and bridges: a right angle gives Pythagoras (Q(hypotenuse) = Q(leg) + Q(leg)), a midpoint a
+  quarter (Q(a m) = Q(a b) / 4), Apollonius' median law. Would prove hypotenuse-leg (so equal
+  tangents), the III.3 converse without angle-angle-side, III.14 and Thales' converse. Not lengths
+  along a line (|a b| = |a m| + |m b| needs square roots). Ratios might later follow as logarithms of
+  quadrances, products becoming sums. First in chapter 5's order.
+- **Signed area**: area with a direction, additive and free of sides as turns are, on the same
+  lattice. For the deferred sums of areas (II.14, I.48). Wildberger's quadrea (16 times area squared)
+  is quadratic, not the tool for sums.
+- **Conics**: a target chapter, how to build it not known. The parabola is nearest: its definition
+  (as far from a focus as from a directrix, through the foot of a perpendicular) can be written today,
+  and its first theorems (the tangent is the perpendicular bisector of the focus and the foot, the
+  reflection) look within reach; it needs drawing (a conic curve, a locus on it, its meetings with a
+  line). The ellipse and hyperbola need length sums (two foci) or ratio (eccentricity).
+
+Spread, Wildberger's other measure, is not a candidate now: turns do the angle chasing linearly and
+with direction; spread's strength is metric laws of products, the ratio chapter's (and its double-angle
+polynomial would state III.20 without sides, as a polynomial equation the engine cannot solve).
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
 composing plans per definition, a change of logic (below, *Open questions*).
