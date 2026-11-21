@@ -219,8 +219,10 @@ isosceles-trapezoid a b c d:
 # ── chapter 5's debts
 
 # Equal chords are equally far from the centre (III.14), their halves given equal: Pythagoras in
-# quadrances. Proves, but has no figure: the planner cannot draw a chord with a given midpoint (d is c
-# doubled through n, a reflection it has no move for), so the midpoint is only checked, and fails.
+# quadrances. Proves, but has no figure: building a chord with a given midpoint needs a fact the
+# hypotheses imply and do not state (that midpoint is the foot of the perpendicular from the centre),
+# and the planner plans from stated facts only. Euclid's own form, the distances measured along the
+# perpendiculars, would draw, but its proof halves the equal chords: the quarter, a candidate.
 equal-chord-halves o a b c d m n:
     circle o a b
     circle o a c

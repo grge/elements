@@ -299,7 +299,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 | 2, angle | written; spreads set aside |
 | 3, direction | written, with the midline, and turns after the postulate (*Next*, 6) |
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
-| 5, circle | first draft (November 2026): chords, tangents, turns in a circle, with `cyclic`; III.14 waits for a planner move, III.20 for the Euclid book |
+| 5, circle | first draft (November 2026): chords, tangents, turns in a circle, with `cyclic`; III.14 waits for the quarter, III.20 for the Euclid book |
 | 6, ratio | equal ratios as an equivalence on pairs of segments; products need sums |
 | 7, regular figures | content, on all the above |
 
