@@ -85,14 +85,17 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      the figure has; both halves (parallel, and half as long) follow under the convention, in 12 to 23
      s. The bare statement stays in *Beyond the book* (`midline-plain`) as the case of points not
      named. Step 5 is done.
-6. **Dependencies.** Each ✓ says whether it needs the parallel postulate: mark the postulate's
-   axioms, and recheck without them or track what a derivation used. Recognised structure counts: a
-   proof that leans on `parallel` being an equivalence leans on I.30.
-7. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
+6. **More book.** Chapter 5 (the circle), then ratio, each written as the book wants and measured as
    an experiment. A sibling geometry once the figure layer can take one (*The workbench*).
 
 **Not now**, each back if a chapter or an experiment needs it: turning proved lemmas into rules,
 composing plans per definition, a change of logic (below, *Open questions*).
+
+**Skipped: which ✓ need the parallel postulate** (November 2026, George). Marking the postulate's
+axioms would make the code treat one axiom as special, which the book should not. A general tool may
+come instead, if at all: set aside any chosen clauses of the knowledge base and see whether a lemma
+still follows. That would answer the parallel postulate's question without naming it (recognised
+structure counts: a proof that leans on `parallel` being an equivalence leans on I.30).
 
 **Parked: proofs that need points no hypothesis names** (November 2026). The stress test's main wall
 after non-degeneracy: the midline's proof begins "through c draw the parallel to a-b", and forward
@@ -219,8 +222,8 @@ three ways:
   `distinct` hypotheses. JavaScript has no mature Gröbner library; giac has a WebAssembly build.
 
 **Sibling books.** Chapters 1 and 2 use no parallel postulate, so a **hyperbolic** book in the Poincaré
-disk can share them and fork at the postulate: the same propositions, the same ✓ (*Next*, 6, makes
-that checked). Its lines are arcs meeting the boundary at right angles and its circles Euclidean
+disk can share them and fork at the postulate: the same propositions, the same ✓ (setting clauses
+aside and re-checking would show it; *Skipped*, above). Its lines are arcs meeting the boundary at right angles and its circles Euclidean
 circles with shifted centres, so every intersection is one the planner already makes. A **spherical**
 book needs its own axioms from chapter 1 (antipodal points share many lines; `between` changes). A
 **rational trigonometry** book would sit beside the algebraic lens.
