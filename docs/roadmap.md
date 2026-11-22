@@ -575,6 +575,18 @@ layers, the boffin panel and an entry page.
 - Hovering a predicate name shows its arguments and doc comment; add its provenance and recognised
   status.
 - Inline proof marks in reading mode.
+- **A ✓'s proof on the page** (an idea, November 2026; after the current engine work). Every ✓ now
+  comes with a proof the worker keeps and replays (engine.md, path steps 3 and 4), but the page does
+  not show it. Book proofs have a median of 4 steps, a 90th percentile of 24 and a longest of 133;
+  most of a long proof is bookkeeping (`distinct`, `triangle`, `collinear`, `between a a b`). Options
+  to weigh then:
+  - **where:** folded under the `?` line (click the ✓), a side panel by the figure (room for rule
+    text, and hovering a step lights up the figure), or on hover (light, but long proofs don't fit);
+  - **what:** the metric steps, with the side conditions folded into one line; every step as
+    replayed; or only the rules and lemmas it rests on;
+  - **naming a rule:** a link to its chapter and line, with its text on hover, or the text inline.
+
+  "Write it in", which copies a proof into the source as `?` lines, would build on the same view.
 
 ## Code structure
 
