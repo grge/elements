@@ -186,6 +186,29 @@ every head variable is bound, and none stands for a class at a position where eq
 substitute: there the head is a fact for each member, and one holding says nothing of the others.
 It is skipped for heads that are defined or answered by a solver.
 
+**Proofs** (November 2026; `proof.ts`, engine.md *Part 1*).
+- **Provenance.** The store records why each fact, each union of tuples (with its sign) and each
+  merge of points is there:
+  - a rule's match (premises worked out only when something new is recorded);
+  - a solver's step (its equations, integer coefficients from the lattice, and the equalities of
+    values it relies on, all taken when it acts);
+  - given.
+- **Certificates are taken at the moment they are used.** A rule premise the turn solver answered
+  in the middle of a join gets its certificate when the rule's conclusion is recorded, before that
+  conclusion changes the store. Later, the solver's equations may include facts that came after.
+- **Explanation.** `Saturation.explain(goal, hypotheses)` turns provenance into a proof:
+  - a membership in a class is the shortest path through recorded unions, signs counted
+    (proof-producing union-find);
+  - every explanation is bounded by time, so it never goes round a cycle;
+  - steps that structure gives for nothing (a fact read another way, a one-link chain) are not
+    steps.
+- **Checking.** `replay` (`proof.ts`) checks a proof on a store that fires no rule. It asserts the
+  hypotheses, then checks each step: its premises hold; a rule step is an instance of its rule; a
+  solver step's fact follows once the solvers have settled.
+- **Cost:** none measurable. The book checks in 34.4 s with provenance, against 34.5 without.
+- **Measured:** every book lemma's proof explains and replays (`tests/proof.test.ts`). The checker
+  returns the proof with a ✓ when asked (`CheckOptions.explain`).
+
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last
 few searches, keyed by their rules (the relevant cut, which depends on the goal's predicate),

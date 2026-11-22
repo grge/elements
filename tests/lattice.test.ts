@@ -42,3 +42,22 @@ describe('integer combinations of equations', () => {
     expect(l.contains(v({ 0: 1, 1: -1 }))).toBe(false)
   })
 })
+
+describe('certificates', () => {
+  it('say which added equations, with which integer coefficients, give one that follows', () => {
+    const l = new Lattice()
+    const v = (o: Record<number, number>) => new Map(Object.entries(o).map(([k, c]) => [Number(k), c]))
+    l.add(v({ 0: 1, 1: -1 }))      // equation 0: x0 - x1
+    l.add(v({ 1: 1, 2: -1 }))      // equation 1: x1 - x2
+    l.add(v({ 3: 2 }))             // equation 2: 2·x3
+    const asked = v({ 0: 1, 2: -1 })
+    const cert = l.certificate(asked)!
+    // the combination, summed, is the equation asked
+    const sum = new Map<number, number>()
+    const eqs = [v({ 0: 1, 1: -1 }), v({ 1: 1, 2: -1 }), v({ 3: 2 })]
+    for (const [i, c] of cert) for (const [k, x] of eqs[i]) sum.set(k, (sum.get(k) ?? 0) + c * x)
+    for (const [k, x] of asked) expect(sum.get(k)).toBe(x)
+    expect([...sum].filter(([k, x]) => x !== 0 && !asked.has(k))).toEqual([])
+    expect(l.certificate(v({ 3: 1 }))).toBeNull()   // x3 alone does not follow: halving is not allowed
+  })
+})

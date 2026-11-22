@@ -25,8 +25,10 @@ import { analyseStructure, type Difference, type Equivalence, type Structure, ty
 import { Lattice, type Vector } from './lattice'
 import { ruleSymmetries, type SymmetryBreak } from './symmetry'
 import { fingerprint, Lru } from './rules'
+import type { Proof, ProofStep } from './proof'
 
 const OBJECT = '__object__'
+const key2 = (f: GroundPredicate) => f.name + '\u0001' + f.args.join('\u0001')
 const SEP = '\u0001'
 
 /**
@@ -38,6 +40,17 @@ const SEP = '\u0001'
 export const MAX_WORK = 3_000_000
 
 interface Binding { v: string; flex: boolean }
+
+/**
+ * Why a fact, a union or a merge is in the store (provenance, for proofs: proof.ts). Recorded when
+ * something new is asserted; a rule's premises are worked out from its match only then.
+ */
+type Cause =
+  | { kind: 'given' }
+  | { kind: 'rule'; rule: Rule; s: Subst; solved?: Map<number, Extract<Cause, { kind: 'solver' }>> }
+  | { kind: 'solver'; relation: string; equations: GroundPredicate[]; coefficients: number[]; guards: GroundPredicate[]; links: GroundPredicate[] }
+interface Recorded { atom: GroundPredicate; cause: Cause; t: number }
+const GIVEN: Cause = { kind: 'given' }
 type Subst = Map<string, Binding>
 
 export interface SaturateOptions {
@@ -81,6 +94,8 @@ export interface Prepared {
   defined: Map<string, Rule>
   /** Each rule's own symmetries (symmetry.ts): matches that are images of a lesser one are skipped. */
   breaks: Map<Rule, SymmetryBreak>
+  /** The rule as written, for each rule whose body had a definition unfolded (proofs cite the written one). */
+  origins?: Map<Rule, Rule>
 }
 
 const preparedByKB = new WeakMap<KnowledgeBase, Prepared>()
@@ -132,9 +147,15 @@ export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
   }
   // A difference's faithful rule is implemented by its solver, not fired (structure.ts, `Difference`).
   for (const d of structure.differences.values()) if (d.faithful) skip.add(d.faithful)
+  const origins = new Map<Rule, Rule>()
   const live = kb.allRules()
     .filter(r => !skip.has(r) && !defined.has(r.head.name))
-    .map(r => r.body.some(b => defined.has(b.name)) ? { ...r, body: expandDefined(r.body, defined) } : r)
+    .map(r => {
+      if (!r.body.some(b => defined.has(b.name))) return r
+      const x = { ...r, body: expandDefined(r.body, defined) }
+      origins.set(x, r)
+      return x
+    })
   const breaks = new Map<Rule, SymmetryBreak>()
   for (const r of live) { const b = ruleSymmetries(r, structure); if (b) breaks.set(r, b) }
   const out: Prepared = {
@@ -144,6 +165,7 @@ export function prepare(kb: KnowledgeBase, abbreviate = true): Prepared {
     rules: live.filter(r => r.body.length > 0),
     defined,
     breaks,
+    origins,
   }
   byKB.set(kb, out)
   byRules.set(key, out)
@@ -255,6 +277,15 @@ export class Saturation {
   private tupleIndex = new Map<string, Map<string, string[]>>()
   /** Equivalences that have a flip: their classes are signed. */
   private signed = new Set<string>()
+  // provenance: what made each stored fact, each union of tuples (with its sign) and each merge of points
+  private cause: Cause = GIVEN
+  private clock = 0
+  private reasons = new Map<string, Recorded>()
+  private unions = new Map<string, (Recorded & { sign: number })[]>()
+  private merges: Recorded[] = []
+  /** Prepared rules are copies where a definition was unfolded in a body: the rule as written. */
+  private original = (r: Rule) => this.prep.origins?.get(r) ?? r
+
   /** While a rule is matched: its head, if the early head check applies to it (`headCheckable`). */
   private head: { rule: Rule; vars: string[]; literal: Set<string> } | null = null
   private derivations = 0
@@ -309,11 +340,18 @@ export class Saturation {
   /** After a merge, rewrite every stored fact and tuple over the new representatives. */
   private renormalise(): void {
     const old = [...this.facts.values()]
+    const reasons = this.reasons
     this.facts = new Map()
     this.byName = new Map()
     this.index = new Map()
     this.tupleIndex = new Map()
-    for (const f of old) this.store(f.name, this.canonArgs(f.name, f.args))
+    this.reasons = new Map()
+    for (const f of old) {
+      const args = this.canonArgs(f.name, f.args)
+      this.store(f.name, args)
+      const r = reasons.get(this.factKey(f.name, f.args)), key = this.factKey(f.name, args), prev = this.reasons.get(key)
+      if (r && (!prev || r.t < prev.t)) this.reasons.set(key, r)
+    }
 
     for (const [p, classes] of this.tuples) {
       const e = this.st.equivalences.get(p)!
@@ -452,14 +490,20 @@ export class Saturation {
   assert(f: GroundPredicate): boolean {
     this.derivations++
     if (f.name === OBJECT) return this.introduce(f.args)
+    // A rule's certificates for the premises a solver answered, taken before this fact changes anything.
+    this.certified(this.cause)
     let changed = this.introduce(f.args)
     const flip = this.st.flips?.get(f.name)
     const e = this.st.equivalences.get(f.name)
     if (flip && f.args.length === 2 * this.st.equivalences.get(flip.of)!.k) {
       const q = flip.of, qe = this.st.equivalences.get(q)!
-      changed = this.unionTuples(q, this.tupleKey(q, qe, f.args.slice(0, qe.k)), this.tupleKey(q, qe, f.args.slice(qe.k)), 1) || changed
+      const u = this.unionTuples(q, this.tupleKey(q, qe, f.args.slice(0, qe.k)), this.tupleKey(q, qe, f.args.slice(qe.k)), 1)
+      if (u) this.recordUnion(q, f, 1)
+      changed = u || changed
     } else if (f.name === this.eq && f.args.length === 2) {
-      changed = this.mergeObjects(f.args[0], f.args[1]) || changed
+      const m = this.mergeObjects(f.args[0], f.args[1])
+      if (m) this.merges.push({ atom: f, cause: this.certified(this.cause), t: ++this.clock })
+      changed = m || changed
     } else if (e && f.args.length === 2 * e.k) {
       // A difference's pair of one point has no value (a line or a segment of one point): a fact naming
       // one says nothing, and kept it would be equal to everything, gluing every class together. So it
@@ -467,12 +511,45 @@ export class Saturation {
       if (this.st.differences.has(f.name) && this.degeneratePair(f.args)) return changed
       const k1 = this.tupleKey(f.name, e, f.args.slice(0, e.k))
       const k2 = this.tupleKey(f.name, e, f.args.slice(e.k))
-      changed = this.unionTuples(f.name, k1, k2) || changed
+      const u = this.unionTuples(f.name, k1, k2)
+      if (u) this.recordUnion(f.name, f, 0)
+      changed = u || changed
     } else {
-      changed = this.store(f.name, this.canonArgs(f.name, f.args)) || changed
+      const args = this.canonArgs(f.name, f.args)
+      const st = this.store(f.name, args)
+      if (st) this.reasons.set(this.factKey(f.name, args), { atom: f, cause: this.certified(this.cause), t: ++this.clock })
+      changed = st || changed
     }
     if (changed) this.version++
     return changed
+  }
+
+  private recordUnion(p: string, atom: GroundPredicate, sign: number): void {
+    let l = this.unions.get(p)
+    if (!l) this.unions.set(p, l = [])
+    l.push({ atom, cause: this.certified(this.cause), t: ++this.clock, sign })
+  }
+
+  /**
+   * A rule's cause, with a certificate for each premise a solver answered (a difference's atom whose
+   * blocks no class joins), taken now: later, the solver's equations may include facts that came after.
+   */
+  private certified(cause: Cause): Cause {
+    if (cause.kind !== 'rule' || cause.solved) return cause
+    const solved = new Map<number, Extract<Cause, { kind: 'solver' }>>()
+    cause.rule.body.forEach((b, i) => {
+      const d = this.st.differences.get(b.name), e = this.st.equivalences.get(b.name)
+      if (!d || !e || b.args.length !== 2 * e.k) return
+      const args = b.args.map(a => cause.s.get(a)!.v)
+      if (this.tupleRoot(b.name, this.tupleKey(b.name, e, args.slice(0, e.k))) === this.tupleRoot(b.name, this.tupleKey(b.name, e, args.slice(e.k)))) return
+      const cached = this.latticeFor(b.name, d)
+      const v: Vector = new Map()
+      if (!this.blockVector(d, cached.unknown, args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, args.slice(e.k), -1, v)) return
+      const cert = cached.lattice.certificate(v)
+      if (cert) solved.set(i, this.solverCause(b.name, cert, cached.atoms, [], { name: b.name, args }) as Extract<Cause, { kind: 'solver' }>)
+    })
+    cause.solved = solved
+    return cause
   }
 
   /** Does a difference's fact name a pair of one point? */
@@ -510,7 +587,7 @@ export class Saturation {
 
   // ───────────────────────── sums: a solver ─────────────────────────
 
-  private sumLattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number>; pairOf: Map<string, [string, string]> }>()
+  private sumLattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number>; pairOf: Map<string, [string, string]>; atoms: GroundPredicate[] }>()
 
   /** A pair's value as an unknown's key: its class under the values' equivalence; null for one point (no length: value nothing). */
   private sumValue(sum: Sum, a: string, b: string): string | null {
@@ -540,8 +617,9 @@ export class Saturation {
     let cached = this.sumLattices.get(p)
     if (!cached || cached.version !== this.version) {
       const lattice = new Lattice(), unknown = new Map<string, number>(), pairOf = new Map<string, [string, string]>()
-      for (const f of this.byName.get(p) ?? []) lattice.add(this.sumVector(sum, unknown, pairOf, f.args))
-      this.sumLattices.set(p, cached = { version: this.version, lattice, unknown, pairOf })
+      const atoms: GroundPredicate[] = []
+      for (const f of this.byName.get(p) ?? []) { lattice.add(this.sumVector(sum, unknown, pairOf, f.args)); atoms.push(f) }
+      this.sumLattices.set(p, cached = { version: this.version, lattice, unknown, pairOf, atoms })
     }
     return cached
   }
@@ -571,8 +649,11 @@ export class Saturation {
       for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
         if (this.sumValue(sum, ...cached.pairOf.get(keys[i])!) === this.sumValue(sum, ...cached.pairOf.get(keys[j])!)) continue
         const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
-        if (!cached.lattice.contains(v)) continue
+        const cert = cached.lattice.certificate(v)
+        if (!cert) continue
+        this.cause = this.solverCause(p, cert, cached.atoms, [])
         changed = this.assert({ name: sum.values, args: [...cached.pairOf.get(keys[i])!, ...cached.pairOf.get(keys[j])!] }) || changed
+        this.cause = GIVEN
       }
     }
     return changed
@@ -581,7 +662,7 @@ export class Saturation {
   // ───────────────────────── differences: a solver ─────────────────────────
 
   /** Per difference relation: its equations as a lattice, built at a version of the store. */
-  private lattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number> }>()
+  private lattices = new Map<string, { version: number; lattice: Lattice; unknown: Map<string, number>; atoms: GroundPredicate[] }>()
 
   /** The value of a pair, as an unknown's key: its class under the pairs' equivalence. Null for a pair of one point. */
   private pairValue(d: Difference, a: string, b: string): string | null {
@@ -634,10 +715,11 @@ export class Saturation {
   }
 
   /** A difference relation's equations as a lattice, at the store's current version. */
-  private latticeFor(p: string, d: Difference): { version: number; lattice: Lattice; unknown: Map<string, number> } {
+  private latticeFor(p: string, d: Difference): { version: number; lattice: Lattice; unknown: Map<string, number>; atoms: GroundPredicate[] } {
     let cached = this.lattices.get(p)
     if (!cached || cached.version !== this.version) {
       const lattice = new Lattice(), unknown = new Map<string, number>()
+      const atoms: GroundPredicate[] = []
       for (const members of this.classesOf(p).members.values()) {
         const blocks = [...members].map(key => key.split(SEP))
         const first = blocks.find(b => this.blockVector(d, unknown, b, 1, new Map()))
@@ -645,10 +727,10 @@ export class Saturation {
         for (const b of blocks) {
           if (b === first) continue
           const v: Vector = new Map()
-          if (this.blockVector(d, unknown, b, 1, v) && this.blockVector(d, unknown, first, -1, v)) lattice.add(v)
+          if (this.blockVector(d, unknown, b, 1, v) && this.blockVector(d, unknown, first, -1, v)) { lattice.add(v); atoms.push({ name: p, args: [...b, ...first] }) }
         }
       }
-      this.lattices.set(p, cached = { version: this.version, lattice, unknown })
+      this.lattices.set(p, cached = { version: this.version, lattice, unknown, atoms })
     }
     return cached
   }
@@ -665,6 +747,246 @@ export class Saturation {
     const outer = this.head
     this.head = null
     try { return !this.join(atoms, s).next().done } finally { this.head = outer }
+  }
+
+  /**
+   * Let the solvers hand back what they now show (equal values, lines that turn by nothing), firing no
+   * rule: what a replay asks of a solver's step (proof.ts). True if anything changed.
+   */
+  settle(): boolean {
+    let changed = false
+    while (this.feedBackDifferences() || this.feedBackSums()) changed = true
+    return changed
+  }
+
+  // ───────────────────────── explanation: proofs from provenance ─────────────────────────
+
+  /**
+   * A solver's step, taken when it acts: its equations and coefficients, and the equalities of values
+   * they rely on as the store has them now (later, the very fact the step gives may have joined them).
+   */
+  private solverCause(relation: string, cert: Map<number, number>, atoms: GroundPredicate[], guards: GroundPredicate[], fact?: GroundPredicate): Cause {
+    const used = [...cert].filter(([, c]) => c !== 0)
+    const equations = used.map(([i]) => atoms[i])
+    const links = this.valueLinks(relation, fact && fact.name === relation ? [fact, ...equations] : equations)
+    return { kind: 'solver', relation, equations, coefficients: used.map(([, c]) => c), guards, links }
+  }
+
+  /**
+   * Why `goal` holds: a proof (proof.ts) whose steps are each a rule applied, a solver's combination,
+   * an equivalence's chain, the same fact read another way, or a definition's instance, every premise
+   * a hypothesis or an earlier step. Null if it does not hold.
+   */
+  explain(goal: GroundPredicate, hypotheses: readonly GroundPredicate[]): Proof | null {
+    if (!this.holds(goal)) return null
+    const steps: ProofStep[] = []
+    const done = new Map<string, number>()   // a fact's key to the time bound it was explained under
+    const given = new Set(hypotheses.map(f => f.name + SEP + f.args.join(SEP)))
+    const key = (f: GroundPredicate) => f.name + SEP + f.args.join(SEP)
+    const active = new Set<string>()
+
+    const add = (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => {
+      const k = key(fact)
+      if (done.has(k) || given.has(k)) return
+      done.set(k, steps.length)
+      steps.push({ fact, by, premises })
+    }
+
+    /** Explain `f` using only what was recorded before time `T`; false if it cannot be. */
+    const show = (f: GroundPredicate, T: number, depth = 0): boolean => {
+      const k = key(f)
+      if (given.has(k) || done.has(k) || f.name === OBJECT) return true
+      if (depth > 500 || active.has(k)) return false
+      active.add(k)
+      try {
+        const ok = this.explainFact(f, T, depth, show, add)
+        return ok
+      } finally { active.delete(k) }
+    }
+
+    if (!show(goal, Infinity)) return null
+    return { goal, hypotheses: [...hypotheses], steps }
+  }
+
+  private explainFact(
+    f: GroundPredicate, T: number, depth: number,
+    show: (f: GroundPredicate, T: number, depth?: number) => boolean,
+    add: (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => void,
+  ): boolean {
+    const next = depth + 1
+    // An equality of points: a chain of recorded merges.
+    if (f.name === this.eq && f.args.length === 2) {
+      if (f.args[0] === f.args[1]) return true
+      const edges = this.merges.filter(m => m.t < T).map(m => ({ r: m, a: m.atom.args[0], b: m.atom.args[1], sign: 0 }))
+      const path = this.pathBetween(edges, f.args[0], f.args[1], 0)
+      return !!path && this.chainStep(f, path, next, show, add)
+    }
+    // A defined fact: an instance of its definition.
+    if (this.prep.defined.has(f.name)) {
+      const atoms = expandDefined([{ name: f.name, args: [...f.args] }], this.prep.defined)
+      const s0: Subst = new Map(f.args.map(a => [a, { v: a, flex: true }]))
+      const outer = this.head
+      this.head = null
+      const m = this.join(atoms, s0).next()
+      this.head = outer
+      if (m.done) return false
+      const premises = atoms.map(a => ({ name: a.name, args: a.args.map(x => m.value.get(x)?.v ?? x) }))
+      if (!premises.every(p => show(p, T, next))) return false
+      add(f, { kind: 'definition' }, premises)
+      return true
+    }
+    // An equivalence, or its flip: a chain through recorded unions, signs counted.
+    const flip = this.st.flips?.get(f.name)
+    const q = flip ? flip.of : f.name
+    const e = this.st.equivalences.get(q)
+    if (e && f.args.length === 2 * e.k) {
+      const k1 = this.tupleKey(q, e, f.args.slice(0, e.k)), k2 = this.tupleKey(q, e, f.args.slice(e.k))
+      if (k1 === k2 && !flip) return true
+      const edges = (this.unions.get(q) ?? []).filter(u => u.t < T).map(u => ({
+        r: u, a: this.tupleKey(q, e, u.atom.args.slice(0, e.k)), b: this.tupleKey(q, e, u.atom.args.slice(e.k)), sign: u.sign,
+      }))
+      const path = this.pathBetween(edges, k1, k2, flip ? 1 : 0)
+      if (path) return this.chainStep(f, path, next, show, add)
+      const d = this.st.differences.get(q)
+      if (d) {
+        const cached = this.latticeFor(q, d)
+        const v: Vector = new Map()
+        if (!this.blockVector(d, cached.unknown, f.args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, f.args.slice(e.k), -1, v)) return false
+        const cert = cached.lattice.certificate(v)
+        if (!cert) return false
+        return this.solverStep(f, this.solverCause(q, cert, cached.atoms, [], f) as Extract<Cause, { kind: 'solver' }>, T, next, show, add)
+      }
+      return false
+    }
+    // A stored fact: what recorded it, then (if it was recorded under another reading) the same fact.
+    const k = this.factKey(f.name, this.canonArgs(f.name, f.args))
+    const rec = this.reasons.get(k)
+    if (rec && rec.t < T) {
+      if (!this.causeStep(rec.atom, rec.cause, rec.t, next, show, add)) return false
+      if (key2(rec.atom) !== key2(f)) return this.sameStep(f, rec.atom, T, next, show, add)
+      return true
+    }
+    const sum = this.st.sums.get(f.name)
+    if (sum && f.args.length === 6) {
+      const cached = this.sumLattice(f.name, sum)
+      const cert = cached.lattice.certificate(this.sumVector(sum, new Map(cached.unknown), null, f.args))
+      if (!cert) return false
+      return this.solverStep(f, this.solverCause(f.name, cert, cached.atoms, [], f) as Extract<Cause, { kind: 'solver' }>, T, next, show, add)
+    }
+    return false
+  }
+
+  /** A step from its recorded cause: a rule's instance, a solver's combination, or given. */
+  private causeStep(
+    fact: GroundPredicate, cause: Cause, t: number, depth: number,
+    show: (f: GroundPredicate, T: number, depth?: number) => boolean,
+    add: (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => void,
+  ): boolean {
+    if (cause.kind === 'given') return true
+    if (cause.kind === 'solver') return this.solverStep(fact, cause, t, depth, show, add)
+    const rule = cause.rule
+    const premises = rule.body.map(b => ({ name: b.name, args: b.args.map(a => cause.s.get(a)!.v) }))
+    const ok = premises.every((p, i) => {
+      const solved = cause.solved?.get(i)
+      return solved ? this.solverStep(p, solved, t, depth, show, add) : show(p, t, depth)
+    })
+    if (!ok) return false
+    add(fact, { kind: 'rule', rule: this.original(rule) }, premises)
+    return true
+  }
+
+  private solverStep(
+    fact: GroundPredicate, cause: Extract<Cause, { kind: 'solver' }>, T: number, depth: number,
+    show: (f: GroundPredicate, T: number, depth?: number) => boolean,
+    add: (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => void,
+  ): boolean {
+    const premises = [...cause.equations, ...cause.guards, ...cause.links]
+    if (!premises.every(p => show(p, T, depth))) return false
+    add(fact, { kind: 'solver', relation: cause.relation, coefficients: cause.coefficients }, premises)
+    return true
+  }
+
+  /**
+   * The equalities a solver's equations rely on: pairs it takes for one value (lines that run one way,
+   * for turns; equal lengths, for quadrances; equal points, where pairs are points), each linked to the
+   * first pair of its value. A replay needs them to add the equations up.
+   */
+  private valueLinks(relation: string, atoms: readonly GroundPredicate[]): GroundPredicate[] {
+    const d = this.st.differences.get(relation), sum = this.st.sums.get(relation)
+    const value = d ? (a: string, b: string) => this.pairValue(d, a, b) : sum ? (a: string, b: string) => this.sumValue(sum, a, b) : null
+    const eqName = d ? d.pairs : sum ? sum.values : null
+    if (!value) return []
+    const first = new Map<string, [string, string]>()
+    const out: GroundPredicate[] = []
+    for (const f of atoms) for (let i = 0; i + 1 < f.args.length; i += 2) {
+      const a = f.args[i], b = f.args[i + 1], v = value(a, b)
+      if (v === null) continue
+      const f0 = first.get(v)
+      if (!f0) { first.set(v, [a, b]); continue }
+      if (f0[0] === a && f0[1] === b) continue
+      if (eqName) out.push({ name: eqName, args: [...f0, a, b] })
+      else if (this.eq) for (const [x, y] of [[f0[0], a], [f0[1], b]]) if (x !== y) out.push({ name: this.eq, args: [x, y] })
+    }
+    return out
+  }
+
+  /** A fact recorded under another reading (a symmetry, or equal points): the same fact. */
+  private sameStep(
+    fact: GroundPredicate, recorded: GroundPredicate, T: number, depth: number,
+    show: (f: GroundPredicate, T: number, depth?: number) => boolean,
+    add: (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => void,
+  ): boolean {
+    const eqs: GroundPredicate[] = []
+    if (this.eq) {
+      const names = new Set(recorded.args)
+      for (const a of fact.args) if (!names.has(a)) {
+        const b = recorded.args.find(x => this.find(x) === this.find(a))
+        if (b !== undefined) eqs.push({ name: this.eq, args: [b, a] })
+      }
+    }
+    if (!eqs.every(p => show(p, T, depth))) return false
+    // Read another way only (a symmetry): structure gives it, no step.
+    if (eqs.length === 0) return true
+    add(fact, { kind: 'same' }, [recorded, ...eqs])
+    return true
+  }
+
+  private chainStep(
+    fact: GroundPredicate, path: Recorded[], depth: number,
+    show: (f: GroundPredicate, T: number, depth?: number) => boolean,
+    add: (fact: GroundPredicate, by: ProofStep['by'], premises: GroundPredicate[]) => void,
+  ): boolean {
+    for (const r of path) if (!this.causeStep(r.atom, r.cause, r.t, depth, show, add)) return false
+    // One link is the fact itself, perhaps read another way: structure gives it, no step.
+    if (path.length === 1) return true
+    add(fact, { kind: 'chain' }, path.map(r => r.atom))
+    return true
+  }
+
+  /** The shortest path of recorded edges from `from` to `to` whose signs add up to `parity`. */
+  private pathBetween(edges: { r: Recorded; a: string; b: string; sign: number }[], from: string, to: string, parity: number): Recorded[] | null {
+    const adj = new Map<string, { r: Recorded; to: string; sign: number }[]>()
+    for (const x of edges) {
+      if (!adj.has(x.a)) adj.set(x.a, [])
+      if (!adj.has(x.b)) adj.set(x.b, [])
+      adj.get(x.a)!.push({ r: x.r, to: x.b, sign: x.sign }); adj.get(x.b)!.push({ r: x.r, to: x.a, sign: x.sign })
+    }
+    const at = (k: string, p: number) => k + '|' + p
+    const back = new Map<string, { r: Recorded; from: string } | null>([[at(from, 0), null]])
+    const queue: [string, number][] = [[from, 0]]
+    while (queue.length) {
+      const [k, p] = queue.shift()!
+      if (k === to && p === parity) break
+      for (const n of adj.get(k) ?? []) {
+        const s = at(n.to, p ^ n.sign)
+        if (!back.has(s)) { back.set(s, { r: n.r, from: at(k, p) }); queue.push([n.to, p ^ n.sign]) }
+      }
+    }
+    const goal = at(to, parity)
+    if (!back.has(goal) || (from === to && parity === 0)) return from === to && parity === 0 ? [] : null
+    const out: Recorded[] = []
+    for (let s = goal; back.get(s); s = back.get(s)!.from) out.unshift(back.get(s)!.r)
+    return out
   }
 
   /** Stored relations, plus each object's equality with its representative. */
@@ -985,7 +1307,9 @@ export class Saturation {
         }
         while (r.m < r.matches.length) {
           const s = r.matches[r.m++]
+          this.cause = { kind: 'rule', rule, s }
           for (const h of this.heads(rule, s)) this.assert(h)
+          this.cause = GIVEN
           if (this.done(false)) return
         }
         r.rule = null
@@ -1032,11 +1356,15 @@ export class Saturation {
       const guards = d.faithful.body.filter(x => x.name !== p)
       for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
         const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
-        if (!cached.lattice.contains(v)) continue
+        const cert = cached.lattice.certificate(v)
+        if (!cert) continue
         const [x1, x2] = keys[i].split(SEP), [y1, y2] = keys[j].split(SEP)
         const bind = new Map([[a, x1], [b, x2], [c, y1], [dd, y2]])
-        if (!guards.every(g => this.holds({ name: g.name, args: g.args.map(v2 => bind.get(v2) ?? v2) }))) continue
+        const ground = guards.map(g => ({ name: g.name, args: g.args.map(v2 => bind.get(v2) ?? v2) }))
+        if (!ground.every(g => this.holds(g))) continue
+        this.cause = this.solverCause(p, cert, cached.atoms, ground)
         changed = this.assert({ name: d.pairs, args: [x1, x2, y1, y2] }) || changed
+        this.cause = GIVEN
       }
     }
     return changed

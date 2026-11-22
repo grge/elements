@@ -3,6 +3,7 @@ import { Configuration } from './configuration'
 import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
 import { saturate } from './saturate'
 import { FreshNames, displayName } from './names'
+import type { Proof } from './proof'
 
 /**
  * verified: the goal follows. vacuous: the hypotheses (or the configuration) are contradictory, i.e.
@@ -30,6 +31,8 @@ export interface CheckResponse {
   witnessed?: boolean
   /** Verified only under the non-degeneracy convention: for figures whose points are all apart. */
   apart?: boolean
+  /** Why it follows, when verified and asked for (`CheckOptions.explain`): proof.ts. */
+  proof?: Proof
 }
 
 export interface CheckOptions {
@@ -50,6 +53,8 @@ export interface CheckOptions {
    * too). Only a lemma that does not follow is checked again under the convention.
    */
   distinctNames?: boolean
+  /** Return the proof the search found, with a verified result (`CheckResponse.proof`). */
+  explain?: boolean
 }
 
 const EQUAL = 'eq-point'
@@ -136,11 +141,14 @@ function runCheckPipeline(
   // it at once (a figure has its points apart, so it witnesses the convention too); otherwise the
   // search is carried on to the end, looking for `false`.
   if (sat.holds(FALSE)) return vacuous(facts)
-  if (!mayDerive(kb, frontier, FALSE.name)) return { result: 'verified', facts }
-  if (options.consistent?.()) return { result: 'verified', facts, witnessed: true }
+  // The proof the search found, before any other search on these facts carries it on.
+  const proof = options.explain ? sat.explain(goal, frontier) ?? undefined : undefined
+  const verified = (extra: Partial<CheckResponse> = {}): CheckResponse => ({ result: 'verified', facts, ...(proof ? { proof } : {}), ...extra })
+  if (!mayDerive(kb, frontier, FALSE.name)) return verified()
+  if (options.consistent?.()) return verified({ witnessed: true })
   const search = saturate(kb, frontier, { goal: FALSE, ...budget })
   if (search.holds(FALSE)) return vacuous(search.allFacts())
-  return { result: search.exhausted && options.strict ? 'unshown' : 'verified', facts }
+  return search.exhausted && options.strict ? { result: 'unshown', facts } : verified()
 }
 
 function withMissingHeadObjects(seeds: readonly GroundPredicate[], lemma: Lemma): GroundPredicate[] {

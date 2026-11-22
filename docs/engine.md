@@ -419,6 +419,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    - Then it replaces `saturate.ts`, which stays in the tests as the oracle: every closure compared.
 3. **Proofs found and shown.** Provenance in the core, with certificates taken when a solver answer
    is used. Explanation, and the proof on the page, folded.
+   Found (November 2026): provenance in `saturate.ts`, `Saturation.explain`, `proof.ts` (the proof
+   object and `replay`), every book proof explained and replayed, at no measurable cost. Still to do:
+   the proof on the page, folded.
 4. **The cache.** Replay before search, in the worker.
 5. **Written proofs.**
    - The parser accepts `?` lines in a lemma's body.

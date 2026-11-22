@@ -47,43 +47,62 @@ function egcd(a: number, b: number): [number, number, number] {
   return r0 < 0 ? [-r0, -s0, -t0] : [r0, s0, t0]
 }
 
+/**
+ * An integer combination of the equations added, by their numbers: the certificate that an equation
+ * follows (each coefficient times the equation it numbers, summed).
+ */
+export type Certificate = Map<number, number>
+
 export class Lattice {
-  /** Rows by their leading unknown. */
-  private rows = new Map<number, Vector>()
+  /** Rows by their leading unknown, each with the combination of added equations it is. */
+  private rows = new Map<number, { v: Vector; c: Certificate }>()
+  private added = 0
   /** Set when a coefficient grew past LIMIT: further equations are dropped (never unsound). */
   overflowed = false
 
-  /** Add an equation: the lattice becomes the integer combinations of it and those before. */
+  /**
+   * Add an equation: the lattice becomes the integer combinations of it and those before. Equations
+   * are numbered in the order they are added, from 0, for certificates.
+   */
   add(vector: Vector): void {
     let v = new Map([...vector].filter(([, c]) => c !== 0))
+    let c: Certificate = new Map([[this.added++, 1]])
     while (v.size) {
-      if ([...v.values()].some(c => Math.abs(c) > LIMIT)) { this.overflowed = true; return }
+      if ([...v.values()].some(x => Math.abs(x) > LIMIT)) { this.overflowed = true; return }
       const p = lead(v)
       const r = this.rows.get(p)
-      if (!r) { this.rows.set(p, v.get(p)! < 0 ? scale(v, -1) : v); return }
-      const rp = r.get(p)!, vp = v.get(p)!
-      if (vp % rp === 0) { v = addScaled(v, r, -vp / rp); continue }
+      if (!r) { this.rows.set(p, v.get(p)! < 0 ? { v: scale(v, -1), c: scale(c, -1) } : { v, c }); return }
+      const rp = r.v.get(p)!, vp = v.get(p)!
+      if (vp % rp === 0) { v = addScaled(v, r.v, -vp / rp); c = addScaled(c, r.c, -vp / rp); continue }
       // Neither divides the other: replace the row by the combination with the gcd as its lead, and
       // go on with the remainder, whose lead is gone (a unimodular change: the same lattice).
       const [g, s, t] = egcd(rp, vp)   // g = s·rp + t·vp
-      const next = addScaled(scale(r, s), v, t)
-      const rest = addScaled(scale(r, vp / g), v, -rp / g)
+      const next = { v: addScaled(scale(r.v, s), v, t), c: addScaled(scale(r.c, s), c, t) }
+      const rest = { v: addScaled(scale(r.v, vp / g), v, -rp / g), c: addScaled(scale(r.c, vp / g), c, -rp / g) }
       this.rows.set(p, next)
-      v = rest
+      v = rest.v
+      c = rest.c
     }
   }
 
   /** Is the equation an integer combination of those added? */
   contains(vector: Vector): boolean {
+    return this.certificate(vector) !== null
+  }
+
+  /** If the equation is an integer combination of those added, the combination; else null. */
+  certificate(vector: Vector): Certificate | null {
     let v = new Map([...vector].filter(([, c]) => c !== 0))
+    let c: Certificate = new Map()
     while (v.size) {
       const p = lead(v)
       const r = this.rows.get(p)
-      if (!r) return false
-      const rp = r.get(p)!, vp = v.get(p)!
-      if (vp % rp !== 0) return false
-      v = addScaled(v, r, -vp / rp)
+      if (!r) return null
+      const rp = r.v.get(p)!, vp = v.get(p)!
+      if (vp % rp !== 0) return null
+      v = addScaled(v, r.v, -vp / rp)
+      c = addScaled(c, r.c, vp / rp)
     }
-    return true
+    return c
   }
 }
