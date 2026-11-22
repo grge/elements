@@ -440,8 +440,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    Landed (November 2026; review-notes.md, *Written proofs*): `?` lines in a lemma's body; each step
    by a short search (which covers the first two ways), each construction with tools.md's four checks
    on the figures; a mark per step. Thales' converse proves as written, the midline proves without
-   ratios, and the centroid's construction is refused with "h is g in every figure". Still to do:
-   citing lemmas (tools.md, option A), the nine-point circle, and a book limiting its moves.
+   ratios, and the centroid's construction is refused with "h is g in every figure". Lemmas are
+   cited (tools.md, option A): the nine-point circle's turn form, citing Thales' converse twice,
+   follows but for two order steps. Still to do: a book limiting its moves; order, for those two.
 6. **Statements back to their plain forms,** where a written proof can carry the points they now
    name (the midline, III.32).
 

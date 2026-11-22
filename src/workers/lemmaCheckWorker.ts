@@ -16,7 +16,8 @@ import type { Proof } from '../kb/proof'
 import { proofView, type ProofView } from '../kb/proofView'
 import { numericEvidence, type Evidence } from '../geometry/evidence'
 import { verdict, writtenVerdicts, type Verdict } from '../geometry/verdict'
-import type { Predicate } from '../language/parser'
+import type { Lemma, Predicate } from '../language/parser'
+import { bookLemmas } from '../language/bookLemmas'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 interface VerifyRequest {
@@ -48,6 +49,9 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
     const parsed = parseSource(text)
     const runtime = buildRuntimeState(new KnowledgeBase(rules), parsed)
 
+    // Lemmas a written proof may cite (tools.md, option A): the book's, which are all ✓, and this
+    // page's own as they are found ✓, those above the proof.
+    const citable: Lemma[] = [...bookLemmas]
     for (const item of parsed) {
       if (item.kind !== 'lemma' && item.kind !== 'ground-query') continue
       const line = (item.sourceRef?.startLine ?? 1) - 1
@@ -70,6 +74,7 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
               if (c.ok) built.push(step)
               return c
             },
+            lemmas: citable,
             consistent: () => {
               if (!built.length) return !!ev?.witness
               try { return !!numericEvidence({ head: lemma.head, hypotheses: [...lemma.hypotheses, ...built] }, runtime.kb).witness } catch { return false }
@@ -103,6 +108,7 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
         } else {
           v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)
         }
+        if (item.kind === 'lemma' && v.type === 'verified') citable.push(item.lemma)
         post({ requestId, kind: 'mark', mark: { line, endLine, ...v, ...(proof ? { proof } : {}) } })
       } catch (error) {
         post({ requestId, kind: 'mark', mark: { line, endLine, type: 'unproven', message: `could not be checked: ${error}` } })

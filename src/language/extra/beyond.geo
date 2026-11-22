@@ -154,6 +154,24 @@ thales-converse a b c o:
     ? eq-lines a b c d
     ? eq-lines b d a c
 
+# The nine-point circle (above), written out, citing Thales' converse twice: f and e are as far from
+# k as from a, so k is a reflected in e-f, and the angle at k is the angle at a, which is the angle
+# at d of the parallelogram a-f-d-e. As turns, k and d see e-f alike: d, e, f and k are cyclic.
+# Every step follows but two, both order: the right angle at k on c's side (its quarter turn
+# follows, but `right` needs the extension's side), and the parallelogram, whose diagonals must
+# cross between its corners.
+? eq-turn k d k e f d f e:
+    nine-point a b c d e f n k
+    ? eq-lines f a f k           # Thales' converse, in a-k-b
+    ? right a k c                # not shown: order
+    ? eq-lines e a e k           # Thales' converse, in a-k-c
+    ? eq-angle e k f e a f       # side-side-side
+    ? parallel d e a b           # midlines
+    ? parallel d f a c
+    ? parallelogram a f d e      # not shown: order
+    ? eq-angle e d f e a f       # its opposite angles
+    ? eq-turn k e k f d e d f
+
 # The perpendicular from the centre to a chord bisects it.
 #
 # Proves, without angle-angle-side: Pythagoras in quadrances on both sides of the foot, reached from

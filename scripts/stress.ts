@@ -21,7 +21,7 @@ import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { numericEvidence, type Evidence } from '../src/geometry/evidence'
 import { verdict } from '../src/geometry/verdict'
-import { bookRules } from '../tests/book'
+import { bookLemmas, bookRules } from '../tests/book'
 
 const arg = (name: string) => { const i = process.argv.indexOf(name); return i >= 0 ? process.argv[i + 1] : undefined }
 const budget = Number(arg('--budget') ?? 200_000)
@@ -38,6 +38,8 @@ function withConvention(lemma: Lemma): Lemma {
 const source = readFileSync(resolve(__dirname, '../src/language/extra/beyond.geo'), 'utf8')
 parseSource(source)   // fail early on a syntax error
 const kb = new KnowledgeBase([...bookRules, ...parseRules(source)])
+// What a written proof may cite: the book's lemmas, and this file's as they are found ✓.
+const citable: Lemma[] = [...bookLemmas]
 
 function draws(lemma: Lemma): string {
   const x = extract(kb, lemma.hypotheses.map(h => ({ name: h.name, args: h.args })))
@@ -60,11 +62,12 @@ for (const written of parseLemmas(source)) {
   const t0 = performance.now()
   // A written proof is checked step by step (its constructions on the figures), then its head.
   const options = { consistent: () => !!ev?.witness, strict: true, distinctNames: true }
-  const steps = lemma.steps ? checkWrittenProof(lemma, kb, { ...options, construct: (s, above, np) => checkConstruction(kb, s, above, np) }, budget) : null
+  const steps = lemma.steps ? checkWrittenProof(lemma, kb, { ...options, construct: (s, above, np) => checkConstruction(kb, s, above, np), lemmas: citable }, budget) : null
   const check = steps ? steps.head : checkLemma(lemma, kb, budget, options)
   const gaps = steps?.steps.filter(s => s.result === 'not-shown' || s.result === 'refused').map(s => `l. ${s.line} ${s.result}`) ?? []
   const ms = performance.now() - t0
   const v = gaps.length && check.result === 'verified' ? { type: 'unproven' } : verdict(check, ev)
+  if (v.type === 'verified') citable.push(lemma)
   console.log(`${v.type.padEnd(9)} ${text}${steps ? ` (written: ${steps.steps.length} steps${gaps.length ? `; ${gaps.join(', ')}` : ''})` : ''}`)
   console.log(`          figure: ${figure}; evidence: ${describeEvidence(ev)}; check: ${check.result} in ${(ms / 1000).toFixed(1)} s, ${check.facts.length} facts`)
 }

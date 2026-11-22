@@ -16,11 +16,12 @@ import type { GroundPredicate } from './inference'
 import { displayName } from './names'
 import type { Proof, ProofStep } from './proof'
 import { showRule } from './rules'
+import { citedLemma } from './checker'
 
 export interface ProofViewStep {
   /** The fact, as the source would write it, auxiliary names subscripted (`d₁`). */
   fact: string
-  /** Why, in a few words: `rule` for a rule, or the structure's reason. */
+  /** Why, in a few words: `rule` for a rule, `lemma` for a lemma cited, or the structure's reason. */
   why: string
   /** For a rule step: the rule's text (`showRule`), by which the page finds where it is written. */
   rule?: string
@@ -49,7 +50,11 @@ const atom = (f: GroundPredicate) => [f.name, ...f.args.map(displayName)].join('
 
 function why(st: ProofStep): Pick<ProofViewStep, 'why' | 'rule' | 'head'> {
   switch (st.by.kind) {
-    case 'rule': return { why: 'rule', rule: showRule(st.by.rule as Rule), head: st.by.rule.head.name }
+    case 'rule': {
+      const lemma = citedLemma(st.by.rule as Rule)
+      if (lemma) return { why: 'lemma', rule: `? ${lemma.head.name} ${lemma.head.args.join(' ')}: ${lemma.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`, head: lemma.head.name }
+      return { why: 'rule', rule: showRule(st.by.rule as Rule), head: st.by.rule.head.name }
+    }
     case 'solver': return { why: SOLVED[st.by.relation] ?? `adding the ${st.by.relation} facts` }
     case 'chain': return { why: 'a chain of equals' }
     case 'same': return { why: 'the same, read another way' }

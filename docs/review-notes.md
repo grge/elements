@@ -733,3 +733,18 @@ step on the page. Measured with the book's rules and *Beyond*'s:
   `right`'s auxiliary point on a-b. That is no dependence: the check is now that no point above is
   placed by means of a new one.
 - **A step's search** has a tenth of a lemma's budget (300,000 units). No step above came near it.
+- **Citing lemmas** (tools.md, option A). A step may cite the book's lemmas and the page's ✓ lemmas
+  above it: each joins the step's search as a rule over primitives (its hypotheses unfolded), and
+  only for a step whose predicate it concludes. Offering all 99 of the book's changes nothing
+  measurable (Thales' converse 3.2 s, the midline 3.0 s). The proof view says "a lemma" for the step.
+- **The nine-point circle,** as turns (`eq-turn k d k e f d f e`), written in *Beyond* citing Thales'
+  converse twice: f and e are as far from k as from a; k is a reflected in e-f, so the angle at k is
+  the angle at a, which is the parallelogram a-f-d-e's angle at d; d, e, f and k are cyclic. The head
+  follows (18.3 s), and every step but two:
+  - `right a k c`, the right angle at the foot on c's side. Its quarter turn follows; `right` needs
+    the side its extension falls on.
+  - `parallelogram a f d e`, whose diagonals must cross between its corners. Constructing the
+    crossing (`line-line-intersection`) gives collinearity, not `between`.
+
+  Both are order, the wall *Beyond* already names; neither is a written proof's limit. The circle
+  form (`circle n d k`) also needs a circle's centre to be unique, which the book does not have.

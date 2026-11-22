@@ -8,6 +8,7 @@ import { checkWrittenProof } from '../src/kb/checker'
 import { checkConstruction } from '../src/geometry/constructionStep'
 import { writtenVerdicts } from '../src/geometry/verdict'
 import { parseLemmas, parseSource } from '../src/language/parser'
+import { proofView } from '../src/kb/proofView'
 import { bookRules } from './book'
 
 const kb = new KnowledgeBase(bookRules)
@@ -111,5 +112,22 @@ describe('checking a written proof', () => {
 `)
     expect(r.steps[0]).toMatchObject({ result: 'constructed', newPoints: ['x'] })
     expect(writtenVerdicts(r, null).steps[0].message).toMatch(/^constructs x: freely chosen/)
+  }, 60_000)
+
+  it("cites a proved lemma as one step (tools.md, option A): Thales' converse, in a-k-b", () => {
+    const written = `? eq-lines f k f b:
+    right a k b
+    midpoint f a b
+    ? eq-lines f a f k
+`
+    const lemma = parseLemmas(written)[0]
+    const thalesConverse = parseLemmas('? eq-lines o a o b: right a b c, midpoint o a c')[0]
+    const without = checkWrittenProof(lemma, kb, { consistent: () => true, distinctNames: true })
+    expect(without.steps[0].result).toBe('not-shown')
+    const cited = checkWrittenProof(lemma, kb, { consistent: () => true, distinctNames: true, lemmas: [thalesConverse] })
+    expect(cited.steps[0].result).toBe('follows')
+    const view = proofView(cited.steps[0].proof!)
+    expect(view.steps).toEqual([expect.objectContaining({ why: 'lemma', rule: '? eq-lines o a o b: right a b c, midpoint o a c' })])
+    expect(cited.head.result).toBe('verified')
   }, 60_000)
 })

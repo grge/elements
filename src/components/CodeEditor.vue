@@ -220,7 +220,7 @@ class ProofWidget extends WidgetType {
         why.className = 'cm-proof-why'
         if (st.rule) {
           const a = document.createElement('a')
-          a.textContent = props.ruleLink?.(st.rule) ?? st.head ?? 'a rule'
+          a.textContent = props.ruleLink?.(st.rule) ?? (st.why === 'lemma' ? 'a lemma' : st.head ?? 'a rule')
           a.title = st.rule
           a.href = '#'
           a.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); if (st.head) emit('open', st.head) })

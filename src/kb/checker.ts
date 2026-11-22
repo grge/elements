@@ -1,9 +1,10 @@
 import type { Lemma, Predicate, Rule } from '../language/parser'
 import { Configuration } from './configuration'
-import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
+import { groundKey, unfold, KnowledgeBase, type GroundPredicate } from './inference'
 import { saturate } from './saturate'
 import { FreshNames, displayName } from './names'
 import { replay, type Proof } from './proof'
+import { showRule } from './rules'
 import { Saturation, prepare } from './saturate'
 
 /**
@@ -251,6 +252,53 @@ export function checkByReplay(
 // ── written proofs ──
 
 /**
+ * Proved lemmas as rules a step may cite (tools.md, option A): each lemma's hypotheses unfolded to
+ * primitives as the body, its head as the head, so that no definition gains a clause (engine.md:
+ * lemmas join after unfolding). A lemma whose head is defined joins only if its head unfolds to
+ * primitives over the lemma's own points, one rule for each.
+ */
+function citable(lemmas: readonly Lemma[], kb: KnowledgeBase): Rule[] {
+  const key = lemmas.map(l => `${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`).join('\n')
+  let byKey = citableRules.get(kb)
+  if (!byKey) citableRules.set(kb, byKey = new Map())
+  const hit = byKey.get(key)
+  if (hit) return hit
+  const out: Rule[] = []
+  for (const l of lemmas) {
+    const fresh = new FreshNames()
+    const body = dedupeFacts(l.hypotheses.flatMap(h => unfold(toGroundPredicate(h), kb, new Set(), { fresh }).frontier))
+    const heads = unfold(toGroundPredicate(l.head), kb, new Set(), { fresh: new FreshNames() }).frontier
+    if (heads.some(h => h.args.some(a => !l.head.args.includes(a)))) continue
+    for (const head of heads) {
+      const rule = { head: { name: head.name, args: [...head.args] }, body: body.map(b => ({ name: b.name, args: [...b.args] })) }
+      citedFrom.set(rule, l)
+      out.push(rule)
+    }
+  }
+  byKey.set(key, out)
+  return out
+}
+const citableRules = new WeakMap<KnowledgeBase, Map<string, Rule[]>>()
+const citedFrom = new WeakMap<Rule, Lemma>()
+/** The lemma a proof's rule step cites, if it is one (a lemma joined as a rule, by `citable`). */
+export const citedLemma = (rule: Rule): Lemma | undefined => citedFrom.get(rule)
+
+/** The knowledge base with the cited lemmas that conclude what this step needs: none, mostly. */
+function withCited(kb: KnowledgeBase, cited: readonly Rule[], goal: GroundPredicate): KnowledgeBase {
+  if (!cited.length) return kb
+  const wanted = new Set(unfold(goal, kb, new Set(), { fresh: new FreshNames() }).frontier.map(f => f.name))
+  const use = cited.filter(r => wanted.has(r.head.name))
+  if (!use.length) return kb
+  const key = use.map(showRule).join('\n')
+  let byKey = citedKbs.get(kb)
+  if (!byKey) citedKbs.set(kb, byKey = new Map())
+  let out = byKey.get(key)
+  if (!out) byKey.set(key, out = new KnowledgeBase([...kb.allRules(), ...use]))
+  return out
+}
+const citedKbs = new WeakMap<KnowledgeBase, Map<string, KnowledgeBase>>()
+
+/**
  * What the figures say of a construction step (geometry/constructionStep.ts): the logic knows nothing
  * of figures, so the caller answers. `ok` when its new points are built from the points above, in
  * every sampled figure; `apart` when each new point stands apart from every other point in every one
@@ -310,7 +358,7 @@ export const STEP_WORK = 300_000
 export function checkWrittenProof(
   lemma: Lemma,
   kb: KnowledgeBase,
-  options: CheckOptions & { construct?: Construct; stepWork?: number } = {},
+  options: CheckOptions & { construct?: Construct; stepWork?: number; lemmas?: readonly Lemma[] } = {},
   maxDerivations = 2_000_000,
 ): WrittenCheck {
   const fresh = new FreshNames()
@@ -321,6 +369,7 @@ export function checkWrittenProof(
   const drawn: Predicate[] = [...lemma.hypotheses]
   const notApart = new Set<string>()
   const stepWork = options.stepWork ?? STEP_WORK
+  const cited = citable(options.lemmas ?? [], kb)
   const steps: StepResult[] = []
   const addFacts = (p: Predicate, notCovered: boolean) => {
     const facts = unfoldAll([p])
@@ -340,9 +389,10 @@ export function checkWrittenProof(
       continue
     }
     const goal = toGroundPredicate(pred)
+    const stepKb = withCited(kb, cited, goal)
     const attempt = (convention: boolean) => {
       const frontier = [...known, ...(convention ? nonDegeneracy(known, goal, notApart) : [])]
-      const sat = saturate(kb, frontier, { goal, maxWork: stepWork, maxDerivations })
+      const sat = saturate(stepKb, frontier, { goal, maxWork: stepWork, maxDerivations })
       return sat.holds(goal) ? sat.explain(goal, frontier) ?? undefined : null
     }
     let proof = attempt(false), apart = false
@@ -355,8 +405,9 @@ export function checkWrittenProof(
   const goal = toGroundPredicate(lemma.head)
   const missing = lemma.head.args.filter(a => !above.has(a)).map(a => ({ name: '__object__', args: [a] }))
   const facts = dedupeFacts([...known, ...missing])
-  const plain = checkFrom(goal, facts, kb, maxDerivations, { ...options, distinctNames: false })
+  const headKb = withCited(kb, cited, goal)
+  const plain = checkFrom(goal, facts, headKb, maxDerivations, { ...options, distinctNames: false })
   if (!options.distinctNames || plain.result === 'verified' || plain.result === 'vacuous' || plain.result === 'unshown') return { steps, head: plain }
-  const apart = checkFrom(goal, facts, kb, maxDerivations, options, notApart)
+  const apart = checkFrom(goal, facts, headKb, maxDerivations, options, notApart)
   return { steps, head: apart.result === 'verified' ? { ...apart, apart: true } : apart }
 }

@@ -235,6 +235,9 @@ It is skipped for heads that are defined or answered by a solver.
   only as witnessed. A figure with no sample names the point the new one falls on, where it can.
   `writtenVerdicts` (verdict.ts) turns the result into marks: one per step (a construction's says
   what it constructs, under its ✓), and the lemma's, unproven while any step is not shown.
+  A step may cite lemmas (`lemmas`: the book's, `language/bookLemmas.ts`, and the page's ✓ lemmas
+  above): each joins that step's search as a rule over primitives, its hypotheses unfolded, only for
+  a step whose predicate it concludes (`citable`, `withCited`); `citedLemma` names it in the proof.
 
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last
