@@ -140,3 +140,5 @@ docs/           documentation
 - [Engine](docs/engine.md): a design proposal (November 2026). It covers proofs the engine finds,
   the page shows and an author writes, with constructions; and a much faster search, with the
   matching-core spike. [Its review](docs/engine-review.md) proposes reordering its path.
+- [Tools](docs/tools.md): a design (November 2026) for a book's construction moves and for proved
+  lemmas as tools; the second step of the engine review's path.
