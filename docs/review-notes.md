@@ -532,3 +532,82 @@ those, the book takes 18.4 s against 74.7 s, and misses 2 lemmas (`bisector-feet
 - Euclid's angle step alone: out of budget at depth 2.
 
 Order and incidence facts hold of too many tuples for the figure to prune.
+
+## Cold-start search (November 2026)
+
+How much faster can a search with no proof to replay be? Measured at c5bf848 (chapters 1 to 7 and
+*Beyond the book*), Node 22 on four CPUs, on a copy of `saturate.ts` with switches. The changes are
+saved as `scripts/prototypes/cold-start.patch`, with its harness `cold-start-harness.ts`. Each
+lemma is searched as the checker does: plain, then under the non-degeneracy convention.
+
+**Where the time goes.** A CPU profile of the windmill's first lemma (out of budget, 6.4 million
+units of work, 36 s):
+
+| Share | What |
+|---|---|
+| 41% | scanning and unifying: `match`, `matchEquivalence`, `unifyArgs` |
+| 21% | string canonical forms: `orbitMin`, `tupleKey`, orbits |
+| 10% | garbage collection |
+| the rest | joins, the solvers, the store |
+
+A match costs about 14 µs. The same rule done as a plain integer join (the common-supplement rule,
+over the windmill's 6,936 `supp` facts, every image bucketed by its first block) costs 0.019 µs a
+match: 345,322 matches in 4.8 s against 683,708 in 12.7 ms. The toy leaves out equal points,
+conclusions and symmetry breaking, so it bounds the matching overhead, not the whole engine.
+
+**Three changes, and the book.** All 99 lemmas, at the default budget:
+
+| Engine | Time | Work | Proved |
+|---|---|---|---|
+| today | 211 s | 28.3 M | 97 (both windmill lemmas out of budget) |
+| signed angle classes | 146 s | 24.8 M | 97 |
+| indexes and the early head check | 80 s | 15.8 M | 99 |
+| all three | 48 s | 9.6 M | 99 |
+
+- **Signed angle classes.**
+  - `supp` is kept as parity in `eq-angle`'s classes (an odd class is an angle equal to its own
+    supplement), so its four structural rules (02-angle:106–108, 114) never fire, and no `supp`
+    fact is stored.
+  - Full closures agree with today's fact for fact.
+  - In the windmill's plain search, `supp` was 6,936 of 7,766 stored facts, naming 1,197 pairs of
+    geometric angles. Matches there fell from 461,440 to 100,284, and to 34,704 with the other
+    two changes.
+  - A trap: the relevance cut must learn that `supp` feeds the angle classes. Otherwise it drops
+    02-angle:111, the only rule that makes supplements, and four lemmas fail.
+  - Built properly, the structure would be recognised from `supp`'s own rules, as equivalences are.
+- **Indexes:**
+  - per stored relation, (position, value) to the images of its facts;
+  - per equivalence, (position in block, value) to the members whose images have it.
+
+  Full closures agree. Alone they gain 17%: scanning was not the main cost while matches were
+  this many.
+- **The early head check:** a partial match is abandoned once the rule's conclusion is bound and
+  already holds. Alone it brings the windmill back inside its budget (2.17 million units, 10.5 s).
+
+**Repeats and blow-up:**
+- **Across rounds,** a full closure matches each rule instance 2 to 3 times (the parallelogram:
+  70,303 matches, 32,805 distinct; I.43: 7.31 million, 2.47 million). Semi-naive evaluation can
+  save at most that.
+- **Angles named along their arms:**
+  - the windmill: 726 angle names for 473 geometric angles (a vertex and two rays);
+  - Euler's line: 951 for 633.
+
+  So a ray structure would be a small lever.
+- **Lemmas with identical hypotheses** recompute one closure: 15 sets, 21 s of the book's 66 s at
+  2aef82e.
+
+**What speed does not buy.** With 20 times the budget (60 million units) and the first two changes:
+- the centroid, the altitudes as `right` and the nine-point circle reach a complete closure
+  without their goal (at 2.6, 3.9 and 3.1 million units). No budget proves them: they wait on a
+  construction or the logic;
+- Euler's line is still unproved at 66 million units (12.6 minutes, 37,158 facts).
+
+**The search's cost is unstable.** On the old engine copy with chapter 7's rules, the supplement
+rules made 210 of the windmill's 590,047 matches. On the current engine they dominate. A
+goal-stopped search's cost swings with small changes to the rules or the engine. And the budget is
+in units of work, so a faster engine proves nothing more until `MAX_WORK` is re-tuned.
+
+**What is left** after the three changes, profiled on the windmill (8.7 s):
+- generic machinery throughout: `unifyArgs` 11%, `matchEquivalence` 11%, `orbitMin` 8%, the
+  prototype's naive parity lookup 6%, garbage collection 7%;
+- the turn solver asked again for the same atoms: `differenceHolds` 16% inclusive.

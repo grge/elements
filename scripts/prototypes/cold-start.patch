@@ -1,0 +1,344 @@
+# Prototype (November 2026, review-notes.md, *Cold-start search*): indexes, an early head check and
+# signed angle classes on src/kb/saturate.ts at c5bf848, behind FLAGS. Not for merging as is: the
+# signed classes are hard-wired to eq-angle and supp, and relevance must name supp (see the notes).
+# Apply with: git apply scripts/prototypes/cold-start.patch; run cold-start-harness.ts (its header).
+diff --git a/src/kb/saturate.ts b/src/kb/saturate.ts
+index cfe1bbf..911e012 100644
+--- a/src/kb/saturate.ts
++++ b/src/kb/saturate.ts
+@@ -24,6 +24,10 @@ import { ruleSymmetries, type SymmetryBreak } from './symmetry'
+ import { fingerprint, Lru } from './rules'
+ 
+ const OBJECT = '__object__'
++const ANGLE = 'eq-angle', SUPP = 'supp'
++export const FLAGS = { idx: false, eqidx: false, headcheck: false, parity: false }
++export const FLAGS_DISTINCT = { on: false }
++const ruleIds = new Map<Rule, number>()
+ const SEP = '\u0001'
+ 
+ /**
+@@ -221,7 +225,7 @@ function cartesian<T>(lists: T[][]): T[][] {
+   return lists.reduce<T[][]>((acc, list) => acc.flatMap(prefix => list.map(x => [...prefix, x])), [[]])
+ }
+ 
+-interface TupleClasses { parent: Map<string, string>; members: Map<string, Set<string>> }
++interface TupleClasses { parent: Map<string, string>; members: Map<string, Set<string>>; par?: Map<string, number>; odd?: Set<string> }
+ 
+ export class Saturation {
+   private readonly st: Structure
+@@ -241,6 +245,16 @@ export class Saturation {
+   private byName = new Map<string, GroundPredicate[]>()
+ 
+   private version = 0
++  /** Prototype indexes: per stored relation, (position, value) → images of its facts. */
++  private idx = new Map<string, Map<string, string[][]>>()
++  /** Per equivalence, (position in block, value) → member keys whose images have that value there. */
++  private tidx = new Map<string, Map<string, Set<string>>>()
++  fired = 0
++  instances = new Set<string>()
++  perRule = new Map<Rule, { fired: number; added: number; work: number }>()
++  roundsRun = 0
++  private curHead: Predicate | null = null
++  private curHeadVars: string[] = []
+   private derivations = 0
+   /** Partial matches considered: the search's work, deterministic and in proportion to its time. */
+   work = 0
+@@ -294,6 +308,8 @@ export class Saturation {
+     const old = [...this.facts.values()]
+     this.facts = new Map()
+     this.byName = new Map()
++    this.idx = new Map()
++    this.tidx = new Map()
+     for (const f of old) this.store(f.name, this.canonArgs(f.name, f.args))
+ 
+     for (const [p, classes] of this.tuples) {
+@@ -302,8 +318,10 @@ export class Saturation {
+       this.tuples.set(p, fresh)
+       const remap = (key: string) => this.tupleKey(p, e, key.split(SEP))
+       for (const [key] of classes.parent) {
+-        this.unionTuples(p, remap(key), remap(this.rootIn(classes.parent, key)))
++        const root = this.rootIn(classes.parent, key)
++        this.unionTuples(p, remap(key), remap(root), classes.par ? this.parityOf(classes, key) : 0)
+       }
++      if (classes.odd) for (const r of classes.odd) this.unionTuples(p, remap(r), remap(r), 1)
+     }
+     this.version++
+   }
+@@ -334,6 +352,19 @@ export class Saturation {
+     let list = this.byName.get(p)
+     if (!list) this.byName.set(p, list = [])
+     list.push(f)
++    if (FLAGS.idx) {
++      let ix = this.idx.get(p)
++      if (!ix) this.idx.set(p, ix = new Map())
++      const group = this.st.symmetries.get(p)
++      for (const img of group ? orbit(group, args) : [args]) {
++        for (let i = 0; i < img.length; i++) {
++          const k = i + SEP + img[i]
++          let l = ix.get(k)
++          if (!l) ix.set(k, l = [])
++          l.push(img)
++        }
++      }
++    }
+     return true
+   }
+ 
+@@ -361,9 +392,51 @@ export class Saturation {
+     return this.rootIn(this.classesOf(p).parent, key)
+   }
+ 
+-  private unionTuples(p: string, k1: string, k2: string): boolean {
++  private indexTuple(p: string, key: string): void {
++    const c = this.classesOf(p)
++    if (c.parent.has(key)) return
++    const e = this.st.equivalences.get(p)!
++    let ix = this.tidx.get(p)
++    if (!ix) this.tidx.set(p, ix = new Map())
++    for (const img of orbitByKey(e.blockGroup, key)) for (let j = 0; j < img.length; j++) {
++      const k = j + SEP + img[j]
++      let l = ix.get(k)
++      if (!l) ix.set(k, l = new Set())
++      l.add(key)
++    }
++  }
++
++  /** Parity of a key relative to its class's root (signed classes: eq-angle 0, supp 1). */
++  parityOf(c: TupleClasses, k: string): number {
++    let x = 0
++    for (let r = k, p = c.parent.get(r); p !== undefined && p !== r; r = p, p = c.parent.get(r)) x ^= c.par?.get(r) ?? 0
++    return x
++  }
++
++  private unionTuples(p: string, k1: string, k2: string, par = 0): boolean {
++    if (FLAGS.eqidx) { this.indexTuple(p, k1); this.indexTuple(p, k2) }
+     const c = this.classesOf(p)
+     const r1 = this.rootIn(c.parent, k1), r2 = this.rootIn(c.parent, k2)
++    if (FLAGS.parity && p === ANGLE) {
++      c.par ??= new Map(); c.odd ??= new Set()
++      const p1 = this.parityOf(c, k1), p2 = this.parityOf(c, k2)
++      if (!c.parent.has(k1)) c.parent.set(k1, k1)
++      if (!c.parent.has(k2)) c.parent.set(k2, k2)
++      if (r1 === r2) {
++        if ((p1 ^ p2) === par || c.odd.has(r1)) return false
++        c.odd.add(r1)
++        return true
++      }
++      const [win, lose] = r1 < r2 ? [r1, r2] : [r2, r1]
++      const wm = c.members.get(win) ?? new Set([win])
++      for (const m of c.members.get(lose) ?? [lose]) wm.add(m)
++      c.members.set(win, wm)
++      c.members.delete(lose)
++      c.parent.set(lose, win)
++      c.par.set(lose, p1 ^ p2 ^ par)
++      if (c.odd.has(lose)) { c.odd.delete(lose); c.odd.add(win) }
++      return true
++    }
+     if (r1 === r2) return false
+     const [win, lose] = r1 < r2 ? [r1, r2] : [r2, r1]
+     const wm = c.members.get(win) ?? new Set([win])
+@@ -382,6 +455,12 @@ export class Saturation {
+     this.derivations++
+     if (f.name === OBJECT) return this.introduce(f.args)
+     let changed = this.introduce(f.args)
++    if (FLAGS.parity && f.name === SUPP && f.args.length === 6) {
++      const ea = this.st.equivalences.get(ANGLE)!
++      changed = this.unionTuples(ANGLE, this.tupleKey(ANGLE, ea, f.args.slice(0, 3)), this.tupleKey(ANGLE, ea, f.args.slice(3)), 1) || changed
++      if (changed) this.version++
++      return changed
++    }
+     const e = this.st.equivalences.get(f.name)
+     if (f.name === this.eq && f.args.length === 2) {
+       changed = this.mergeObjects(f.args[0], f.args[1]) || changed
+@@ -410,6 +489,14 @@ export class Saturation {
+     if (f.name === OBJECT) return f.args.every(a => this.names.has(a))
+     if (this.prep.defined.has(f.name)) return this.holdsDefined(f)
+     if (f.name === this.eq && f.args.length === 2) return this.find(f.args[0]) === this.find(f.args[1])
++    if (FLAGS.parity && (f.name === SUPP || f.name === ANGLE) && f.args.length === 6) {
++      const ea = this.st.equivalences.get(ANGLE)!, c = this.classesOf(ANGLE)
++      const k1 = this.tupleKey(ANGLE, ea, f.args.slice(0, 3)), k2 = this.tupleKey(ANGLE, ea, f.args.slice(3))
++      const r1 = this.rootIn(c.parent, k1), r2 = this.rootIn(c.parent, k2)
++      if (r1 !== r2) return false
++      if (c.odd?.has(r1)) return true
++      return ((this.parityOf(c, k1) ^ this.parityOf(c, k2)) === (f.name === SUPP ? 1 : 0))
++    }
+     const e = this.st.equivalences.get(f.name)
+     if (e && f.args.length === 2 * e.k) {
+       if (this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(0, e.k)))
+@@ -558,7 +645,9 @@ export class Saturation {
+   private holdsDefined(f: GroundPredicate): boolean {
+     const atoms = expandDefined([{ name: f.name, args: [...f.args] }], this.prep.defined)
+     const s: Subst = new Map(f.args.map(a => [a, { v: a, flex: true }]))
+-    return !this.join(atoms, s).next().done
++    const [h, hv] = [this.curHead, this.curHeadVars]
++    this.curHead = null
++    try { return !this.join(atoms, s).next().done } finally { this.curHead = h; this.curHeadVars = hv }
+   }
+ 
+   /** Stored relations, plus each object's equality with its representative. */
+@@ -613,8 +702,30 @@ export class Saturation {
+       yield* this.matchEquivalence(name, e, args, s, mask)
+       return
+     }
++    if (FLAGS.parity && name === SUPP && args.length === 6) {
++      yield* this.matchEquivalence(ANGLE, this.st.equivalences.get(ANGLE)!, args, s, this.maskOf(ANGLE, 6), 1)
++      return
++    }
+ 
+     const group = this.st.symmetries.get(name)
++    if (FLAGS.idx) {
++      let best: string[][] | null = null
++      const ix = this.idx.get(name)
++      for (let i = 0; i < args.length; i++) {
++        const b = s.get(args[i])
++        if (!b || (!mask[i] && b.flex)) continue
++        const l = ix?.get(i + SEP + (mask[i] ? this.find(b.v) : b.v)) ?? []
++        if (!best || l.length < best.length) best = l
++      }
++      if (best) {
++        for (const img of best) {
++          if (img.length !== args.length) continue
++          const t = this.unifyArgs(s, args, img, mask)
++          if (t) yield t
++        }
++        return
++      }
++    }
+     for (const f of this.byName.get(name) ?? []) {
+       if (f.args.length !== args.length) continue
+       for (const img of group ? orbit(group, f.args) : [f.args]) {
+@@ -624,7 +735,11 @@ export class Saturation {
+     }
+   }
+ 
+-  private *matchEquivalence(p: string, e: Equivalence, args: readonly string[], s: Subst, mask: boolean[]): Generator<Subst> {
++  private *matchEquivalence(p: string, e: Equivalence, args: readonly string[], s: Subst, mask: boolean[], want = 0): Generator<Subst> {
++    const signed = FLAGS.parity && p === ANGLE
++    const cls = this.classesOf(p)
++    // In signed classes, two members are equal (want 0) or supplements (want 1) by their parities.
++    const fits = (a: string, b: string) => !signed || !!cls.odd?.has(this.rootIn(cls.parent, a)) || ((this.parityOf(cls, a) ^ this.parityOf(cls, b)) === want)
+     const k = e.k
+     const imagesOf = (key: string) => orbitByKey(e.blockGroup, key)
+     const classMembers = (root: string) => this.classesOf(p).members.get(root) ?? [root]
+@@ -638,8 +753,10 @@ export class Saturation {
+ 
+     if (first || second) {
+       const known = (first ?? second)!
+-      const root = this.tupleRoot(p, this.tupleKey(p, e, known))
++      const knownKey = this.tupleKey(p, e, known)
++      const root = this.tupleRoot(p, knownKey)
+       for (const m of classMembers(root)) {
++        if (!fits(knownKey, m)) continue
+         for (const img of imagesOf(m)) {
+           const t = this.unifyArgs(s, args, first ? [...known, ...img] : [...img, ...known], mask)
+           if (t) yield t
+@@ -648,24 +765,60 @@ export class Saturation {
+       return
+     }
+ 
+-    // Every class of tuples mentioned.
+     const mentioned = this.classesOf(p).parent
++    // Prototype: some variable bound exactly: only members whose images have that value there.
++    let pick: { side: number; j: number; keys: Set<string> } | null = null
++    if (FLAGS.eqidx) {
++      const ix = this.tidx.get(p)
++      for (let side = 0; side < 2; side++) for (let j = 0; j < k; j++) {
++        const b = s.get(args[side * k + j])
++        if (!b || (!mask[0] && b.flex)) continue
++        const v = mask[0] ? this.find(b.v) : b.v
++        const keys = ix?.get(j + SEP + v) ?? new Set<string>()
++        if (!pick || keys.size < pick.keys.size) pick = { side, j, keys }
++      }
++    }
++    if (pick) {
++      const valueAt = (vars: readonly string[]) => vars
++      void valueAt
++      const b = s.get(args[pick.side * k + pick.j])!
++      const v = mask[0] ? this.find(b.v) : b.v
++      for (const m of pick.keys) {
++        this.work++
++        const root = this.tupleRoot(p, m)
++        const others = [...classMembers(root)].filter(mm => fits(m, mm)).flatMap(imagesOf)
++        for (const x of imagesOf(m)) {
++          if (x[pick.j] !== v) continue
++          for (const y of others) {
++            const t = this.unifyArgs(s, args, pick.side === 0 ? [...x, ...y] : [...y, ...x], mask)
++            if (t) yield t
++          }
++        }
++      }
++    } else
++    // Every class of tuples mentioned.
++    {
+     const seen = new Set<string>()
+     for (const key of mentioned.keys()) {
+       this.work++
+       const root = this.tupleRoot(p, key)
+       if (seen.has(root)) continue
+       seen.add(root)
+-      const tuples = [...classMembers(root)].flatMap(imagesOf)
+-      for (const x of tuples) for (const y of tuples) {
+-        const t = this.unifyArgs(s, args, [...x, ...y], mask)
+-        if (t) yield t
++      const ms = [...classMembers(root)]
++      for (const m1 of ms) for (const m2 of ms) {
++        if (!fits(m1, m2)) continue
++        for (const x of imagesOf(m1)) for (const y of imagesOf(m2)) {
++          const t = this.unifyArgs(s, args, [...x, ...y], mask)
++          if (t) yield t
++        }
+       }
+     }
++    }
+     // A tuple never mentioned is a class of its own, so it matches only reflexively: both blocks are
+     // images of the one tuple. Only tuples consistent with what is bound can match: generate them
+     // from the block with fewer unbound variables (bound positions fixed, the rest over every point),
+     // each paired with its images in the other block.
++    if (want === 1) return   // a supplement is never reflexive outside an odd class, and those are mentioned
+     const pool = [...(mask[0] ? this.reps : this.names)]
+     const blocks = [args.slice(0, k), args.slice(k)]
+     const unbound = (b: readonly string[]) => b.filter(v => !s.has(v)).length
+@@ -708,6 +861,9 @@ export class Saturation {
+     this.work++
+     if (brk && !this.leastSoFar(s, brk)) return
+     if (body.length === 0) { yield s; return }
++    if (FLAGS.headcheck && this.curHead && this.curHeadVars.every(v => s.has(v))) {
++      if (this.holds({ name: this.curHead.name, args: this.curHead.args.map(a => s.get(a)!.v) })) return
++    }
+     // Greedy: match the atom with the largest share of already-bound arguments next. An atom of a
+     // solved relation (a difference) waits until the others have bound its arguments, if they can:
+     // then it is asked of the solver too (`match`), which knows equalities no stored class has.
+@@ -755,14 +911,32 @@ export class Saturation {
+ 
+   run(): void {
+     const rules = [...this.prep.axioms, ...this.prep.rules]
+-    for (;;) {
++    for (let round = 1; ; round++) {
+       if (this.done()) return
+       const before = this.version
+       for (const rule of rules) {
+         if (this.lastRun.get(rule) === this.version) continue
+         this.lastRun.set(rule, this.version)
+         // Materialise first: asserting mutates the structures being matched against.
++        const hn = rule.head.name
++        const cheap = !this.prep.defined.has(hn) && !this.st.differences.has(hn) && !this.st.sums.has(hn) && hn !== 'false'
++        const bodyVars = new Set(rule.body.flatMap(b => b.args))
++        this.curHead = cheap && rule.head.args.every(a => bodyVars.has(a)) ? rule.head : null
++        this.curHeadVars = this.curHead ? [...new Set(rule.head.args)] : []
++        const w0 = this.work
+         const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
++        let pr = this.perRule.get(rule); if (!pr) this.perRule.set(rule, pr = { fired: 0, added: 0, work: 0 })
++        pr.work += this.work - w0; pr.fired += matches.length
++        this.curHead = null
++        this.fired += matches.length
++        if (FLAGS_DISTINCT.on) {
++          let ri = ruleIds.get(rule); if (ri === undefined) ruleIds.set(rule, ri = ruleIds.size)
++          for (const m of matches) {
++            const key = ri + '|' + [...m].map(([k, b]) => k + '=' + this.find(b.v)).sort().join(',')
++            this.instances.add(key)
++          }
++          this.roundsRun = Math.max(this.roundsRun, round)
++        }
+         for (const s of matches) {
+           for (const h of this.heads(rule, s)) this.assert(h)
+           if (this.done(false)) return
