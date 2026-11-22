@@ -263,7 +263,7 @@ export class Saturation {
   private lastRun = new Map<Rule, number>()
   exhausted = false
 
-  constructor(private readonly prep: Prepared, private readonly opts: SaturateOptions = {}) {
+  constructor(private readonly prep: Prepared, private opts: SaturateOptions = {}) {
     this.st = prep.structure
     this.eq = prep.structure.equality
     for (const f of this.st.flips?.values() ?? []) this.signed.add(f.of)
@@ -548,6 +548,10 @@ export class Saturation {
 
   /** Does a sum follow, by adding and subtracting the known ones (integer combinations: sound in any group)? */
   private sumHolds(p: string, sum: Sum, args: readonly string[]): boolean {
+    return this.answered(p + SEP + args.join(SEP), () => this.sumHoldsNow(p, sum, args))
+  }
+
+  private sumHoldsNow(p: string, sum: Sum, args: readonly string[]): boolean {
     const cached = this.sumLattice(p, sum)
     return cached.lattice.contains(this.sumVector(sum, new Map(cached.unknown), null, args))
   }
@@ -609,7 +613,20 @@ export class Saturation {
    * solver sees values no pair of the figure has (the sum of two turns); that is the step it adds to
    * the rules, deliberately.
    */
+  /** The solvers' answers, at a version of the store: the same atom is asked again and again in joins. */
+  private answers = { version: -1, map: new Map<string, boolean>() }
+  private answered(key: string, compute: () => boolean): boolean {
+    if (this.answers.version !== this.version) this.answers = { version: this.version, map: new Map() }
+    let v = this.answers.map.get(key)
+    if (v === undefined) this.answers.map.set(key, v = compute())
+    return v
+  }
+
   private differenceHolds(p: string, e: Equivalence, d: Difference, args: readonly string[]): boolean {
+    return this.answered(p + SEP + args.join(SEP), () => this.differenceHoldsNow(p, e, d, args))
+  }
+
+  private differenceHoldsNow(p: string, e: Equivalence, d: Difference, args: readonly string[]): boolean {
     const cached = this.latticeFor(p, d)
     const v: Vector = new Map()
     if (!this.blockVector(d, cached.unknown, args.slice(0, e.k), 1, v) || !this.blockVector(d, cached.unknown, args.slice(e.k), -1, v)) return false
@@ -928,39 +945,77 @@ export class Saturation {
    * Is the search over: the goal found, or the budget spent? A defined goal is a search of its own
    * (`holdsDefined`), so between rules, not after every fact, it is asked only when `full`.
    */
+  /** Whether the last check was a full one (a defined goal is asked only then). */
+  private lastCheckFull = true
+
   private done(full = true): boolean {
+    this.lastCheckFull = full
     const goal = this.opts.goal
     if (goal && (full || !this.prep.defined.has(goal.name)) && this.holds(goal)) return true
     if (this.derivations >= (this.opts.maxDerivations ?? 200_000) || this.work >= (this.opts.maxWork ?? MAX_WORK)) { this.exhausted = true; return true }
     return false
   }
 
+  /**
+   * Where a run stopped inside a round: the rule it was at, and the matches of that rule not yet
+   * asserted. A later run (`resume`) carries on from exactly there, so a search continued towards a
+   * second goal is step for step the search a fresh one would make.
+   */
+  private round: { i: number; before: number; rule: Rule | null; matches: Subst[]; m: number } | null = null
+
   run(): void {
     const rules = [...this.prep.axioms, ...this.prep.rules]
     for (;;) {
-      if (this.done()) return
-      const before = this.version
-      for (const rule of rules) {
-        if (this.lastRun.get(rule) === this.version) continue
-        this.lastRun.set(rule, this.version)
-        // Materialise first: asserting mutates the structures being matched against.
-        this.head = this.headCheckable(rule)
-        const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
-        this.head = null
-        for (const s of matches) {
+      if (!this.round) {
+        if (this.done()) return
+        this.round = { i: 0, before: this.version, rule: null, matches: [], m: 0 }
+      }
+      const r = this.round
+      while (r.i < rules.length) {
+        const rule = rules[r.i]
+        if (r.rule !== rule) {
+          if (this.lastRun.get(rule) === this.version) { r.i++; continue }
+          this.lastRun.set(rule, this.version)
+          // Materialise first: asserting mutates the structures being matched against.
+          this.head = this.headCheckable(rule)
+          r.matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
+          this.head = null
+          r.rule = rule
+          r.m = 0
+        }
+        while (r.m < r.matches.length) {
+          const s = r.matches[r.m++]
           for (const h of this.heads(rule, s)) this.assert(h)
           if (this.done(false)) return
         }
+        r.rule = null
+        r.matches = []
+        r.i++
         if (this.done()) return
       }
+      this.round = null
       // The solvers' findings go back to the store after every round, not only at the end: a goal
       // that needs them (collinear, from equal directions) may not wait for a quiet round.
       const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
       const fed = fedDifferences || fedSums
       if (this.done()) return
-      if (this.version === before && !fed) return
+      if (this.version === r.before && !fed) return
     }
   }
+
+  /**
+   * Carry the search on towards another goal, from where it stopped, under the same budgets (counted
+   * from the start, as a fresh search counts them). The closure only grows, and the search is
+   * deterministic, so the verdict is the one a fresh search would give.
+   */
+  resume(goal: GroundPredicate): void {
+    this.opts = { ...this.opts, goal }
+    this.exhausted = false
+    // First the check the search stopped at, now asked of this goal: a fresh search would ask it there.
+    if (this.done(this.lastCheckFull)) return
+    this.run()
+  }
+
 
   /**
    * For each difference whose faithful rule the book states: pairs the solver shows to have one value
@@ -1040,11 +1095,37 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
   return out
 }
 
+/**
+ * Recent searches, by their rules (the relevant cut, which depends on the goal's predicate), their
+ * seeds and their budgets: lemmas with the same hypotheses and a goal of the same predicate (the
+ * windmill's two) share one search, each carrying it on from where the last stopped (`resume`).
+ */
+const searches = new WeakMap<Prepared, Map<string, Saturation>>()
+const SEARCHES_KEPT = 8
+
 export function saturate(
   kb: KnowledgeBase,
   seeds: readonly GroundPredicate[],
   opts: SaturateOptions = {},
 ): Saturation {
+  if (opts.goal && !opts.relevant) {
+    const prep = relevant(prepare(kb, opts.abbreviate ?? true), [opts.goal.name])
+    const key = [opts.maxDerivations ?? '', opts.maxWork ?? '', ...seeds.map(f => f.name + ' ' + f.args.join(' '))].join('\n')
+    let byKey = searches.get(prep)
+    if (!byKey) searches.set(prep, byKey = new Map())
+    const kept = byKey.get(key)
+    if (kept) {
+      byKey.delete(key); byKey.set(key, kept)   // most recent last
+      kept.resume(opts.goal)
+      return kept
+    }
+    const sat = new Saturation(prep, opts)
+    for (const f of seeds) sat.assert(f)
+    sat.run()
+    byKey.set(key, sat)
+    if (byKey.size > SEARCHES_KEPT) byKey.delete(byKey.keys().next().value!)
+    return sat
+  }
   const prep = prepare(kb, opts.abbreviate ?? true)
   const names = opts.relevant ?? (opts.goal ? [opts.goal.name] : null)
   const sat = new Saturation(names ? relevant(prep, names) : prep, opts)

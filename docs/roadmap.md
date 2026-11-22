@@ -66,7 +66,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      - an early head check where it is exact.
 
      The book checks in 48 s against 184 s, as the app checks it, all 99 proved: the windmill is
-     back inside its budget and its tests in the suite. What remains is the cost of a match (about
+     back inside its budget and its tests in the suite. With shared, resumable searches and the
+     solver cache since, 34.5 s. What remains is the cost of a match (about
      14 µs, against 0.02 µs for the same join on integers).
    - **A new matching core, shown on a slice** (November 2026, review-notes.md, *The
      matching-core spike*): on integers, on chapters 1 to 4 without the solvers' words, it gives

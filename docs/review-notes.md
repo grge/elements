@@ -691,3 +691,16 @@ Measured against the engine before the change (2e4a360):
   - The suite's "Timeout calling onTaskUpdate", which failed runs though every test passed (before
     the change too), came from `saturate.test.ts`'s long comparisons with no macrotask between them.
     They now yield, as the lemma tests do.
+
+**Shared searches and the solver cache** (November 2026), the rest of engine.md's first step:
+- **Resumable runs.** A run that stops inside a round keeps its place, so a lemma with the same
+  hypotheses and goal predicate carries the last search on. That is step for step the fresh search,
+  with the same budgets counted from the start.
+- **Measured.** Every lemma of the book and *Beyond* (118), checked in file order with sharing and
+  each alone: 0 verdicts differ. As the app checks, the book takes 34.5 s against 48.2 s:
+  - the windmill's second lemma costs nothing;
+  - the golden section's second costs 3.5 s against 7.6;
+  - *Beyond* is within noise (112.8 s against 103.9; its slowest lemmas run out of budget either
+    way).
+- **The solver cache:** the turn and quadrance solvers' answers, per version of the store.
+- **The test suite:** 743 pass in 4 minutes.

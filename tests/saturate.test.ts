@@ -82,3 +82,21 @@ describe('saturate agrees with the reference engine on small lemmas', () => {
     }, 60000)
   }
 })
+
+describe('a search shared by lemmas with the same hypotheses (November 2026)', () => {
+  // The second lemma carries the first's search on from where it stopped; the verdict must be the one
+  // a fresh search gives, and so must the first's when asked again.
+  const goal = (s: string) => { const [name, ...args] = s.split(' '); return { name, args } }
+  const seeds = ['parallel a b d c', 'parallel a d b c', 'between a m c', 'between b m d', 'triangle a b c', 'triangle c d a'].map(goal)
+  it('gives fresh verdicts, and is the same search', () => {
+    const kb = new KnowledgeBase(bookRules)
+    const first = saturate(kb, seeds, { goal: goal('eq-lines a b c d') })
+    const second = saturate(kb, seeds, { goal: goal('eq-lines a d b c') })
+    expect(second).toBe(first)
+    for (const g of ['eq-lines a b c d', 'eq-lines a d b c', 'eq-lines a c b d']) {
+      // a budget of its own is a search of its own: not the shared one
+      const fresh = saturate(new KnowledgeBase([...bookRules]), seeds, { goal: goal(g), maxWork: 3_000_001 })
+      expect(saturate(kb, seeds, { goal: goal(g) }).holds(goal(g)), g).toBe(fresh.holds(goal(g)))
+    }
+  })
+})

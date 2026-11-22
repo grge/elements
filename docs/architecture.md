@@ -186,6 +186,19 @@ every head variable is bound, and none stands for a class at a position where eq
 substitute: there the head is a fact for each member, and one holding says nothing of the others.
 It is skipped for heads that are defined or answered by a solver.
 
+**Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
+place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last
+few searches, keyed by their rules (the relevant cut, which depends on the goal's predicate),
+their seeds and their budgets. A lemma with the same hypotheses and a goal of the same predicate
+(the windmill's two) carries the last search on towards its own goal (`Saturation.resume`).
+- It first re-asks the check the search stopped at, then runs on under the same budgets, counted
+  from the start.
+- The search is deterministic and the closure only grows, so this is step for step the search a
+  fresh one would make, and the verdict is the same. Measured on every lemma of the book and
+  *Beyond*: no verdict differs.
+- The solvers' answers are cached per version of the store, since a join asks the same atom
+  again and again.
+
 The search has two budgets, whichever runs out first: derivations, and **work** (partial matches and
 tuples considered, `Saturation.work`), which is in proportion to time. Derivations alone stopped
 measuring anything once the cheap derivations of defined facts were gone: the same budget bought three

@@ -407,7 +407,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    - indexes;
    - the head check bound to exact heads.
 
-   Still to do here: one closure per set of hypotheses, and the solver cache.
+   Then one search per set of hypotheses (resumable runs: a lemma carries on the last search with
+   the same hypotheses and goal predicate, with the verdict a fresh search gives) and the solver
+   cache: the book in 34.5 s (review-notes.md, *Shared searches*). Step 1 is done.
 2. **The new core: solvers, then the whole book.**
    - The lattice for differences and sums, with a solver atom answered in the middle of a join.
    - The interface the checker and the marks closure use.
