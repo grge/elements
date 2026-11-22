@@ -441,3 +441,94 @@ there are points not named, sides and sums, as the table says; and its checks ta
 state that lines concur) is exempt and checked, but nothing in the book derives such an equality yet,
 and evidence cannot test it, since the figure keeps different names apart.
 
+
+## Proofs and the search (November 2026)
+
+The evidence for [proofs.md](proofs.md). Measured at 2aef82e (chapters 1 to 6 and *Beyond the book*),
+under Node 22 on four CPUs, with a prototype built on a copy of `saturate.ts`. The prototype:
+- records a reason for every stored fact, union of tuples and merge of points;
+- explains a fact by its reason, and a class membership by the shortest path through recorded
+  unions, bounded by time;
+- takes certificates (the equations combined, with their coefficients) from a lattice that tracks
+  each row's combination;
+- checks a claim by one rule with its head bound;
+- has a figure-guided backward search.
+
+It was not committed; proofs.md's path builds it properly.
+
+**As the app checks** (evidence first, the convention, strict):
+- every book lemma is ✓, 18 of them for figures whose points are all apart;
+- *Beyond the book* is 8 ✓ (6 apart), 9 ?, 1 ✗ (the isosceles trapezoid, rightly).
+
+Times, by file:
+
+| File | Time |
+|---|---|
+| chapter 1 | 0.1 s |
+| chapter 2 | 0.6 s |
+| chapter 3 | 12.5 s |
+| chapter 4 | 47.0 s |
+| chapter 5 | 15.6 s |
+| chapter 6 | 3.4 s |
+| *Beyond* | 188 s |
+
+**Proofs extracted.**
+- All 91 book proofs explain; nothing is left unexplained.
+- They have 518 steps, rule and solver steps together. Without the solver steps' insides they have
+  283 rule steps: the median proof one rule step, the longest 33 (I.43). 37 proofs are structure or
+  a solver alone.
+- The searches made 1.58 million matches.
+- 86 of the 91 replay, in 6 ms for all of them; their searches took 74 s. The other five use a
+  solver's answer as a rule's premise (a turn matched through `holds`), whose certificate the
+  prototype takes too late:
+  - the parallelogram's two diagonals;
+  - the midline's half;
+  - the tangent and chord;
+  - the medians.
+- Provenance costs no measurable time: the windmill's work is the same 2,920,779 units.
+
+**The windmill's two lemmas, by rule** (share of 5.8 million units of work; "proofs" counts the
+extracted proofs a rule appears in):
+
+| Rule | Work | Matches | New facts | Proofs |
+|---|---|---|---|---|
+| a common supplement (02-angle:114) | 23.7% | 691,036 | 16 | 0 |
+| side-angle-side, the angle (02-angle:88) | 13.9% | 11,964 | 34 | 2 |
+| side-angle-side, the side (02-angle:87) | 13.8% | 6,620 | 2 | 2 |
+| all right angles alike (02-angle:128) | 7.9% | 578 | 12 | 2 |
+| similarity by turns, four forms (06-ratio:66–69) | 19.2% | 1,872 | 48 | 0 |
+| a turn from a right angle (03-direction:293) | 3.5% | 92 | 6 | 0 |
+| congruent triangles' areas (04-area:42) | 2.8% | 7,466 | 230 | 2 |
+
+**Checking steps:**
+- **The windmill's first lemma:**
+  - the search: 20 s;
+  - replaying its 11-step proof: 0.3 ms;
+  - its 11 steps, each checked as one rule with the head bound: 5 ms;
+  - as Euclid's two steps, by search: 5.2 s (2 rounds, 990,642 units), then 1.5 s (1 round,
+    375,380), though the second step is one rule. Each step's search matches every rule against
+    every fact.
+- **The second lemma,** as three steps (two cited lemmas, then the shear): 33 ms, against 19.5 s.
+
+**Constructions.** Thales' converse, with `double b o d` added to its hypotheses, proves in 3.0 s
+(514,932 units, a 20-step proof). Written as the construction, four one-rule steps and a step
+(the rectangle's diagonals) that takes a search, it checks in 1.6 s. The diagonals take 1.2 s and
+the head 0.4 s.
+
+**Lemmas as rules.** The windmill's second lemma:
+- with its two cited lemmas as derived rules: 4.8 s and a 7-step proof, against 19.5 s;
+- with every earlier lemma: did not finish in 30 minutes.
+
+Added as clauses of the knowledge base rather than after definitions are unfolded, the lemmas put
+`right`, `parallelogram`, `square` and `windmill` on a cycle, so they stopped being definitions and
+the proof was lost. Lemmas must join the engine as rules over primitives.
+
+**A first pass with the rules proofs use.** The book's proofs use 51 of the 77 live rules. With only
+those, the book takes 18.4 s against 74.7 s, and misses 2 lemmas (`bisector-feet` among them).
+
+**Figure-guided backward search.**
+- The isosceles triangle: one step, 238 checks.
+- The windmill: out of 3 million units at depth 2.
+- Euclid's angle step alone: out of budget at depth 2.
+
+Order and incidence facts hold of too many tuples for the figure to prune.
