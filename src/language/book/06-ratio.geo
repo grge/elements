@@ -44,6 +44,15 @@ eq-ratio i j c d e f g h: eq-ratio a b c d e f g h, eq-lines a b i j
 eq-ratio a b c d a b a b: eq-lines a b c d, distinct a b, distinct c d
 eq-lines a b c d: eq-ratio a b c d a b a b, distinct a b, distinct c d
 
+# ── ratios of sums, along lines
+
+# Componendo (V.18) and dividendo (V.17), the sums and differences along lines: a-b-c in a row and
+# d-e-f in a row, a-b is to b-c as d-e is to e-f exactly when a-c is to b-c as d-f is to e-f. A ratio
+# of a sum in general cannot be said (it is no difference of logarithms); along a line, its parts named,
+# it can.
+eq-ratio a c b c d f e f: between a b c, between d e f, eq-ratio a b b c d e e f
+eq-ratio a b b c d e e f: between a b c, between d e f, eq-ratio a c b c d f e f
+
 # ── the intercept theorem
 
 # A line parallel to one side of a triangle cuts the other two in one ratio (VI.2): d on a-b, e on a-c,

@@ -52,6 +52,10 @@ appears in statements only because the engine needs it is a cost (the README: th
 - **`supp`**: an equal angle on the other side (marks.ts flips it). With turns, a supplement is a
   reversed turn; perhaps `supp` is redundant in the big book. (November 2026)
 
+- **One linear structure, not three?** The engine recognises a difference (turns, ratios) and a sum
+  (quadrance); the quarter and Apollonius (coefficients) and Ceva and Menelaus (three terms) want a
+  general linear relation recognised from rules. Perhaps one structure kind covers all. (November 2026)
+
 ## Where things live
 
 - **Turns in chapter 3**, used mostly by chapter 5 and the stress test. Chapter 3 is their home (they
@@ -81,6 +85,8 @@ Each taken as given here to get on; each worth asking whether it can become a th
 - **Similar triangles by turns** (chapter 6), direct and mirror: VI.4 to VI.6 in Euclid, an axiom
   here, the way III.21 is; with it, the intercept forms might follow, and some be dropped. (November
   2026)
+- **Componendo and dividendo** (V.17, V.18; chapter 6), with the sums along lines: theorems of Book V
+  in Euclid, axioms here; a general ratio of a sum cannot be said. (November 2026)
 - **I.6 in turns** (chapter 3): equal base turns make equal legs. Euclid's I.6 is undirected, a theorem
   by I.4; here a bridge. (November 2026)
 - **All right angles turn alike**: Euclid's fourth postulate, directed; a postulate there too.

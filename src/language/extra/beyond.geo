@@ -234,3 +234,16 @@ equal-chord-halves o a b c d m n:
 
 ? eq-lines o m o n: equal-chord-halves o a b c d m n
 
+# ── chapter 7's debts
+
+# The golden triangle (IV.10): the isosceles triangle a-b-d, a-b = a-d, its base b-d equal to the
+# golden part a-c of a-b; its base angles are twice its apex, the pentagon's triangle (IV.11). Euclid:
+# a-b·b-c = b-d², so b-d touches the circle through a, c, d (III.37, the converse of III.36), and the
+# angles follow. Not proved: III.37 is not in the book, and the search runs past its budget.
+golden-triangle a b c d m p e f:
+    golden-section a b c m p e f
+    circle a b d
+    eq-lines b d a c
+
+? eq-lines c d c a: golden-triangle a b c d m p e f
+

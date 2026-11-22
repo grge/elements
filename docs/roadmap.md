@@ -264,10 +264,25 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 
    **The rest of the build-out, before engine work and the reorganisation** (decided November 2026,
    in this order):
-   1. Chapter 7, regular figures (the triangle, square, hexagon, pentagon and fifteen-gon in and about
-      a circle), with Euclid's ratio constructions as words (dividing a segment, the fourth
-      proportional, the golden section); and an exploration of Ceva and Menelaus (products of three
-      ratios, which `eq-ratio` cannot yet say), not a commitment to support them.
+   1. Chapter 7, regular figures: first draft done (November 2026). The square in a circle (IV.6), the
+      hexagon's triangle, trisecting a segment (VI.9), the fourth proportional (VI.12), the golden
+      section (II.11, VI.30: a tangent and its secant, then dividendo). Componendo and dividendo
+      (V.17, V.18) are axioms of chapter 6 with the sums along lines, their parts named. A fault found
+      and closed in the engine: a difference's fact naming a pair of one point (a segment of no length,
+      a line of one point) is now never kept, so it cannot glue classes together (the intercept
+      theorem's near-to-far form could make one from `between a b b`, an endpoint counting as
+      between). The pentagon (IV.10, IV.11) and the fifteen-gon wait: the golden triangle's proof needs
+      III.37 (the converse of III.36) and runs past its budget (*Beyond the book*).
+      Ceva and Menelaus, explored: their proofs' pieces prove (Menelaus with its helper g, the parallel
+      to a side through the opposite corner: two similar-triangle ratios sharing c-g, 5 s each), but
+      the product of three ratios cannot be said: `eq-ratio` relates four segments. Options: state them
+      with the helper (works today, not the usual statement); a 12-place word the engine recognises as
+      a sum of three differences; not a definition through an unnamed segment. The 12-place word is the
+      same engine question as the quarter and Apollonius (next): can the engine recognise, from rules,
+      a linear relation of any number of terms with integer coefficients?
+      The windmill's two lemmas now run past the 3 million budget (similarity by turns, componendo):
+      left out of the suite (tests/lemmas.test.ts `overBudget`) while George works on the engine's
+      efficiency alongside; the budget stays.
    2. The quarter and Apollonius revisited: how the engine could discover quadrance laws with
       coefficients (they would bring the nine-point circle, Thales' converse, III.14 in Euclid's form).
    3. An exploration of conics: what a chapter would need, before the reorganisation decides its shape.
@@ -336,7 +351,7 @@ The chapters and what they wait on (book.md has each chapter's plan and notes):
 | 4, area | written, Euclid's way without sums, to Pythagoras and squaring a triangle; II.14's proof and I.48 wait for sums |
 | 5, circle | first draft (November 2026): chords, tangents, turns in a circle, with `cyclic`; III.14 waits for the quarter, III.20 for the Euclid book |
 | 6, ratio | first draft (November 2026): `eq-ratio` (a difference of logarithms, solved as turns are), the intercept theorem, similarity by turns; parallels, the midline, the medians, crossing chords, the angle bisector, the mean proportional |
-| 7, regular figures | content, on all the above |
+| 7, regular figures | first draft (November 2026): the square and the hexagon's triangle in a circle; trisecting, the fourth proportional, the golden section; the pentagon and fifteen-gon wait for III.37 |
 
 ### Open questions
 

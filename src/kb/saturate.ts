@@ -386,6 +386,10 @@ export class Saturation {
     if (f.name === this.eq && f.args.length === 2) {
       changed = this.mergeObjects(f.args[0], f.args[1]) || changed
     } else if (e && f.args.length === 2 * e.k) {
+      // A difference's pair of one point has no value (a line or a segment of one point): a fact naming
+      // one says nothing, and kept it would be equal to everything, gluing every class together. So it
+      // is not kept. (Turns' rules were once unsound this way; ratios' degenerate betweens were too.)
+      if (this.st.differences.has(f.name) && this.degeneratePair(f.args)) return changed
       const k1 = this.tupleKey(f.name, e, f.args.slice(0, e.k))
       const k2 = this.tupleKey(f.name, e, f.args.slice(e.k))
       changed = this.unionTuples(f.name, k1, k2) || changed
@@ -394,6 +398,12 @@ export class Saturation {
     }
     if (changed) this.version++
     return changed
+  }
+
+  /** Does a difference's fact name a pair of one point? */
+  private degeneratePair(args: readonly string[]): boolean {
+    for (let i = 0; i < args.length; i += 2) if (this.find(args[i]) === this.find(args[i + 1])) return true
+    return false
   }
 
   holds(f: GroundPredicate): boolean {
