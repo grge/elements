@@ -326,7 +326,11 @@ distinct points, so a lemma false only when two points coincide holds in every s
 as it should be. The whole book samples, at about 6 ms a lemma.
 
 The page checks its `?` lines in a web worker (`useVerification` → `lemmaCheckWorker`), so typing never
-blocks.
+blocks. On a book page, each lemma is checked in the book's order: with the rules of the chapter it is
+written in and those before, citing only lemmas of those chapters (`bookScope.ts`), never with its
+page's own clauses, which on a word's page come from every chapter. A lemma of `extra/` or the user's
+is checked with everything. A lemma with a written proof reaches its page as written, steps and
+comments with it. `tests/pageChecks.test.ts` checks the pages themselves, as the worker does.
 
 ## From facts to a figure
 

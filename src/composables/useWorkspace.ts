@@ -49,12 +49,25 @@ eq-triangle a b c
 ? eq-lines a b b c: eq-triangle a b c
 ? eq-lines a b b c: circle a b c`
 
-/** Clauses one per paragraph, except that a lemma without a comment of its own joins the lemmas before it. */
-function joinClauses(sources: string[]): string {
+/**
+ * Clauses one per paragraph, except that a lemma without a comment of its own joins the lemmas before
+ * it; and the book chapter each line of the text is written in (null for none).
+ */
+function joinClausesWithChapters(items: { source: string; chapter?: number }[]): { text: string; lineChapters: (number | null)[] } {
   const isLemma = (src: string) => src.split('\n').find(line => !line.startsWith('#'))?.trimStart().startsWith('?') ?? false
   const together = (prev: string, cur: string) => isLemma(prev) && isLemma(cur) && !cur.startsWith('#')
-  return sources.reduce((text, src, i) =>
-    i === 0 ? src : text + (together(sources[i - 1], src) ? '\n' : '\n\n') + src, '')
+  let text = ''
+  const lineChapters: (number | null)[] = []
+  items.forEach((item, i) => {
+    if (i > 0) {
+      const sep = together(items[i - 1].source, item.source) ? '\n' : '\n\n'
+      text += sep
+      if (sep === '\n\n') lineChapters.push(null)
+    }
+    text += item.source
+    for (const _ of item.source.split('\n')) lineChapters.push(item.chapter ?? null)
+  })
+  return { text, lineChapters }
 }
 
 /**
@@ -70,6 +83,8 @@ export function useWorkspace() {
   const selectedNamespace = ref<Namespace | ''>('')
   const scratch = ref(DEFAULT_SCRATCH)
   const clause = ref('')
+  /** For a book page, the chapter each line of its text is written in (useVerification, bookScope.ts). */
+  const clauseChapters = ref<(number | null)[] | null>(null)
 
   const readOnly = computed(() =>
     mode.value === 'predicate' && selectedNamespace.value !== 'user')
@@ -91,13 +106,16 @@ export function useWorkspace() {
     mode.value = 'scratchpad'
     selectedPred.value = ''
     selectedNamespace.value = ''
+    clauseChapters.value = null
   }
 
   function openPredicate(name: string, ns: Namespace) {
     mode.value = 'predicate'
     selectedPred.value = name
     selectedNamespace.value = ns
-    clause.value = joinClauses(clausesForPredicate(name, ns).map(c => c.source))
+    const joined = joinClausesWithChapters(clausesForPredicate(name, ns))
+    clause.value = joined.text
+    clauseChapters.value = ns === 'user' ? null : joined.lineChapters
   }
 
   function newUserPredicate(name: string): boolean {
@@ -288,7 +306,7 @@ export function useWorkspace() {
 
   return {
     kb, predicates, userClauses, chapters,
-    mode, selectedPred, selectedNamespace, readOnly, text, signature,
+    mode, selectedPred, selectedNamespace, readOnly, text, signature, clauseChapters,
     parseError, items, runtime, extraction, facts, figure, construction, drawing, solution, setConstruction, setVerified,
     openScratchpad, openPredicate, newUserPredicate, deleteSelected,
   }

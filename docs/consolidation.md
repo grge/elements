@@ -5,6 +5,14 @@ What to revisit when the book is reorganised as a whole, at the end of the probe
 names, placement and what is primitive stay provisional. Each entry says what, and why it is worth
 reconsidering; an entry leaves when it is settled. Newest at the end of each section.
 
+## Reading the book (November 2026)
+
+- **A reader's reading of the app**, after the engine work: proofs that cite line numbers, fold away
+  their argument or wander (101 steps where two triangles do); a page's own points subscripted; word
+  pages that gather every chapter under one chapter's label; lemmas landing on surprising pages;
+  promises not kept; comments in two voices. Each with its pages in review-notes.md, *Reading the
+  book*. Input to the whole reorganisation, not one entry. (November 2026)
+
 ## The test for every tool (November 2026)
 
 A tool can do three jobs, judged separately:

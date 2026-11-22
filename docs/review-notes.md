@@ -807,3 +807,79 @@ that is not explained.
   (`tests/proof.test.ts`, 39.6 s to 12.8 s), and recording changes no search (`tests/core.test.ts`).
 - **As the app checks, proofs asked for** (as the worker does): the book and *Beyond* in 37.1 s,
   against about 189 s, every verdict and message the same.
+
+## Reading the book (November 2026)
+
+A reading of the app as a reader meets it, after the engine work landed (at f1ecd0c, the proofs on
+the pages new): all of chapter 1, then a selection of every chapter and *Beyond the book*,
+each page's figure, construction steps, lemmas and the proof under each ✓. The proofs were taken from
+the page's own checking worker, run in Node on each page's text, so they are what a page shows.
+
+**Two bugs, fixed.**
+- **Written proofs never reached the pages.** A page rebuilt each lemma from its parse, without its
+  `?` steps (and their comments), so it checked the bare lemma: III.32 showed ? on its page, Thales'
+  converse and the nine-point circle ? in *Beyond*, and the midline a ✓ by search under a comment that
+  narrates a written proof the page did not have. The book's tests check the files, so they never saw
+  it. Now a lemma with a written proof is shown as written (useKB.ts), and `tests/pageChecks.test.ts`
+  checks pages as the worker does.
+- **Proofs rested on later chapters.** A page checked its lemmas with every rule of the book. 8 of the
+  96 book lemmas were proved through chapter 6's similar triangles: chapter 3's I.34, the
+  parallelogram's diagonals, the rectangle, the square; chapter 5's `chord-foot` and `bisector-feet`.
+  Their comments give their own chapter's argument. With only their own chapter and earlier, all
+  prove, in milliseconds, and shorter (I.34 in 6 steps against 16, `bisector-feet` 28 against 60). A
+  book lemma is now checked with the rules of its chapter and those before, citing only lemmas of
+  those chapters, and not with its page's clauses, which on a word's page come from any chapter
+  (kb/bookScope.ts). Every lemma on every book page is still ✓, and none rests on a later chapter
+  (`tests/pageChecks.test.ts`).
+
+**For the reorganisation.** The rest is not fixed now: it is feedback for the consolidation
+(roadmap.md, *Next*, 8; consolidation.md, *Reading the book*).
+
+*Proofs as a reader reads them:*
+- **Citations are line numbers.** A step cites "ch. 2, l. 87"; no page shows file lines. The rule's
+  comment names it: side-angle-side, common notion 3.
+- **The folding can hide the argument.** Vertical angles reads "a chain of equals": its supplements,
+  Euclid's argument, went to the side conditions (supplements are signed classes now). When the claim
+  is itself bookkeeping (`between`, `distinct`), the steps shown are unrelated or none (`march`'s
+  `between a b e`, `double`'s `distinct a c`). Some proofs open to nothing (`reflect`, the first
+  `eq-triangle` lemma, `parallel-through`'s length); some end on a fact that is not the claim but reads
+  the same (the equilateral triangle's angles end at `a b c a c b` for `a b c b c a`).
+- **The proof found is not the short one.** The triangle in a circle (chapter 7) is 101 steps, where
+  its comment gives two congruent triangles. `bisector-feet` spent 10 of 31 steps on degenerate angles
+  (`eq-lines a a b b`, `eq-angle b e e …`): the ledger's degenerate-angle risk, visible in a proof.
+  Probes found nothing false.
+- **A comment against its proof, and a duplicate.** *Beyond*'s `chord-bisector` is chapter 5's
+  `chord-foot` word for word; its comment promises a proof by quadrances, the engine finds one by
+  ratios.
+- **A written step's aligned comment** (`? double a o e            # the diameter…`) wraps badly in
+  the page's narrow column, and the constructed point is not drawn (roadmap: proofs and the figure).
+
+*Figures:*
+- **A page's own construction points get subscripts.** `transfer`'s source, beside its figure, names
+  d and g; the figure and proof say d₁ and g₁. So `compass-midpoint` (c₁, d₁, e₁), `circumcentre`
+  (p₁ … s₁), `right` (d₁).
+- **Ticks under points.** On `march` the double steps' ticks sit at the midpoints of a-c, b-d, c-e:
+  b, c and d.
+- **What the page is about, not drawn.** `reflect` has no line a-b; `circumcentre` no circle (and its
+  "drag and watch it hold" has nothing to watch); `compass-midpoint` no a-b.
+- **Clutter.** The golden section's nested triple arcs at four points; the windmill's lines;
+  `right`'s helper points (d₁, d₂) labelled as prominently as the page's own (`bisector-feet`,
+  `tangent-chord`); label collisions (`compass-midpoint`, `tangent-chord` at a); `copy-angle`'s sample
+  angle so thin its arcs vanish.
+
+*Across the book:*
+- **A word's page gathers every chapter, under one chapter's label.** Chapter 1's `eq-lines` page
+  holds side-angle-side, angle-angle-side, I.6 in turns, `quad-sum` and `eq-ratio`; `distinct` speaks
+  of `triangle` before chapter 2. Nothing says which chapter a clause is from.
+- **Where lemmas land.** A lemma goes to the latest-defined word it mentions, so reflection's angle
+  lemmas are on `eq-angle`, not `reflect`, while the vesica's chapter 2 lemmas are on `vesica`.
+  Section headings (`── equal points may be exchanged`) do not reach pages, so their clauses come
+  without a word.
+- **Promises.** Chapter 1 says the circumcentre needs chapter 2; chapter 2 says it is still unproved.
+  The compass midpoint "needs similar triangles (chapter 6)", which chapter 6 never does. The
+  hexagon's sixth side "needs angles", never paid. With turns and written proofs some may now be paid.
+- **Two voices.** About twenty comments speak to the engine, not the reader ("so that right stays a
+  definition", "saying both only doubles the search", `docs/architecture.md`, "engine.md, *Writing a
+  proof*"); chapter 2's opening still says the engine has no sums.
+- **Small things.** The book's first page (`eq-point`) draws nothing ("nothing to draw yet"); that
+  `between` counts its ends is never said.

@@ -280,7 +280,7 @@ onBeforeUnmount(() => {
 
 // ── source, verification, contents ──
 
-const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value)
+const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value, () => ws.clauseChapters.value)
 
 /** Where a proof step's rule is written: on this page ("l. 5"), or in the book ("ch. 3, l. 40"). */
 const pageRules = computed(() => {

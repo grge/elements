@@ -51,6 +51,12 @@ export interface ClauseItem {
   args?: string[]
   /** For a rule, the first paragraph of its doc comment. */
   doc?: string
+  /**
+   * The book chapter it is written in (1 for the first), whatever page it shows on; none for a clause
+   * of `extra/` or the user's. A lemma of the book is checked with the rules of its chapter and those
+   * before it, as Euclid's order has it (bookScope.ts).
+   */
+  chapter?: number
 }
 
 const chapterSources = import.meta.glob('../language/book/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -97,6 +103,13 @@ loaded.forEach(c => c.items.forEach(item => {
 }))
 export const ruleWrittenAt = (text: string): string | undefined => writtenAt.get(text)
 
+/** The book chapter (1 for the first) a rule is first written in, by its text; none for `extra/`. */
+const ruleChapterMap = new Map<string, number>()
+loaded.filter(c => !c.extra).forEach((c, i) => c.items.forEach(item => {
+  if (item.kind === 'rule' && !ruleChapterMap.has(showRule(item.rule))) ruleChapterMap.set(showRule(item.rule), i + 1)
+}))
+export const ruleChapter = (text: string): number | undefined => ruleChapterMap.get(text)
+
 // Where each predicate is first defined in the book (chapter, then position), for ordering.
 const definedAt = new Map<string, number>()
 loaded.forEach((c, ci) => c.items.forEach((item, ii) => {
@@ -115,8 +128,12 @@ loaded.forEach(c => c.items.forEach(item => {
   if (item.kind === 'rule' && !homeOf.has(item.rule.head.name)) homeOf.set(item.rule.head.name, c.id)
 }))
 
+const bookChapterNumber = (c: typeof loaded[number]) => c.extra ? undefined : loaded.filter(x => !x.extra).indexOf(c) + 1
 const builtinClauses: ClauseItem[] = loaded.flatMap(c => c.items.flatMap(item =>
-  toClauseItem(item, c.id).map(ci => ({ ...ci, namespace: homeOf.get(ci.predName) ?? ci.namespace }))))
+  toClauseItem(item, c.id, c.source).map(ci => {
+    const chapter = bookChapterNumber(c)
+    return { ...ci, namespace: homeOf.get(ci.predName) ?? ci.namespace, ...(chapter ? { chapter } : {}) }
+  })))
 
 /** A clause with its doc comment above it, each paragraph of the comment on one line (the editor wraps it). */
 function withDocComment(source: string, item: TopLevel): string {
@@ -146,7 +163,17 @@ function lemmaToSource(l: Lemma): string {
   return `? ${head}: ${hyps}`
 }
 
-function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
+/**
+ * A lemma as its page shows it. One with a written proof is shown as written, its steps and their
+ * comments with it: rebuilt from the parse, it would lose them, and the page would check the bare
+ * lemma.
+ */
+function lemmaSource(item: TopLevel & { kind: 'lemma' }, source: string): string {
+  if (!item.lemma.steps || !item.sourceRef) return lemmaToSource(item.lemma)
+  return source.split('\n').slice(item.sourceRef.startLine - 1, item.sourceRef.endLine).join('\n')
+}
+
+function toClauseItem(item: TopLevel, namespace: Namespace, source: string): ClauseItem[] {
   switch (item.kind) {
     case 'rule':
       return [{
@@ -162,7 +189,7 @@ function toClauseItem(item: TopLevel, namespace: Namespace): ClauseItem[] {
     case 'lemma':
       return [{
         id: `lemma:${item.lemma.head.name}:${Math.random()}`,
-        source: withDocComment(lemmaToSource(item.lemma), item),
+        source: withDocComment(lemmaSource(item, source), item),
         predName: owner(item.lemma),
         namespace,
         readOnly: true,
