@@ -418,8 +418,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    cache: the book in 34.5 s (review-notes.md, *Shared searches*). Step 1 is done.
 2. **The new core: solvers, then the whole book.** Landed without provenance (November 2026;
    review-notes.md, *The matching core*): the core makes every search that is not explained, 4.7×
-   faster on the book and *Beyond*, join step for join step the search `Saturation` makes. Next:
-   provenance in the core, so that proofs come from it too.
+   faster on the book and *Beyond*, join step for join step the search `Saturation` makes. Then
+   provenance in it (explain.ts, shared by both engines): every search is the core's, explained or
+   not. Step 2 is done.
    - The lattice for differences and sums, with a solver atom answered in the middle of a join.
    - The interface the checker and the marks closure use.
    - The three changes inside it.

@@ -240,9 +240,10 @@ It is skipped for heads that are defined or answered by a solver.
   a step whose predicate it concludes (`citable`, `withCited`); `citedLemma` names it in the proof.
 
 **The matching core** (November 2026; `core.ts`, engine.md *A new matching core*). `saturate()`
-searches with the core unless provenance is asked for (`SaturateOptions.provenance`, which the
-checker sets when it explains) or the figure has more than 256 points; `Saturation` makes those
-searches, and is the core's oracle (`tests/core.test.ts`). The core runs the same prepared rules and
+searches with the core, unless the figure has more than 256 points or `Saturation` is asked for;
+`Saturation` is the core's oracle (`tests/core.test.ts`). The core records provenance only when
+asked (`SaturateOptions.provenance`, which the checker sets when it explains), and both engines
+explain through one module, `explain.ts`, each answering for its own store (`ExplainStore`). The core runs the same prepared rules and
 makes the same search, join step for join step, in another representation:
 - points are numbers, a tuple a packed number; a rule is compiled once, its variables slots bound and
   undone by a trail, its matches found by recursion with a callback;

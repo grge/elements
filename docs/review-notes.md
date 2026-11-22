@@ -801,5 +801,9 @@ that is not explained.
   with `Saturation`, since they are explained.
 - **Also:** `Lattice.contains` no longer builds a certificate to answer yes or no, which made
   `Saturation` itself 196 s to 165 s on the same searches.
-- **Next:** provenance in the core, so that explained searches (every ✓ the page shows, every
-  written step) use it too.
+- **Provenance in the core** (then): recorded only when asked, as `Saturation` records it (a
+  match's premises worked out only for a fact that is recorded); the explanation moved to
+  `explain.ts`, which both engines answer for. Every book proof from the core replays
+  (`tests/proof.test.ts`, 39.6 s to 12.8 s), and recording changes no search (`tests/core.test.ts`).
+- **As the app checks, proofs asked for** (as the worker does): the book and *Beyond* in 37.1 s,
+  against about 189 s, every verdict and message the same.

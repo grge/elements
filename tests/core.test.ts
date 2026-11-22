@@ -5,7 +5,8 @@
  * search must agree in everything: whether the goal holds, whether the budget ran out, the join steps
  * (the budget's unit, which only the join order fixes) and the complete matches. A budget a tenth of
  * the checker's keeps the suite quick and catches the searches that run out alike. Full closures (no
- * goal) must hold the same facts both ways.
+ * goal) must hold the same facts both ways. Recording provenance must not change the search; that the
+ * core's proofs replay is tests/proof.test.ts's (the checker searches with the core).
  */
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'fs'
@@ -46,8 +47,15 @@ describe('the core agrees with Saturation, step for step', () => {
       await yieldToRunner()
       const goal = { name: lemma.head.name, args: lemma.head.args }
       const { s, c } = both(seedsOf(lemma), [goal.name], { goal, maxWork: 300_000 })
-      expect({ holds: c.holds(goal), exhausted: c.exhausted, work: c.work, matches: c.matches })
-        .toEqual({ holds: s.holds(goal), exhausted: s.exhausted, work: s.work, matches: s.matches })
+      // Counts first: asking whether a defined goal holds is a search of its own, and counts.
+      const p = new Core(relevant(prepare(kb), [goal.name]), { goal, maxWork: 300_000, provenance: true })
+      for (const f of seedsOf(lemma)) p.assert(f)
+      p.run()
+      const count = (e: Saturation | Core) => ({ exhausted: e.exhausted, work: e.work, matches: e.matches })
+      const [cs, ss, ps] = [count(c), count(s), count(p)]
+      expect({ ...cs, holds: c.holds(goal) }).toEqual({ ...ss, holds: s.holds(goal) })
+      // Recording provenance changes nothing of the search.
+      expect({ ...ps, holds: p.holds(goal) }).toEqual({ ...cs, holds: c.holds(goal) })
     }, 60_000)
   }
 })

@@ -14,12 +14,15 @@
  * Where `Saturation` compares points by name (the rule symmetries' least member, which of two equal
  * points stands for both), the core compares them by name too, so it makes the same choices.
  *
- * Not yet: provenance (`explain`). `saturate()` uses the core only when no proof is asked for.
+ * With `provenance`, it records why each fact, union and merge is in the store, as `Saturation` does,
+ * and explains a goal by it (explain.ts); without, it records nothing.
  */
 import type { Predicate, Rule } from '../language/parser'
 import type { GroundPredicate } from './inference'
 import { Lattice, type Vector } from './lattice'
 import { expandDefined, MAX_WORK, type Prepared, type SaturateOptions } from './saturate'
+import { explain, GIVEN, type Cause, type ExplainStore, type Recorded, type SolverCause } from './explain'
+import type { Proof } from './proof'
 import type { Difference, Sum } from './structure'
 
 const OBJECT = '__object__'
@@ -83,6 +86,9 @@ class Rel {
   pairsRel: Rel | null = null
   /** Bumped whenever its classes or facts change: what a solver built from it is valid while this holds. */
   stamp = 0
+  /** Provenance: stored facts' records by canonical key; an equivalence's recorded unions. */
+  reasons = new Map<Key, Recorded>()
+  unions: (Recorded & { sign: number })[] = []
   // equivalence
   classes: Classes | null = null
   constructor(readonly name: string, readonly arity: number) {
@@ -134,6 +140,12 @@ export class Core {
   exhausted = false
   private readonly eqName: string | null
 
+  // provenance (with `opts.provenance`)
+  private readonly recording: boolean
+  private cause: Cause = GIVEN
+  private clock = 0
+  private mergeRecords: Recorded[] = []
+
   // bindings
   private val = new Int32Array(64)
   private flex = new Uint8Array(64)
@@ -142,6 +154,7 @@ export class Core {
 
   constructor(private readonly prep: Prepared, private opts: SaturateOptions = {}) {
     this.eqName = prep.structure.equality
+    this.recording = !!opts.provenance
     this.compiled = [...prep.axioms, ...prep.rules].map(r => this.compile(r.body, r.head, r, prep.breaks.get(r)))
   }
 
@@ -212,9 +225,16 @@ export class Core {
   private renormalise(): void {
     for (const r of this.rels.values()) {
       if (r.kind !== 'stored') continue
-      const old = r.facts
-      r.keys = new Set(); r.facts = []; r.images = []; r.index = new Map()
-      for (const f of old) this.store(r, this.canon(r, f))
+      const old = r.facts, oldReasons = r.reasons
+      r.keys = new Set(); r.facts = []; r.images = []; r.index = new Map(); r.reasons = new Map()
+      for (const f of old) {
+        const t = this.canon(r, f)
+        this.store(r, t)
+        const rec = oldReasons.get(packOf(f))
+        if (!rec) continue
+        const k = packOf(t), prev = r.reasons.get(k)
+        if (!prev || rec.t < prev.t) r.reasons.set(k, rec)
+      }
     }
     for (const r of this.equivOrder) {
       const old = r.classes!
@@ -439,17 +459,52 @@ export class Core {
   }
 
   private assertIds(r: Rel, vals: ArrayLike<number>): boolean {
+    // A rule's certificates for the premises a solver answered, taken before this fact changes anything.
+    if (this.recording) this.certified(this.cause)
     let changed = false
+    const atom = () => ({ name: r.name, args: Array.from(vals, v => this.names[v]) })
     if (r.kind === 'flip') {
       const q = r.of!
       changed = this.union(q, this.tupleKey(q, vals, 0), this.tupleKey(q, vals, q.k), 1)
-    } else if (r.kind === 'eq') changed = this.merge(vals[0], vals[1])
-    else if (r.kind === 'equiv') {
+      if (changed && this.recording) q.unions.push({ atom: atom(), cause: this.cause, t: ++this.clock, sign: 1 })
+    } else if (r.kind === 'eq') {
+      const a = atom()   // before the merge renames anything
+      changed = this.merge(vals[0], vals[1])
+      if (changed && this.recording) this.mergeRecords.push({ atom: a, cause: this.cause, t: ++this.clock })
+    } else if (r.kind === 'equiv') {
       if (r.difference) for (let i = 0; i < vals.length; i += 2) if (this.find(vals[i]) === this.find(vals[i + 1])) return false
       changed = this.union(r, this.tupleKey(r, vals, 0), this.tupleKey(r, vals, r.k))
-    } else changed = this.store(r, this.canon(r, vals))
+      if (changed && this.recording) r.unions.push({ atom: atom(), cause: this.cause, t: ++this.clock, sign: 0 })
+    } else {
+      const t = this.canon(r, vals)
+      changed = this.store(r, t)
+      if (changed && this.recording) r.reasons.set(packOf(t), { atom: atom(), cause: this.cause, t: ++this.clock })
+    }
     if (changed) this.version++
     return changed
+  }
+
+  /**
+   * A rule's cause, with a certificate for each premise a solver answered (a difference's atom whose
+   * blocks no class joins), taken now: later, the solver's equations may include facts that came after.
+   */
+  private certified(cause: Cause): void {
+    if (cause.kind !== 'rule' || cause.solved) return
+    const solved = new Map<number, SolverCause>()
+    const premises = cause.premises()
+    cause.rule.body.forEach((b, i) => {
+      const r = this.rel(b.name, b.args.length)
+      if (r.kind !== 'equiv' || !r.difference) return
+      const ids = premises[i].args.map(a => this.id(a))
+      const c = this.classesOf(r)
+      if (this.root(c, this.tupleKey(r, ids, 0)) === this.root(c, this.tupleKey(r, ids, r.k))) return
+      const cached = this.latticeFor(r)
+      const v: Vector = new Map()
+      if (!this.blockVector(r.pairsRel, cached.unknown, ids, 0, 1, v) || !this.blockVector(r.pairsRel, cached.unknown, ids, r.k, -1, v)) return
+      const cert = cached.lattice.certificate(v)
+      if (cert) solved.set(i, this.solverCause(r, cert, cached.atoms, [], premises[i]))
+    })
+    cause.solved = solved
   }
 
   holds(f: GroundPredicate): boolean {
@@ -546,14 +601,15 @@ export class Core {
     return true
   }
 
-  private lattices = new Map<Rel, { stamp: string; lattice: Lattice; unknown: Map<number, number>; byEquation: Map<number | string, boolean> }>()
+  private lattices = new Map<Rel, { stamp: string; lattice: Lattice; unknown: Map<number, number>; byEquation: Map<number | string, boolean>; atoms: GroundPredicate[] }>()
   /** What a solver over `r` was built from: its classes or facts, its values' classes, the merges. */
   private solverStamp(r: Rel): string { return `${r.stamp} ${r.pairsRel?.stamp ?? 0} ${this.merges}` }
-  private latticeFor(r: Rel): { stamp: string; lattice: Lattice; unknown: Map<number, number>; byEquation: Map<number | string, boolean> } {
+  private latticeFor(r: Rel): { stamp: string; lattice: Lattice; unknown: Map<number, number>; byEquation: Map<number | string, boolean>; atoms: GroundPredicate[] } {
     let cached = this.lattices.get(r)
     const stamp = this.solverStamp(r)
     if (!cached || cached.stamp !== stamp) {
       const d = r.pairsRel, lattice = new Lattice(), unknown = new Map<number, number>()
+      const atoms: GroundPredicate[] = []
       for (const members of this.classesOf(r).members.values()) {
         const blocks = members.map(key => unpackOf(key, r.k))
         const first = blocks.find(b => this.blockVector(d, unknown, b, 0, 1, new Map()))
@@ -561,10 +617,13 @@ export class Core {
         for (const b of blocks) {
           if (b === first) continue
           const v: Vector = new Map()
-          if (this.blockVector(d, unknown, b, 0, 1, v) && this.blockVector(d, unknown, first, 0, -1, v)) lattice.add(v)
+          if (this.blockVector(d, unknown, b, 0, 1, v) && this.blockVector(d, unknown, first, 0, -1, v)) {
+            lattice.add(v)
+            atoms.push({ name: r.name, args: [...b, ...first].map(x => this.names[x]) })
+          }
         }
       }
-      this.lattices.set(r, cached = { stamp, lattice, unknown, byEquation: new Map() })
+      this.lattices.set(r, cached = { stamp, lattice, unknown, byEquation: new Map(), atoms })
     }
     return cached
   }
@@ -635,12 +694,15 @@ export class Core {
       const guards = d.faithful.body.filter(x => x.name !== p)
       for (let i = 0; i < keys.length; i++) for (let j = i + 1; j < keys.length; j++) {
         const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
-        if (!cached.lattice.contains(v)) continue
+        const cert = this.recording ? cached.lattice.certificate(v) : null
+        if (this.recording ? !cert : !cached.lattice.contains(v)) continue
         const [x1, x2] = this.pairOfKey(r.pairsRel, keys[i]), [y1, y2] = this.pairOfKey(r.pairsRel, keys[j])
         const bind = new Map([[a, x1], [b, x2], [c, y1], [dd, y2]])
         const ground = guards.map(g => ({ name: g.name, args: g.args.map(v2 => bind.get(v2) ?? v2) }))
         if (!ground.every(g => this.holds(g))) continue
+        if (cert) this.cause = this.solverCause(r, cert, cached.atoms, ground)
         changed = this.assert({ name: d.pairs, args: [x1, x2, y1, y2] }) || changed
+        this.cause = GIVEN
       }
     }
     return changed
@@ -674,14 +736,15 @@ export class Core {
     return v
   }
 
-  private sumLattices = new Map<Rel, { stamp: string; lattice: Lattice; unknown: Map<number, number>; pairOf: Map<number, [number, number]>; byEquation: Map<string, boolean> }>()
+  private sumLattices = new Map<Rel, { stamp: string; lattice: Lattice; unknown: Map<number, number>; pairOf: Map<number, [number, number]>; byEquation: Map<string, boolean>; atoms: GroundPredicate[] }>()
   private sumLattice(r: Rel) {
     let cached = this.sumLattices.get(r)
     const stamp = this.solverStamp(r)
     if (!cached || cached.stamp !== stamp) {
       const lattice = new Lattice(), unknown = new Map<number, number>(), pairOf = new Map<number, [number, number]>()
-      for (const f of r.facts) lattice.add(this.sumVector(r.pairsRel!, unknown, pairOf, f))
-      this.sumLattices.set(r, cached = { stamp, lattice, unknown, pairOf, byEquation: new Map() })
+      const atoms: GroundPredicate[] = []
+      for (const f of r.facts) { lattice.add(this.sumVector(r.pairsRel!, unknown, pairOf, f)); atoms.push({ name: r.name, args: Array.from(f, x => this.names[x]) }) }
+      this.sumLattices.set(r, cached = { stamp, lattice, unknown, pairOf, byEquation: new Map(), atoms })
     }
     return cached
   }
@@ -709,8 +772,11 @@ export class Core {
         const pi = cached.pairOf.get(keys[i])!, pj = cached.pairOf.get(keys[j])!
         if (this.sumValue(r.pairsRel!, pi[0], pi[1]) === this.sumValue(r.pairsRel!, pj[0], pj[1])) continue
         const v: Vector = new Map([[cached.unknown.get(keys[i])!, 1], [cached.unknown.get(keys[j])!, -1]])
-        if (!cached.lattice.contains(v)) continue
+        const cert = this.recording ? cached.lattice.certificate(v) : null
+        if (this.recording ? !cert : !cached.lattice.contains(v)) continue
+        if (cert) this.cause = this.solverCause(r, cert, cached.atoms, [])
         changed = this.assert({ name: sum.values, args: [pi[0], pi[1], pj[0], pj[1]].map(x => this.names[x]) }) || changed
+        this.cause = GIVEN
       }
     }
     return changed
@@ -1003,14 +1069,14 @@ export class Core {
   }
 
   /** Where a run stopped inside a round, as saturate.ts keeps it, so `resume` carries on from there. */
-  private round: { i: number; before: number; c: Compiled | null; snaps: number[]; count: number; m: number } | null = null
+  private round: { i: number; before: number; c: Compiled | null; snaps: number[]; full: Int32Array[]; count: number; m: number } | null = null
 
   run(): void {
     const rules = this.compiled
     for (;;) {
       if (!this.round) {
         if (this.done()) return
-        this.round = { i: 0, before: this.version, c: null, snaps: [], count: 0, m: 0 }
+        this.round = { i: 0, before: this.version, c: null, snaps: [], full: [], count: 0, m: 0 }
       }
       const r = this.round
       while (r.i < rules.length) {
@@ -1020,21 +1086,24 @@ export class Core {
           this.lastRun.set(c, this.version)
           // Materialise the matches first: asserting changes what is matched against.
           this.ensure(c.nvars)
-          const hv = c.headVars, snaps: number[] = []
+          const hv = c.headVars, snaps: number[] = [], full: Int32Array[] = []
           let count = 0
           this.join(c, (1 << c.atoms.length) - 1, () => {
             count++
             for (const x of hv) snaps.push(this.bound[x] ? this.val[x] : -1, this.flex[x])
+            if (this.recording) full.push(this.val.slice(0, c.nvars))
             return false
           })
           this.matches += count
-          r.c = c; r.snaps = snaps; r.count = count; r.m = 0
+          r.c = c; r.snaps = snaps; r.full = full; r.count = count; r.m = 0
         }
         while (r.m < r.count) {
+          if (this.recording) this.cause = this.ruleCause(c, r.full[r.m])
           this.assertMatch(c, r.snaps, r.m++)
+          this.cause = GIVEN
           if (this.done(false)) return
         }
-        r.c = null; r.snaps = []; r.count = 0
+        r.c = null; r.snaps = []; r.full = []; r.count = 0
         r.i++
         if (this.done()) return
       }
@@ -1078,6 +1147,114 @@ export class Core {
     }
     rec(0)
     for (const t of all) { this.derivations++; this.assertIds(head.rel, t) }
+  }
+
+  // ───────────────────────── provenance and explanation ─────────────────────────
+
+  /** A match's cause: its rule, and its premises (worked out only if a fact is recorded). */
+  private ruleCause(c: Compiled, vals: Int32Array): Cause {
+    let premises: GroundPredicate[] | null = null
+    return {
+      kind: 'rule', rule: c.rule!,
+      premises: () => premises ??= c.atoms.map(a => ({ name: a.name, args: Array.from(a.slots, x => this.names[vals[x]]) })),
+    }
+  }
+
+  /**
+   * A solver's step, taken when it acts: its equations and coefficients, and the equalities of values
+   * they rely on as the store has them now (saturate.ts's `solverCause`).
+   */
+  private solverCause(r: Rel, cert: Map<number, number>, atoms: GroundPredicate[], guards: GroundPredicate[], fact?: GroundPredicate): SolverCause {
+    const used = [...cert].filter(([, c]) => c !== 0)
+    const equations = used.map(([i]) => atoms[i])
+    const links = this.valueLinks(r, fact && fact.name === r.name ? [fact, ...equations] : equations)
+    return { kind: 'solver', relation: r.name, equations, coefficients: used.map(([, c]) => c), guards, links }
+  }
+
+  /** The equalities of values a solver's equations rely on, each pair linked to the first of its value. */
+  private valueLinks(r: Rel, atoms: readonly GroundPredicate[]): GroundPredicate[] {
+    const value = r.difference ? (a: number, b: number) => this.pairValue(r.pairsRel, a, b) : r.sum ? (a: number, b: number) => this.sumValue(r.pairsRel!, a, b) : null
+    const eqName = r.difference ? r.difference.pairs : r.sum ? r.sum.values : null
+    if (!value) return []
+    const first = new Map<number, [string, string]>()
+    const out: GroundPredicate[] = []
+    for (const f of atoms) for (let i = 0; i + 1 < f.args.length; i += 2) {
+      const a = f.args[i], b = f.args[i + 1], v = value(this.id(a), this.id(b))
+      if (v < 0) continue
+      const f0 = first.get(v)
+      if (!f0) { first.set(v, [a, b]); continue }
+      if (f0[0] === a && f0[1] === b) continue
+      if (eqName) out.push({ name: eqName, args: [...f0, a, b] })
+      else if (this.eqName) for (const [x, y] of [[f0[0], a], [f0[1], b]]) if (x !== y) out.push({ name: this.eqName, args: [x, y] })
+    }
+    return out
+  }
+
+  /** Why `goal` holds, from what this search recorded (explain.ts). Needs `provenance`. */
+  explain(goal: GroundPredicate, hypotheses: readonly GroundPredicate[]): Proof | null {
+    if (!this.recording) throw new Error('the core explains only a search made with provenance')
+    return explain(this.explainStore(), goal, hypotheses)
+  }
+
+  private explainStore(): ExplainStore {
+    const st = this.prep.structure
+    const ids = (args: readonly string[]) => args.map(a => this.id(a))
+    return {
+      equality: this.eqName,
+      holds: f => this.holds(f),
+      samePoint: (a, b) => this.find(this.id(a)) === this.find(this.id(b)),
+      isDefined: name => this.prep.defined.has(name),
+      definedInstance: f => {
+        const atoms = expandDefined([{ name: f.name, args: [...f.args] }], this.prep.defined)
+        const c = this.compile(atoms, null, null, undefined)
+        this.ensure(c.nvars)
+        const mark = this.trail.length
+        for (let s = 0; s < c.nvars; s++) if (f.args.includes(c.names[s])) this.bind(s, this.id(c.names[s]), 1)
+        let out: GroundPredicate[] | null = null
+        this.join(c, (1 << c.atoms.length) - 1, () => {
+          out = c.atoms.map(a => ({ name: a.name, args: Array.from(a.slots, x => this.names[this.val[x]]) }))
+          return true
+        })
+        this.undo(mark)
+        return out
+      },
+      merges: () => this.mergeRecords,
+      equivalenceOf: f => {
+        const flip = st.flips?.get(f.name)
+        const q = flip ? flip.of : f.name
+        const e = st.equivalences.get(q)
+        return e && f.args.length === 2 * e.k ? { q, k: e.k, flip: !!flip } : null
+      },
+      blockKey: (q, block) => {
+        const r = this.rel(q, 2 * block.length)
+        return String(this.tupleKey(r, ids(block), 0))
+      },
+      unions: q => {
+        const e = st.equivalences.get(q)
+        return e ? this.rel(q, 2 * e.k).unions : []
+      },
+      differenceCause: f => {
+        const r = this.rel(f.name, f.args.length)
+        if (r.kind !== 'equiv' || !r.difference) return null
+        const v: Vector = new Map(), x = ids(f.args)
+        const cached = this.latticeFor(r)
+        if (!this.blockVector(r.pairsRel, cached.unknown, x, 0, 1, v) || !this.blockVector(r.pairsRel, cached.unknown, x, r.k, -1, v)) return null
+        const cert = cached.lattice.certificate(v)
+        return cert ? this.solverCause(r, cert, cached.atoms, [], f) : null
+      },
+      sumCause: f => {
+        const r = this.rel(f.name, f.args.length)
+        if (!r.sum) return null
+        const cached = this.sumLattice(r)
+        const cert = cached.lattice.certificate(this.sumVector(r.pairsRel!, new Map(cached.unknown), null, ids(f.args)))
+        return cert ? this.solverCause(r, cert, cached.atoms, [], f) : null
+      },
+      reasonOf: f => {
+        const r = this.rel(f.name, f.args.length)
+        return r.kind === 'stored' ? r.reasons.get(this.canonKey(r, ids(f.args))) : undefined
+      },
+      original: rule => this.prep.origins?.get(rule) ?? rule,
+    }
   }
 
   /** Carry the search on towards another goal (saturate.ts's `resume`). */
