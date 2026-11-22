@@ -297,9 +297,9 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
       a sum of three differences; not a definition through an unnamed segment. The 12-place word is the
       same engine question as the quarter and Apollonius (next): can the engine recognise, from rules,
       a linear relation of any number of terms with integer coefficients?
-      The windmill's two lemmas now run past the 3 million budget (similarity by turns, componendo):
-      left out of the suite (tests/lemmas.test.ts `overBudget`) while George works on the engine's
-      efficiency alongside; the budget stays.
+      The windmill's two lemmas ran past the 3 million budget (similarity by turns, componendo) and
+      were left out of the suite; since signed classes, indexes and the head check (November 2026,
+      *Cold start*, above) they prove again and are back in it.
    2. The quarter and Apollonius revisited: how the engine could discover quadrance laws with
       coefficients (they would bring the nine-point circle, Thales' converse, III.14 in Euclid's form).
    3. An exploration of conics: what a chapter would need, before the reorganisation decides its shape.
@@ -316,7 +316,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    Deferred past the reorganisation: signed area (its shape understood: a difference of areas on the
    same lattice, with bridges from figures cut into parts), the mark for equal ratios, and the
    interface work (givens the reader chooses, Byrne's fills, overlapping figures). Then engine work
-   (semi-naive evaluation, indexed joins, cheaper similarity), then the reorganisation.
+   (engine.md and its review: indexed joins and signed classes are done, semi-naive evaluation
+   measured no faster), then the reorganisation.
 
 **Candidates**, tools we expect to adopt when a chapter needs them; not yet planned (November 2026):
 
