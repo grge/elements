@@ -748,3 +748,27 @@ step on the page. Measured with the book's rules and *Beyond*'s:
 
   Both are order, the wall *Beyond* already names; neither is a written proof's limit. The circle
   form (`circle n d k`) also needs a circle's centre to be unique, which the book does not have.
+
+## The budget's unit (November 2026)
+
+The review's step 5 begins by fixing what the budget counts, so that the new core's verdicts can be
+compared with `saturate.ts`'s: a faster engine counting in its own units would flip verdicts near the
+budget. Measured on every search of the book and *Beyond* (141, as the checker runs them), the spread
+of time per unit (the standard deviation of its logarithm, over the 103 searches above 20 ms):
+
+| Unit | µs per unit, median (p10 to p90) | Spread |
+|---|---|---|
+| join steps (partial matches extended) | 5.3 (3.7 to 8.7) | 0.34 |
+| work as it was (join steps and index scans) | 4.2 (3.1 to 7.3) | 0.36 |
+| index scans alone | 21 (14 to 73) | 0.74 |
+| complete matches | 75 (49 to 222) | 0.60 |
+| derivations | 63 (39 to 181) | 0.61 |
+
+- **Complete matches**, the review's guess, track time poorly: most of a search's time goes into partial
+  matches that never complete, and a match budget does not see them.
+- **Join steps** track time best, and are fixed by each rule's join order alone, so the new core,
+  joining in the same order, counts the same: the oracle compares the counts, not only the closures.
+- **Work is now join steps**, and `MAX_WORK` stays 3 million: the largest finished search takes 2.80
+  million, and the one that runs out has passed 3.11 million. Every verdict and message of the book
+  and *Beyond* is the same (119 lemmas, written proofs included). `Saturation.matches` counts complete
+  matches, for comparisons.

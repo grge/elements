@@ -34,8 +34,9 @@ const SEP = '\u0001'
 /**
  * The default budget of work (`SaturateOptions.maxWork`): what a search may do before it gives up (the
  * checker's, and the marks closure's). Work is in proportion to time, so this, not the budget of
- * derivations, is what binds (the checker's derivations are a distant safety valve). Enough for
- * Pythagoras with whole squares (2.1 million), and a page that runs out gives up in under a minute.
+ * derivations, is what binds (the checker's derivations are a distant safety valve). Counted in join
+ * steps since November 2026: the largest search of the book and *Beyond* that finishes takes 2.8
+ * million, the one that runs out has passed 3.1 million, so the verdicts are those of the old unit.
  */
 export const MAX_WORK = 3_000_000
 
@@ -59,7 +60,7 @@ export interface SaturateOptions {
   /** Budget on derivations, as a safety valve. When it runs out, `exhausted` is set. */
   maxDerivations?: number
   /**
-   * Budget on work (`Saturation.work`: partial matches and tuples considered), which is in
+   * Budget on work (`Saturation.work`: join steps, the partial matches extended), which is in
    * proportion to time, as derivations are not: with definitions abbreviated, the cheap derivations
    * of defined facts no longer use up a budget of derivations, so it would buy far more search.
    */
@@ -289,8 +290,15 @@ export class Saturation {
   /** While a rule is matched: its head, if the early head check applies to it (`headCheckable`). */
   private head: { rule: Rule; vars: string[]; literal: Set<string> } | null = null
   private derivations = 0
-  /** Partial matches considered: the search's work, deterministic and in proportion to its time. */
+  /**
+   * Join steps: every partial match a rule's body is extended from, the search's work. The budget's
+   * unit (engine-review.md, *The budget's unit*): deterministic, and fixed by the rule's join order
+   * alone, so another engine that joins in the same order counts the same; and it tracks time best
+   * (review-notes.md, *The budget's unit*). Index scans are not counted.
+   */
   work = 0
+  /** Complete matches of rule bodies found (each a substitution whose heads are asserted). */
+  matches = 0
   private lastRun = new Map<Rule, number>()
   exhausted = false
 
@@ -1125,7 +1133,6 @@ export class Saturation {
     }
     if (pick) {
       for (const m of pick.keys) {
-        this.work++
         const xs = imagesOf(m).filter(x => x[pick!.j] === pick!.v)
         if (!xs.length) continue
         for (const mm of classMembers(this.tupleRoot(p, m))) {
@@ -1140,7 +1147,6 @@ export class Saturation {
       // Every class of tuples mentioned.
       const seen = new Set<string>()
       for (const key of mentioned.keys()) {
-        this.work++
         const root = this.tupleRoot(p, key)
         if (seen.has(root)) continue
         seen.add(root)
@@ -1170,7 +1176,6 @@ export class Saturation {
       return mask[0] ? [this.find(b.v)] : b.flex ? [...this.members(this.find(b.v))] : [b.v]
     })
     for (const t of cartesian<string>(choices)) {
-      this.work++
       if (mentioned.has(this.tupleKey(p, e, t))) continue
       for (const y of orbit(e.blockGroup, t)) {
         const u = this.unifyArgs(s, args, from === 0 ? [...t, ...y] : [...y, ...t], mask)
@@ -1301,6 +1306,7 @@ export class Saturation {
           // Materialise first: asserting mutates the structures being matched against.
           this.head = this.headCheckable(rule)
           r.matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
+          this.matches += r.matches.length
           this.head = null
           r.rule = rule
           r.m = 0

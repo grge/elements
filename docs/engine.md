@@ -421,6 +421,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    - The interface the checker and the marks closure use.
    - The three changes inside it.
    - Then it replaces `saturate.ts`, which stays in the tests as the oracle: every closure compared.
+
+   The budget's unit first (the review's step 5): done (November 2026), join steps
+   (review-notes.md, *The budget's unit*).
 3. **Proofs found and shown.** Provenance in the core, with certificates taken when a solver answer
    is used. Explanation, and the proof on the page, folded.
    Found (November 2026): provenance in `saturate.ts`, `Saturation.explain`, `proof.ts` (the proof

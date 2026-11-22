@@ -252,8 +252,10 @@ their seeds and their budgets. A lemma with the same hypotheses and a goal of th
 - The solvers' answers are cached per version of the store, since a join asks the same atom
   again and again.
 
-The search has two budgets, whichever runs out first: derivations, and **work** (partial matches and
-tuples considered, `Saturation.work`), which is in proportion to time. Derivations alone stopped
+The search has two budgets, whichever runs out first: derivations, and **work** (join steps, the
+partial matches a rule's body is extended from, `Saturation.work`), which is in proportion to time.
+Join steps are fixed by a rule's join order alone, so an engine that joins in the same order counts
+the same (since November 2026; before, index scans counted too). Derivations alone stopped
 measuring anything once the cheap derivations of defined facts were gone: the same budget bought three
 times the search.
 
