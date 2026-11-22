@@ -350,7 +350,7 @@ come instead, if at all: set aside any chosen clauses of the knowledge base and 
 still follows. That would answer the parallel postulate's question without naming it (recognised
 structure counts: a proof that leans on `parallel` being an equivalence leans on I.30).
 
-**Parked: proofs that need points no hypothesis names** (November 2026). [proofs.md](proofs.md)
+**Parked: proofs that need points no hypothesis names** (November 2026). [engine.md](engine.md)
 proposes the construction as a step of a written proof, built by the planner with Euclid's moves
 (Thales' converse proves with it). The stress test's main wall
 after non-degeneracy: the midline's proof begins "through c draw the parallel to a-b", and forward
@@ -499,7 +499,7 @@ the first step for every item in this section; do it when a lens or a sibling bo
 - **Show a ✗'s counterexample**: clicking the mark draws the figure that breaks the lemma, the failing
   fact marked. Lemmas whose head introduces points of their own get no evidence yet: they need a
   witness search.
-- **Proofs** (proposed November 2026, [proofs.md](proofs.md)): every ✓ carrying the proof the
+- **Proofs** (proposed November 2026, [engine.md](engine.md)): every ✓ carrying the proof the
   engine found, shown on the page; proofs an author writes as `?` lines in a lemma's body, with
   constructions built by Euclid's moves; proofs kept and replayed instead of searched again. The
   diagnosis there covers the engine's power and efficiency too.

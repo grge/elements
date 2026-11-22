@@ -137,5 +137,6 @@ docs/           documentation
 - [Roadmap](docs/roadmap.md): what comes next, in order, then everything else that is open.
 - [Review notes](docs/review-notes.md): what writing the book has shown about the engine, with the
   measurements of the November 2026 review (`npx vite-node scripts/bench.ts` reproduces them).
-- [Proofs](docs/proofs.md): a proposal (November 2026) for proofs the engine finds, the page shows
-  and an author writes, with a diagnosis of the logic engine's power and efficiency.
+- [Engine](docs/engine.md): a design proposal (November 2026). It covers proofs the engine finds,
+  the page shows and an author writes, with constructions; and a much faster search, with the
+  matching-core spike.

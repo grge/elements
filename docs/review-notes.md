@@ -444,7 +444,7 @@ and evidence cannot test it, since the figure keeps different names apart.
 
 ## Proofs and the search (November 2026)
 
-The evidence for [proofs.md](proofs.md). Measured at 2aef82e (chapters 1 to 6 and *Beyond the book*),
+The evidence for [engine.md](engine.md). Measured at 2aef82e (chapters 1 to 6 and *Beyond the book*),
 under Node 22 on four CPUs, with a prototype built on a copy of `saturate.ts`. The prototype:
 - records a reason for every stored fact, union of tuples and merge of points;
 - explains a fact by its reason, and a class membership by the shortest path through recorded
@@ -454,7 +454,7 @@ under Node 22 on four CPUs, with a prototype built on a copy of `saturate.ts`. T
 - checks a claim by one rule with its head bound;
 - has a figure-guided backward search.
 
-It was not committed; proofs.md's path builds it properly.
+It was not committed; engine.md's path builds it properly.
 
 **As the app checks** (evidence first, the convention, strict):
 - every book lemma is ✓, 18 of them for figures whose points are all apart;
