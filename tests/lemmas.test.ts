@@ -10,7 +10,8 @@
 
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
-import { checkLemma } from '../src/kb/checker'
+import { checkLemma, checkWrittenProof } from '../src/kb/checker'
+import { checkConstruction } from '../src/geometry/constructionStep'
 import { numericEvidence } from '../src/geometry/evidence'
 import { holds, relationOf } from '../src/geometry/relations'
 import type { Lemma } from '../src/language/parser'
@@ -57,7 +58,13 @@ describe('the book', () => {
       // Derived (as the page derives it: under the convention that different names are different
       // points, where it must), and no contradiction found by the full search (which may run out of
       // budget).
-      const check = checkLemma(lemma, kb, undefined, { strict: true, distinctNames: true })
+      // A written proof: every step shown, every construction allowed, citing the lemmas before it.
+      const written = lemma.steps ? checkWrittenProof(lemma, kb, {
+        strict: true, distinctNames: true, lemmas: bookLemmas.slice(0, bookLemmas.indexOf(lemma)),
+        construct: (s, above, np) => checkConstruction(kb, s, above, np),
+      }) : null
+      expect(written?.steps.filter(s => s.result === 'not-shown' || s.result === 'refused').map(s => `l. ${s.line}`) ?? []).toEqual([])
+      const check = written ? written.head : checkLemma(lemma, kb, undefined, { strict: true, distinctNames: true })
       expect(['verified', 'unshown']).toContain(check.result)
       // A witness, as the app requires instead of the search.
       const { witness } = numericEvidence(lemma, kb)

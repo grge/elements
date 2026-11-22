@@ -141,15 +141,15 @@ semicircle a b c o:
 # The angle in a semicircle is right (III.31): the turn at b to the diameter's ends is its own reverse.
 ? eq-turn b a b c b c b a: semicircle a b c o
 
-# The tangent a-t at a, a chord a-b, a point c of the circle; and e, the far end of the diameter
-# through a, the point the proof needs (named, as the midline names its points).
-tangent-chord o a b c t e:
+# The tangent a-t at a, a chord a-b, and a point c of the circle.
+tangent-chord o a b c t:
     circle o a b
     circle o a c
     right o a t
-    between a o e
-    circle o a e
 
 # The angle between a tangent and a chord is the angle in the other segment (III.32): the tangent a-t
-# turns to the chord a-b as the chord is seen from c, a-b-e being the angle in a semicircle.
-? eq-turn a t a b c a c b: tangent-chord o a b c t e
+# turns to the chord a-b as the chord is seen from c. The proof draws the far end e of the diameter
+# through a: a-b-e is the angle in a semicircle.
+? eq-turn a t a b c a c b:
+    tangent-chord o a b c t
+    ? double a o e            # the diameter through a, to e

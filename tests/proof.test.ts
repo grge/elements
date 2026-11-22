@@ -5,7 +5,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
-import { checkByReplay, checkLemma } from '../src/kb/checker'
+import { checkByReplay, checkLemma, checkWrittenProof } from '../src/kb/checker'
+import { checkConstruction } from '../src/geometry/constructionStep'
 import { showRule } from '../src/kb/rules'
 import { Saturation, prepare } from '../src/kb/saturate'
 import { replay, showProof } from '../src/kb/proof'
@@ -22,6 +23,19 @@ describe('every book lemma has a proof that replays', () => {
   for (const lemma of bookLemmas) {
     it(show(lemma), async () => {
       await yieldToRunner()
+      if (lemma.steps) {
+        // A written proof: each step's proof, and the head's, replays.
+        const written = checkWrittenProof(lemma, kb, {
+          consistent: () => true, strict: true, distinctNames: true, explain: true,
+          lemmas: bookLemmas.slice(0, bookLemmas.indexOf(lemma)),
+          construct: (s, above, np) => checkConstruction(kb, s, above, np),
+        })
+        expect(written.head.result).toBe('verified')
+        for (const p of [...written.steps.flatMap(s => s.proof ? [s.proof] : []), written.head.proof!]) {
+          expect(replay(p, fresh, prepare(kb).structure.equality), showProof(p)).toBe(-1)
+        }
+        return
+      }
       const check = checkLemma(lemma, kb, undefined, { consistent: () => true, strict: true, distinctNames: true, explain: true })
       expect(check.result).toBe('verified')
       const proof = check.proof!

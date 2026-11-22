@@ -173,7 +173,14 @@ with a crossing that picks the far side, and is also the translation of a segmen
 I.31 (parallel and equal), I.34 (opposite sides and angles), I.33, and the diagonals bisecting each
 other.
 
-**The midline, in (November 2026)**, with its proof's two points in its figure: d-e doubled to f, and where the second parallelogram's diagonals cross. It follows under the convention that different names are different points, once the engine was fast enough. What follows was written before. Its proof goes through I.33 on a second parallelogram, and lemmas do not
+**The midline, plain (November 2026).** It is stated as said, a triangle and two midpoints, with a
+written proof that constructs its one extra point: d-e doubled to f. The triangles about the vertical
+angles at e are congruent, c-f runs the way a-b does and as long as d-b, and d-b-c-f is a
+parallelogram (I.33). That it is half as long waits for chapter 6's ratios (the midsegment). III.32
+lost its named point the same way: the far end of the diameter is a construction step. Earlier, the
+midline named its proof's two points in its figure (f, and where the second parallelogram's diagonals
+cross), and followed under the convention once the engine was fast enough. What follows was written
+before that. Its proof goes through I.33 on a second parallelogram, and lemmas do not
 yet become rules, so the closure redoes that reasoning. Three rules now derive most of the
 non-degeneracy it needs (chapter 2: a point between b and d is not a corner off b-d; points on two
 sides from a corner make a triangle with it; chapter 3: a parallel through a point off a line stays

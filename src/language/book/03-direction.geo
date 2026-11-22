@@ -214,23 +214,26 @@ square a b c d:
 
 # ══ The midline ══════════════════════════════════════════════════════════════════════════════════
 
-# The midline of a triangle a-b-c: d and e halve a-b and a-c, and d-e runs the way b-c does, half as
-# long. Its proof draws two more points, and they are part of the figure here, since a lemma's
-# hypotheses can only name points the figure has: d-e doubled to f, and x, where d-c and b-f cross.
-# e halves both a-c and d-f, so a-d-c-f is a parallelogram (its diagonals halve each other), and c-f
-# runs the way a-d does and as long. So c-f also runs the way d-b does and as long, and d-b-c-f is a
-# parallelogram too (I.33, with its diagonals crossing at x).
-midline a b c d e f x:
+# The midline of a triangle a-b-c: d and e halve a-b and a-c, and d-e runs the way b-c does (that it
+# is half as long waits for ratios, chapter 6).
+midline a b c d e:
     triangle a b c
     midpoint d a b
     midpoint e a c
-    between d e f
-    eq-lines d e e f
-    between d x c
-    between b x f
 
-? parallel d e b c: midline a b c d e f x
-? eq-lines d f b c: midline a b c d e f x
+# The proof draws a point the figure does not have: d-e doubled to f. The triangles a-e-d and c-e-f
+# are congruent about the vertical angles at e, so c-f is as long as a-d, and runs the way a-b does
+# (the angles at a and c are alternate). So c-f is as long as d-b and runs the way it does, and
+# d-b-c-f is a parallelogram (I.33): d-f, which is d-e, runs the way b-c does.
+? parallel d e b c:
+    midline a b c d e
+    ? double d e f            # continue d-e past e by its own length, to f
+    ? eq-angle a e d c e f    # vertical angles
+    ? eq-lines a d c f        # side-angle-side
+    ? eq-angle d a e f c e
+    ? parallel a b c f        # alternate angles
+    ? eq-lines d b c f
+    ? parallel d f b c        # I.33
 
 # ══ Turns ════════════════════════════════════════════════════════════════════════════════════════
 #

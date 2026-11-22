@@ -98,8 +98,8 @@ midsegment a b c d e:
     midpoint d a b
     midpoint e a c
 
-# The line joining them is parallel to the third side (the midline, without its proof's points, which
-# chapter 3 had to name), and half as long: d-e is to b-c as a-d to a-b.
+# The line joining them is parallel to the third side (chapter 3's midline, here by ratios), and half
+# as long: d-e is to b-c as a-d to a-b.
 ? parallel d e b c: midsegment a b c d e
 ? eq-ratio d e b c a d a b: midsegment a b c d e
 

@@ -444,7 +444,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    cited (tools.md, option A): the nine-point circle's turn form, citing Thales' converse twice,
    follows but for two order steps. Still to do: a book limiting its moves; order, for those two.
 6. **Statements back to their plain forms,** where a written proof can carry the points they now
-   name (the midline, III.32).
+   name (the midline, III.32). Done (November 2026): both stated plainly, each with a written proof
+   that constructs its point (`double`); the midline's "as long as b-c" went with f, and is chapter
+   6's (the midsegment).
 
 ## Open questions
 

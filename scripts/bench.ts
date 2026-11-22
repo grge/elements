@@ -31,6 +31,8 @@ import { closureQueries } from '../src/geometry/marks'
 import { closureAnswers, assumedOf } from '../src/geometry/closure'
 import { RELATIONS } from '../src/geometry/relations'
 import { numericEvidence } from '../src/geometry/evidence'
+import { checkWrittenProof } from '../src/kb/checker'
+import { checkConstruction } from '../src/geometry/constructionStep'
 
 const bookDir = resolve(__dirname, '../src/language/book')
 const files = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
@@ -62,6 +64,16 @@ function saturateFrom(kb: KnowledgeBase, frontier: GroundPredicate[], goal: Grou
   return { ms: performance.now() - t, holds: sat.holds(goal), exhausted: sat.exhausted, derived, added }
 }
 
+const allLemmas = files.flatMap(f => parseLemmas(source(f)))
+function writtenFrom(kb: KnowledgeBase, lemma: Lemma) {
+  derived = added = 0
+  const t = performance.now()
+  const lemmas = allLemmas.slice(0, allLemmas.findIndex(l => show(l) === show(lemma)))
+  const r = checkWrittenProof(lemma, kb, { distinctNames: true, lemmas, construct: (st, above, np) => checkConstruction(kb, st, above, np) })
+  const holds = r.head.result === 'verified' && r.steps.every(st => st.result === 'follows' || st.result === 'constructed')
+  return { ms: performance.now() - t, holds, exhausted: r.head.result === 'out-of-budget', derived, added }
+}
+
 function checking() {
   const all = rulesTo(files.length - 1)
   const rows: { chapter: number; goalMs: number; falseMs: number; witnessMs: number; witnessed: boolean; exhausted: boolean; derived: number; added: number; proved: boolean }[] = []
@@ -77,7 +89,8 @@ function checking() {
         ...seeds.flatMap(f => unfold(f, kb, new Set(), { fresh }).frontier),
         ...headOnly.map(a => ({ name: '__object__', args: [a] })), // as the checker introduces them
       ]
-      const goal = saturateFrom(kb, frontier, { name: lemma.head.name, args: lemma.head.args })
+      // A written proof is checked as the page checks it, steps and head (its time is the goal's).
+      const goal = lemma.steps ? writtenFrom(kb, lemma) : saturateFrom(kb, frontier, { name: lemma.head.name, args: lemma.head.args })
       const t = performance.now()
       const witnessed = flag('--witness') && goal.holds && !!numericEvidence(lemma, kb).witness
       const witnessMs = flag('--witness') && goal.holds ? performance.now() - t : 0
