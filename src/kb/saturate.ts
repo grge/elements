@@ -26,6 +26,7 @@ import { Lattice, type Vector } from './lattice'
 import { ruleSymmetries, type SymmetryBreak } from './symmetry'
 import { fingerprint, Lru } from './rules'
 import type { Proof, ProofStep } from './proof'
+import { Core, CoreRefused } from './core'
 
 const OBJECT = '__object__'
 const key2 = (f: GroundPredicate) => f.name + '\u0001' + f.args.join('\u0001')
@@ -77,7 +78,18 @@ export interface SaturateOptions {
    * would derive could only feed rules that are cut too.
    */
   relevant?: readonly string[]
+  /**
+   * Keep provenance, for `explain`: the search is made by `Saturation`, which records it. Otherwise
+   * `saturate()` uses the matching core (core.ts), which makes the same search faster, but keeps none
+   * yet.
+   */
+  provenance?: boolean
+  /** Which engine `saturate()` uses: the core (the default, where it can) or `Saturation` (the oracle). */
+  engine?: 'core' | 'saturation'
 }
+
+/** A search, by either engine: what `saturate()` returns. */
+export type Search = Saturation | Core
 
 export interface Prepared {
   structure: Structure
@@ -1434,17 +1446,18 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
  * seeds and their budgets: lemmas with the same hypotheses and a goal of the same predicate (the
  * windmill's two) share one search, each carrying it on from where the last stopped (`resume`).
  */
-const searches = new WeakMap<Prepared, Map<string, Saturation>>()
+const searches = new WeakMap<Prepared, Map<string, Search>>()
 const SEARCHES_KEPT = 8
 
 export function saturate(
   kb: KnowledgeBase,
   seeds: readonly GroundPredicate[],
   opts: SaturateOptions = {},
-): Saturation {
+): Search {
   if (opts.goal && !opts.relevant) {
     const prep = relevant(prepare(kb, opts.abbreviate ?? true), [opts.goal.name])
-    const key = [opts.maxDerivations ?? '', opts.maxWork ?? '', ...seeds.map(f => f.name + ' ' + f.args.join(' '))].join('\n')
+    const engine = opts.provenance || opts.engine === 'saturation' ? 'saturation' : 'core'
+    const key = [engine, opts.maxDerivations ?? '', opts.maxWork ?? '', ...seeds.map(f => f.name + ' ' + f.args.join(' '))].join('\n')
     let byKey = searches.get(prep)
     if (!byKey) searches.set(prep, byKey = new Map())
     const kept = byKey.get(key)
@@ -1453,16 +1466,29 @@ export function saturate(
       kept.resume(opts.goal)
       return kept
     }
-    const sat = new Saturation(prep, opts)
-    for (const f of seeds) sat.assert(f)
-    sat.run()
+    const sat = search(prep, seeds, opts)
     byKey.set(key, sat)
     if (byKey.size > SEARCHES_KEPT) byKey.delete(byKey.keys().next().value!)
     return sat
   }
   const prep = prepare(kb, opts.abbreviate ?? true)
   const names = opts.relevant ?? (opts.goal ? [opts.goal.name] : null)
-  const sat = new Saturation(names ? relevant(prep, names) : prep, opts)
+  return search(names ? relevant(prep, names) : prep, seeds, opts)
+}
+
+/** One search: by the core, unless provenance is wanted or the core refuses the figure (core.ts). */
+function search(prep: Prepared, seeds: readonly GroundPredicate[], opts: SaturateOptions): Search {
+  if (!opts.provenance && opts.engine !== 'saturation') {
+    try {
+      const core = new Core(prep, opts)
+      for (const f of seeds) core.assert(f)
+      core.run()
+      return core
+    } catch (e) {
+      if (!(e instanceof CoreRefused)) throw e
+    }
+  }
+  const sat = new Saturation(prep, opts)
   for (const f of seeds) sat.assert(f)
   sat.run()
   return sat

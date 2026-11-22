@@ -772,3 +772,34 @@ of time per unit (the standard deviation of its logarithm, over the 103 searches
   million, and the one that runs out has passed 3.11 million. Every verdict and message of the book
   and *Beyond* is the same (119 lemmas, written proofs included). `Saturation.matches` counts complete
   matches, for comparisons.
+
+## The matching core (November 2026)
+
+engine.md's new core, built (`core.ts`), with `Saturation` as its oracle. It covers everything the
+search does except provenance: signed classes and flips, the solvers with their atoms answered in
+the middle of a join and their findings fed back after each round, the early head check, defined
+predicates asked by a search of their own, resumable rounds. `saturate()` uses it for every search
+that is not explained.
+- **Agreement.** On every lemma of the book and *Beyond* (119 searches, as the checker unfolds them,
+  with the convention), the two engines agree in the goal, in running out, in join steps and in
+  complete matches: 119 of 119. `tests/core.test.ts` keeps it so (at a tenth of the budget), with
+  full closures compared fact for fact.
+- **Speed**, the same 119 searches:
+
+  | Engine | Time |
+  |---|---|
+  | `Saturation` | 165 s |
+  | the core, first cut (the spike's representation, with flips, solvers and head check) | 99 s (2.0×) |
+  | solver answers cached by numbers, stored facts' images kept | 32 s (5.1×) |
+  | solvers valid while their relation is unchanged, not one version; path compression | 25 s (6.7×) |
+
+  The spike's 10× was on chapters 1 to 4 without solvers; with the solvers in, they were most of
+  the time (a lattice rebuilt, and every answer thrown away, at each assertion) until they were
+  kept while what they are built from is unchanged.
+- **As the app checks** (evidence, convention, strict; no proofs asked for): the book and *Beyond*
+  in 38.8 s against 184 s, every verdict and message the same. Written proofs' steps still search
+  with `Saturation`, since they are explained.
+- **Also:** `Lattice.contains` no longer builds a certificate to answer yes or no, which made
+  `Saturation` itself 196 s to 165 s on the same searches.
+- **Next:** provenance in the core, so that explained searches (every ✓ the page shows, every
+  written step) use it too.

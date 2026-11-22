@@ -85,9 +85,24 @@ export class Lattice {
     }
   }
 
-  /** Is the equation an integer combination of those added? */
+  /** Is the equation an integer combination of those added? (As `certificate`, reducing in place and keeping no combination.) */
   contains(vector: Vector): boolean {
-    return this.certificate(vector) !== null
+    const v = new Map<number, number>()
+    for (const [k, c] of vector) if (c !== 0) v.set(k, c)
+    while (v.size) {
+      const p = lead(v)
+      const r = this.rows.get(p)
+      if (!r) return false
+      const rp = r.v.get(p)!, vp = v.get(p)!
+      if (vp % rp !== 0) return false
+      const m = -vp / rp
+      for (const [k, c] of r.v) {
+        const x = (v.get(k) ?? 0) + m * c
+        if (x === 0) v.delete(k)
+        else v.set(k, x)
+      }
+    }
+    return true
   }
 
   /** If the equation is an integer combination of those added, the combination; else null. */

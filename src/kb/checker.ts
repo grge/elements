@@ -141,7 +141,7 @@ function checkFrom(
   const assumed = options.distinctNames ? nonDegeneracy(unfolded, goal, exclude) : []
   const frontier = [...unfolded, ...assumed]
   const budget = { maxDerivations }
-  const sat = saturate(kb, frontier, { goal, ...budget })
+  const sat = saturate(kb, frontier, { goal, ...budget, ...(options.explain ? { provenance: true } : {}) })
   const facts = sat.allFacts()
   const vacuous = (found: readonly GroundPredicate[]): CheckResponse => {
     const message = assumed.length ? forcedTogether(found, assumed) : undefined
@@ -156,7 +156,7 @@ function checkFrom(
   // search is carried on to the end, looking for `false`.
   if (sat.holds(FALSE)) return vacuous(facts)
   // The proof the search found, before any other search on these facts carries it on.
-  const proof = options.explain ? sat.explain(goal, frontier) ?? undefined : undefined
+  const proof = options.explain && sat instanceof Saturation ? sat.explain(goal, frontier) ?? undefined : undefined
   const verified = (extra: Partial<CheckResponse> = {}): CheckResponse => ({ result: 'verified', facts, ...(proof ? { proof } : {}), ...extra })
   if (!mayDerive(kb, frontier, FALSE.name)) return verified()
   if (options.consistent?.()) return verified({ witnessed: true })
@@ -392,8 +392,8 @@ export function checkWrittenProof(
     const stepKb = withCited(kb, cited, goal)
     const attempt = (convention: boolean) => {
       const frontier = [...known, ...(convention ? nonDegeneracy(known, goal, notApart) : [])]
-      const sat = saturate(stepKb, frontier, { goal, maxWork: stepWork, maxDerivations })
-      return sat.holds(goal) ? sat.explain(goal, frontier) ?? undefined : null
+      const sat = saturate(stepKb, frontier, { goal, maxWork: stepWork, maxDerivations, provenance: true })
+      return sat.holds(goal) && sat instanceof Saturation ? sat.explain(goal, frontier) ?? undefined : null
     }
     let proof = attempt(false), apart = false
     if (proof === null && options.distinctNames) { proof = attempt(true); apart = proof !== null }

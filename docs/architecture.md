@@ -239,6 +239,20 @@ It is skipped for heads that are defined or answered by a solver.
   above): each joins that step's search as a rule over primitives, its hypotheses unfolded, only for
   a step whose predicate it concludes (`citable`, `withCited`); `citedLemma` names it in the proof.
 
+**The matching core** (November 2026; `core.ts`, engine.md *A new matching core*). `saturate()`
+searches with the core unless provenance is asked for (`SaturateOptions.provenance`, which the
+checker sets when it explains) or the figure has more than 256 points; `Saturation` makes those
+searches, and is the core's oracle (`tests/core.test.ts`). The core runs the same prepared rules and
+makes the same search, join step for join step, in another representation:
+- points are numbers, a tuple a packed number; a rule is compiled once, its variables slots bound and
+  undone by a trail, its matches found by recursion with a callback;
+- where `Saturation` compares points by name (a rule symmetry's least member, which of two equal
+  points stands for both), the core compares them by name too;
+- the solvers' lattices, pair values and answers are kept while what they were built from is
+  unchanged (each relation's stamp, and the merges), not only for one version of the store; a
+  question with a value no equation mentions is answered no at once;
+- the classes of blocks compress their paths, parities kept.
+
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last
 few searches, keyed by their rules (the relevant cut, which depends on the goal's predicate),
