@@ -285,10 +285,14 @@ const TABLE: Relation[] = [
     residual: ps => concyclicGap(ps) ?? 0,
   },
   {
-    // The quadrances (squared lengths) of a-b and c-d together make that of e-f. Measured only: not
-    // drawn, and not read by the planner (a construction by it is a candidate: roadmap). Compared as
-    // lengths, so the tolerance is a length: the hypotenuse against the root of the legs' quadrances.
-    name: 'quad-sum', arity: 6, depicted: false,
+    // The quadrances (squared lengths) of a-b and c-d together make that of e-f. Placed by the
+    // planner: a point in one segment is on a circle about its other end, in two on a circle or a
+    // line (construction.ts, the quadrance locus). Drawn as its three segments, unmarked (how to show
+    // a quadrance is a candidate: roadmap). Compared as lengths, so the tolerance is a length: the
+    // hypotenuse against the root of the legs'.
+    name: 'quad-sum', arity: 6, depicted: true,
+    read: (args, m) => m.measure('quad-sum', args),
+    draw: ([a, b, c, e, f, g], pen) => { for (const [x, y] of [[a, b], [c, e], [f, g]]) if (x !== y) pen.segment(x, y, [x, y]) },
     holds: ([a, b, c, e, f, g], tol) => Math.abs(Math.sqrt(d(a, b) ** 2 + d(c, e) ** 2) - d(f, g)) <= tol,
     residual: ([a, b, c, e, f, g]) => Math.abs(d(a, b) ** 2 + d(c, e) ** 2 - d(f, g) ** 2),
   },

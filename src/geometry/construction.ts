@@ -175,6 +175,13 @@ export type Locus =
    */
   | { kind: 'apollonius'; from: string; to: string; ratio: [[string, string], [string, string]] }
   /**
+   * The points whose quadrances to `terms`, each taken with its sign, sum to the quadrances of `plus`
+   * less those of `minus` (quad-sum). One term: a circle about it whose radius is a right triangle's
+   * leg or hypotenuse. Two of one sign: a circle about their midpoint (Apollonius' median law). Two of
+   * opposite signs: a line perpendicular to the segment between them.
+   */
+  | { kind: 'quadrance'; terms: { to: string; sign: 1 | -1 }[]; plus: [string, string][]; minus: [string, string][] }
+  /**
    * The line through `through` turned from the line `base` by the turn from line `turn[0..1]` to line
    * `turn[2..3]` (`sign` 1), or back by it (`sign` -1): a turn copied onto a line.
    */
@@ -335,6 +342,20 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
       out.push({ kind: 'apollonius', from: u, to: v, ratio: [L[rest[0]], L[rest[1]]] })
     }
   }
+  // Quadrances: Q(a-b) + Q(c-d) = Q(e-f). Each segment with p at one end puts a term Q(p, other end)
+  // on p's side, with its sign (plus for the parts, minus for the whole); the rest are known.
+  for (const m of model.measures) {
+    if (m.name !== 'quad-sum' || !m.args.includes(p) || !m.args.every(q => q === p || isPlaced.has(q))) continue
+    const L = [0, 1, 2].map(i => [m.args[2 * i], m.args[2 * i + 1]] as [string, string])
+    const terms: { to: string; sign: 1 | -1 }[] = [], plus: [string, string][] = [], minus: [string, string][] = []
+    L.forEach((seg, i) => {
+      const part = i < 2
+      if (seg[0] === p && seg[1] === p) return                        // nothing
+      if (seg.includes(p)) terms.push({ to: seg[0] === p ? seg[1] : seg[0], sign: part ? 1 : -1 })
+      else if (seg[0] !== seg[1]) (part ? minus : plus).push(seg)    // known: moved to the other side
+    })
+    if (terms.length) out.push({ kind: 'quadrance', terms, plus, minus })
+  }
   // Four points on one circle: three placed, the fourth on their circle.
   for (const m of model.measures) {
     if (m.name !== 'cyclic' || m.args.filter(q => q === p).length !== 1) continue
@@ -364,12 +385,16 @@ function lociFor(model: ConstructionModel, p: string, placed: readonly string[],
   // is one condition too.
   // Two parallels to one line, through two placed points, never meet (or are one line): they are one
   // condition between the points, not two on p (Playfair).
+  // Likewise two circles about one placed centre never meet (or are one circle): one condition
+  // between their radii.
   const kept: Locus[] = []
   for (const l of out) {
     if (banned?.has(lociKey(p, l))) continue
     if (euclid && !(l.kind === 'line' || (l.kind === 'circle' && l.radius.includes(l.center)))) continue
     const through = pivots(l)
     if (through.length && kept.some(k => pivots(k).some(q => through.includes(q)))) continue
+    const hub = centre(l)
+    if (hub && kept.some(k => centre(k) === hub)) continue
     if (kept.some(k => sameLocus(k, l))) continue
     if (l.kind === 'parallel' && kept.some(k => k.kind === 'parallel' && new Set([...k.to, ...l.to]).size === 2)) continue
     kept.push(l)
@@ -396,9 +421,21 @@ function pivots(l: Locus): string[] {
   }
 }
 
+/** The placed point a circular locus is about, when it is about one (null otherwise). */
+function centre(l: Locus): string | null {
+  switch (l.kind) {
+    case 'circle': case 'proportional': return l.center
+    case 'quadrance': {
+      const to = new Set(l.terms.map(t => t.to))
+      return to.size === 1 && l.terms.reduce((s, t) => s + t.sign, 0) !== 0 ? [...to][0] : null
+    }
+    default: return null
+  }
+}
+
 function countEquations(model: ConstructionModel): number {
   return model.lines.reduce((s, l) => s + l.length - 2, 0) + model.lengths.reduce((s, c) => s + c.length - 1, 0)
-    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn', 'cyclic', 'eq-ratio'].includes(m.name)).length
+    + model.measures.filter(m => ['eq-angle', 'supp', 'parallel', 'eq-area', 'eq-turn', 'cyclic', 'eq-ratio', 'quad-sum'].includes(m.name)).length
 }
 
 const DP_LIMIT = 18
@@ -637,6 +674,27 @@ export function curveOf(locus: Locus, at: Map<string, Point>): Curve | null {
       const k2 = k * k
       return { kind: 'circle', c: [(u[0] - k2 * v[0]) / (1 - k2), (u[1] - k2 * v[1]) / (1 - k2)], r: k * duv / Math.abs(1 - k2) }
     }
+    case 'quadrance': {
+      // Σ s·|x - t|² = K. With S = Σ s nonzero: S|x - c|² = K - Σ s|t|² + S|c|², c = Σ s·t / S.
+      // With S zero: -2 x·w + Σ s|t|² = K, w = Σ s·t: a line perpendicular to w.
+      const q = ([x, y]: [string, string]) => dist(g(x), g(y)) ** 2
+      const K = locus.plus.reduce((a, seg) => a + q(seg), 0) - locus.minus.reduce((a, seg) => a + q(seg), 0)
+      let S = 0, w: [number, number] = [0, 0], T = 0
+      for (const { to, sign } of locus.terms) {
+        const t = g(to)
+        S += sign; w = [w[0] + sign * t[0], w[1] + sign * t[1]]; T += sign * (t[0] ** 2 + t[1] ** 2)
+      }
+      if (S !== 0) {
+        const c: [number, number] = [w[0] / S, w[1] / S]
+        const r2 = (K - T) / S + c[0] ** 2 + c[1] ** 2
+        return r2 < 1e-12 ? null : { kind: 'circle', c, r: Math.sqrt(r2) }
+      }
+      const wn = Math.hypot(...w)
+      if (wn < 1e-12) return null
+      // x·w = (T - K) / 2: the point along w at that height, and the line across it.
+      const h = (T - K) / 2 / (wn * wn)
+      return { kind: 'line', p: [w[0] * h, w[1] * h], d: [-w[1], w[0]] }
+    }
     case 'through': {
       const [a, b, c] = locus.points.map(g)
       const found = circumcircle(a, b, c)
@@ -800,6 +858,17 @@ export function describeLocus(l: Locus): string {
     case 'through': return `the circle through ${n(l.points)}`
     case 'proportional': return `the circle about ${n([l.center])} with radius the fourth proportional to ${n(l.over)}, ${n(l.times[0])} and ${n(l.times[1])}`
     case 'apollonius': return `the points whose distances to ${n([l.from])} and ${n([l.to])} are as ${n(l.ratio[0])} to ${n(l.ratio[1])}`
+    case 'quadrance': {
+      // Read with the point's side positive: Σ s·Q(p, t) = known.
+      const flip = l.terms.reduce((a, t) => a + t.sign, 0) < 0 || (l.terms.length === 2 && l.terms[0].sign < 0)
+      const terms = l.terms.map(t => ({ to: t.to, sign: flip ? -t.sign : t.sign }))
+      const [plus, minus] = flip ? [l.minus, l.plus] : [l.plus, l.minus]
+      const known = [...plus.map((s, i) => `${i ? ' + ' : ''}Q(${n(s)})`), ...minus.map((s, i) => `${i || plus.length ? ' − ' : '−'}Q(${n(s)})`)].join('') || '0'
+      const [t, u] = terms
+      if (terms.length === 1) return `the circle about ${n([t.to])} whose quadrance is ${known}`
+      if (t.sign === u.sign) return `the points whose quadrances to ${n([t.to])} and ${n([u.to])} make ${known}: a circle about the midpoint of ${n([t.to, u.to])}`
+      return `the points whose quadrance to ${n([t.to])} exceeds that to ${n([u.to])} by ${known}: a line across ${n([t.to, u.to])}`
+    }
     case 'turned': return `the line through ${n([l.through])} turned ${l.sign > 0 ? 'from' : 'back from'} ${n(l.base)} as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
     case 'seen': return `the circle through ${n(l.ends)} on which ${n(l.ends)} is seen as ${n(l.turn.slice(0, 2))} turns to ${n(l.turn.slice(2))}`
   }

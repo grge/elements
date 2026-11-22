@@ -286,10 +286,16 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
    2. The quarter and Apollonius revisited: how the engine could discover quadrance laws with
       coefficients (they would bring the nine-point circle, Thales' converse, III.14 in Euclid's form).
    3. An exploration of conics: what a chapter would need, before the reorganisation decides its shape.
-   4. Every word of the plane a construction: `quad-sum` placed by the planner (the last that is not;
-      `right` is placed through its definition). Later each book chooses which count as its tools.
-      `eq-point` is not placed by design (different names, different points): a question for the
-      reorganisation.
+   4. **Every word of the plane a construction: done (November 2026).** `quad-sum` is placed by the
+      planner, the last that was not (`right` is placed through its definition). A point in one segment
+      is on a circle about its other end, its radius a leg or hypotenuse; in both parts, on a circle
+      about their midpoint (Apollonius' median law); in a part and the whole, on a line across the
+      segment between their other ends: one locus, Σ ±Q(p, t) = known, a circle or a line. Two circles
+      about one centre now count as one condition, as two lines through one point already did. Numeric
+      evidence now checks every rule with `quad-sum` among its hypotheses (all hold, but the quarter
+      turn's: see Candidates). Drawn as its three segments, unmarked. Later each book chooses which
+      words count as its tools. `eq-point` is not placed by design (different names, different
+      points): a question for the reorganisation.
    Deferred past the reorganisation: signed area (its shape understood: a difference of areas on the
    same lattice, with bridges from figures cut into parts), the mark for equal ratios, and the
    interface work (givens the reader chooses, Byrne's fills, overlapping figures). Then engine work
@@ -300,12 +306,12 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
 - **The quarter and Apollonius' median law**, quadrance's laws with coefficients, which one additive
   word cannot express (*Next*, 7, step 0). Would prove III.14 with the halves derived and Thales'
   converse. Wanted: a way the engine could discover them from rules, not a declared linear form.
-- **Quadrance in figures**: `quad-sum` is measured (November 2026) but not placed or drawn. A
-  construction: a point with Q(p a) + Q(c d) = Q(e f) is on a circle about a whose radius is a right
-  triangle's leg (ruler and compass); with Q(p a) + Q(p b) fixed, on a circle about the midpoint of
-  a-b (Apollonius). Placing it would also let numeric evidence check the rules that take `quad-sum` as
-  a hypothesis, which it cannot now. Drawing it: perhaps Byrne's squares on the segments (his I.47),
-  or Wildberger's own way of showing quadrance in diagrams; both to be looked at closely first.
+- **A mark for quadrance**: `quad-sum` is placed and drawn as its segments (November 2026), with no
+  mark. Perhaps Byrne's squares on the segments (his I.47), or Wildberger's own way of showing
+  quadrance in diagrams; both to be looked at closely first.
+- **A quarter turn as a locus**: `eq-turn b a b c b c b a` (the line b-c in both blocks: twice its
+  turn from b-a is nothing) is not placed; it is the perpendicular to b-a at b, or b-a itself. So the
+  rule that takes it to `quad-sum` has no figure for numeric evidence. Planner work, for turns.
 - **Signed area**: area with a direction, additive and free of sides as turns are, on the same
   lattice. For the deferred sums of areas (II.14, I.48). Wildberger's quadrea (16 times area squared)
   is quadratic, not the tool for sums.
