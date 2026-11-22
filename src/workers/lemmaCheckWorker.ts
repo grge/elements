@@ -12,6 +12,7 @@ import { KnowledgeBase } from '../kb/inference'
 import { checkByReplay, checkGroundQuery, checkLemma } from '../kb/checker'
 import { showRule } from '../kb/rules'
 import type { Proof } from '../kb/proof'
+import { proofView, type ProofView } from '../kb/proofView'
 import { numericEvidence, type Evidence } from '../geometry/evidence'
 import { verdict, type Verdict } from '../geometry/verdict'
 import type { EditorMark } from '../components/CodeEditor.vue'
@@ -51,6 +52,7 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
       const endLine = (item.sourceRef?.endLine ?? line + 1) - 1
       try {
         let v: Verdict
+        let proof: ProofView | undefined
         if (item.kind === 'lemma') {
           // Evidence first: its figures also witness that the hypotheses are consistent, which spares the
           // checker its search for a contradiction.
@@ -67,10 +69,11 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
             if (kept.size > KEPT) kept.delete(kept.keys().next().value!)
           }
           v = verdict(check, ev)
+          if (v.type === 'verified' && check.proof) proof = proofView(check.proof)
         } else {
           v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)
         }
-        post({ requestId, kind: 'mark', mark: { line, endLine, ...v } })
+        post({ requestId, kind: 'mark', mark: { line, endLine, ...v, ...(proof ? { proof } : {}) } })
       } catch (error) {
         post({ requestId, kind: 'mark', mark: { line, endLine, type: 'unproven', message: `could not be checked: ${error}` } })
       }

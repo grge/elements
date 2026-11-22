@@ -12,6 +12,7 @@
 import { ref, computed } from 'vue'
 import { parseRules, parseSource, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
+import { showRule } from '../kb/rules'
 
 /** A chapter's id (its file name without `.geo`), or 'user'. */
 export type Namespace = string
@@ -82,6 +83,19 @@ export function pageLemmas(name: string): Lemma[] {
 
 export const bookLemmas: Lemma[] = loaded.filter(c => !c.extra).flatMap(c => c.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []))
 const bookRules: Rule[] = loaded.flatMap(c => parseRules(c.source))
+
+/**
+ * Where a rule of the book is written, by its text (`showRule`), as a proof step names it: "ch. 3,
+ * l. 40", or the chapter's id for one without a number (`extra/`).
+ */
+const writtenAt = new Map<string, string>()
+loaded.forEach(c => c.items.forEach(item => {
+  if (item.kind !== 'rule' || !item.sourceRef) return
+  const n = /^(\d+)-/.exec(c.id)?.[1]
+  const text = showRule(item.rule)
+  if (!writtenAt.has(text)) writtenAt.set(text, `${n ? `ch. ${Number(n)}` : c.id}, l. ${item.sourceRef.startLine}`)
+}))
+export const ruleWrittenAt = (text: string): string | undefined => writtenAt.get(text)
 
 // Where each predicate is first defined in the book (chapter, then position), for ordering.
 const definedAt = new Map<string, number>()

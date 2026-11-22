@@ -218,6 +218,13 @@ It is skipped for heads that are defined or answered by a solver.
 
   Consistency is still asked: a witness, or `false` out of reach; otherwise the lemma is searched.
   Verdicts that are not ✓ keep nothing, since a new rule can change them.
+- **On the page.** The worker posts each ✓ with its proof as plain data (`proofView.ts`): the steps
+  that carry the argument, and apart from them the side conditions (`distinct`, `triangle`,
+  `collinear`, `between`, rule steps resting only on those, ratios that are one on both sides).
+  Clicking the ✓ unfolds it under the lemma (`CodeEditor.vue`), the side conditions behind one line.
+  A rule step names its rule by text; the page shows where it is written (`ruleWrittenAt` in
+  `useKB.ts` for the book, the page's own lines first), and clicking opens the page of the
+  predicate it concludes.
 
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last

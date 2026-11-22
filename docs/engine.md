@@ -424,8 +424,10 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
 3. **Proofs found and shown.** Provenance in the core, with certificates taken when a solver answer
    is used. Explanation, and the proof on the page, folded.
    Found (November 2026): provenance in `saturate.ts`, `Saturation.explain`, `proof.ts` (the proof
-   object and `replay`), every book proof explained and replayed, at no measurable cost. Still to do:
-   the proof on the page, folded.
+   object and `replay`), every book proof explained and replayed, at no measurable cost. Shown
+   (November 2026): clicking a ✓ unfolds its proof under the lemma, the steps that carry it in order,
+   each rule a link to where it is written, the side conditions folded into one line (`proofView.ts`,
+   `CodeEditor.vue`). Step 3 is done.
 4. **The cache.** Replay before search, in the worker. Done (November 2026): kept in memory, by
    the lemma's text. Still open: keeping proofs across sessions (rules stored by their text and
    resolved again on load).
