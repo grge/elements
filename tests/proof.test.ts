@@ -5,7 +5,8 @@
  */
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
-import { checkLemma } from '../src/kb/checker'
+import { checkByReplay, checkLemma } from '../src/kb/checker'
+import { showRule } from '../src/kb/rules'
 import { Saturation, prepare } from '../src/kb/saturate'
 import { replay, showProof } from '../src/kb/proof'
 import { parseLemmas, type Lemma } from '../src/language/parser'
@@ -13,6 +14,7 @@ import { bookLemmas, bookRules } from './book'
 
 const kb = new KnowledgeBase(bookRules)
 const show = (l: Lemma) => `${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`
+const kbAgain = new KnowledgeBase(structuredClone(bookRules))
 const fresh = () => new Saturation(prepare(kb), {})
 const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -25,6 +27,10 @@ describe('every book lemma has a proof that replays', () => {
       const proof = check.proof!
       expect(proof, 'a proof').toBeTruthy()
       expect(replay(proof, fresh, prepare(kb).structure.equality), showProof(proof)).toBe(-1)
+      // Kept, it checks the lemma again with no search, on the same rules parsed again (other objects).
+      const again = checkByReplay(lemma, kbAgain, { proof, apart: !!check.apart }, showRule, { consistent: () => true })
+      expect(again?.result).toBe('verified')
+      expect(!!again?.apart).toBe(!!check.apart)
     }, 120_000)
   }
 })
@@ -40,5 +46,15 @@ describe('proofs', () => {
     const proof = checkLemma(parseLemmas('? eq-angle a b c a c b: eq-lines a b a c')[0], kb, undefined, { explain: true }).proof!
     const broken = { ...proof, hypotheses: [] }
     expect(replay(broken, fresh, prepare(kb).structure.equality)).toBe(0)
+  })
+
+  it('a kept proof is not used once a rule it cites is gone, nor for other hypotheses', () => {
+    const lemma = parseLemmas('? eq-angle a b c a c b: eq-lines a b a c')[0]
+    const check = checkLemma(lemma, kb, undefined, { explain: true })
+    const kept = { proof: check.proof!, apart: false }
+    const rule = check.proof!.steps[0].by.kind === 'rule' ? check.proof!.steps[0].by.rule : null
+    const without = new KnowledgeBase(bookRules.filter(r => showRule(r) !== showRule(rule!)))
+    expect(checkByReplay(lemma, without, kept, showRule)).toBeNull()
+    expect(checkByReplay(parseLemmas('? eq-angle a b c a c b: eq-lines b a b c')[0], kb, kept, showRule)).toBeNull()
   })
 })

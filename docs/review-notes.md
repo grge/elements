@@ -704,3 +704,14 @@ Measured against the engine before the change (2e4a360):
     way).
 - **The solver cache:** the turn and quadrance solvers' answers, per version of the store.
 - **The test suite:** 743 pass in 4 minutes.
+
+**Kept proofs** (November 2026), engine.md's fourth step. A page's second check, after an edit
+elsewhere on it (a scratch harness: the knowledge base parsed again with one unrelated rule added, every
+lemma checked as the worker checks it):
+- **The book:** 99 of 99 replay; 0.1 s against 34.4 s of search; every verdict the same. Evidence,
+  which runs either way, is 1.3 s.
+- **With *Beyond*** (118 lemmas): the 106 ✓ replay. The 12 without a ✓ search again (nothing is
+  kept for them), and they are most of the time left: 93.5 s against 145.2 s. Every verdict the same.
+- A lemma ✓ only under the convention stays so on replay, even if the edit would now give it a
+  plain ✓: the replay starts from the facts its proof started from. A changed rule it cites sends
+  it back to the search, which asks plain first.

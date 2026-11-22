@@ -9,7 +9,9 @@
 import { parseSource, type Rule } from '../language/parser'
 import { buildRuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { checkGroundQuery, checkLemma } from '../kb/checker'
+import { checkByReplay, checkGroundQuery, checkLemma } from '../kb/checker'
+import { showRule } from '../kb/rules'
+import type { Proof } from '../kb/proof'
 import { numericEvidence, type Evidence } from '../geometry/evidence'
 import { verdict, type Verdict } from '../geometry/verdict'
 import type { EditorMark } from '../components/CodeEditor.vue'
@@ -24,6 +26,16 @@ type VerifyResponse =
   | { requestId: number; kind: 'mark'; mark: EditorMark }
   | { requestId: number; kind: 'done' }
   | { requestId: number; kind: 'error'; message: string }
+
+/**
+ * Proofs kept from earlier checks, by the lemma's text: a later check replays one before it searches
+ * (checker.ts, `checkByReplay`), so an edit elsewhere on the page, which changes the knowledge base,
+ * does not send every lemma back to its search. Kept for the worker's life, the most recent last.
+ */
+const kept = new Map<string, { proof: Proof; apart: boolean }>()
+const KEPT = 200
+const lemmaKey = (l: { head: { name: string; args: string[] }; hypotheses: { name: string; args: string[] }[] }) =>
+  `${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`
 
 self.onmessage = (event: MessageEvent<VerifyRequest>) => {
   const { requestId, text, rules } = event.data
@@ -44,7 +56,16 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
           // checker its search for a contradiction.
           let ev: Evidence | null = null
           try { ev = numericEvidence(item.lemma, runtime.kb) } catch { ev = null }
-          const check = checkLemma(item.lemma, runtime.kb, undefined, { consistent: () => !!ev?.witness, strict: true, distinctNames: true })
+          const options = { consistent: () => !!ev?.witness, strict: true, distinctNames: true, explain: true }
+          const key = lemmaKey(item.lemma)
+          const keptProof = kept.get(key)
+          const check = (keptProof && checkByReplay(item.lemma, runtime.kb, keptProof, showRule, options))
+            ?? checkLemma(item.lemma, runtime.kb, undefined, options)
+          if (check.result === 'verified' && check.proof) {
+            kept.delete(key)
+            kept.set(key, { proof: check.proof, apart: !!check.apart })
+            if (kept.size > KEPT) kept.delete(kept.keys().next().value!)
+          }
           v = verdict(check, ev)
         } else {
           v = verdict(checkGroundQuery(item.pred, runtime.kb, runtime.configuration), null)

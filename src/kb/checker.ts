@@ -1,9 +1,10 @@
-import type { Lemma, Predicate } from '../language/parser'
+import type { Lemma, Predicate, Rule } from '../language/parser'
 import { Configuration } from './configuration'
 import { groundKey, unfold, type GroundPredicate, type KnowledgeBase } from './inference'
 import { saturate } from './saturate'
 import { FreshNames, displayName } from './names'
-import type { Proof } from './proof'
+import { replay, type Proof } from './proof'
+import { Saturation, prepare } from './saturate'
 
 /**
  * verified: the goal follows. vacuous: the hypotheses (or the configuration) are contradictory, i.e.
@@ -193,4 +194,44 @@ export function checkGroundQuery(
     }
   }
   return runCheckPipeline(toGroundPredicate(pred), configuration.allFacts(), kb, maxDerivations)
+}
+
+/**
+ * Check a lemma by replaying a proof kept from an earlier check, with no search: the proof must start
+ * from the lemma's hypotheses as the knowledge base unfolds them now (plain, or under the convention
+ * if the proof was found so), each of its rule steps must be an instance of a rule the knowledge base
+ * still has (`rules`, by the rule's text), and the replay must hold. Consistency is still asked
+ * (`options.consistent`): a proof shows the goal follows, not that the hypotheses can hold. Returns
+ * null when the proof cannot be used, and the caller searches.
+ */
+export function checkByReplay(
+  lemma: Lemma,
+  kb: KnowledgeBase,
+  kept: { proof: Proof; apart: boolean },
+  ruleText: (r: Rule) => string,
+  options: CheckOptions = {},
+): CheckResponse | null {
+  const goal = toGroundPredicate(lemma.head)
+  if (groundKey(goal) !== groundKey(kept.proof.goal)) return null
+  const seeds = withMissingHeadObjects(lemma.hypotheses.map(toGroundPredicate), lemma)
+  const fresh = new FreshNames()
+  const unfolded = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
+  const frontier = [...unfolded, ...(kept.apart ? nonDegeneracy(unfolded, goal) : [])]
+  const now = new Set(frontier.map(groundKey)), then = new Set(kept.proof.hypotheses.map(groundKey))
+  if (now.size !== then.size || [...now].some(k => !then.has(k))) return null
+  // Rules by their text, as the knowledge base has them now.
+  const byText = new Map(kb.allRules().map(r => [ruleText(r), r]))
+  const steps = kept.proof.steps.map(st => {
+    if (st.by.kind !== 'rule') return st
+    const r = byText.get(ruleText(st.by.rule))
+    return r ? { ...st, by: { kind: 'rule' as const, rule: r } } : null
+  })
+  if (steps.some(st => st === null)) return null
+  const proof = { ...kept.proof, hypotheses: frontier, steps: steps as Proof['steps'] }
+  const prep = prepare(kb)
+  if (replay(proof, () => new Saturation(prep, {}), prep.structure.equality) !== -1) return null
+  // As the pipeline asks it, but with no search for `false`: without a witness, the caller searches.
+  const witnessed = mayDerive(kb, frontier, FALSE.name)
+  if (witnessed && !options.consistent?.()) return null
+  return { result: 'verified', facts: [], proof, ...(witnessed ? { witnessed: true } : {}), ...(kept.apart ? { apart: true } : {}) }
 }

@@ -153,9 +153,13 @@ A proof is a list of steps: a fact and its justification. The justification is o
   rests on what, from the content rather than from file order.
 
 **Kept and replayed.**
-- A proof is kept in the browser, keyed by the knowledge base's fingerprint and the lemma.
-- A check replays it first: it asserts each step after checking that its premises hold. The search
-  runs only when there is no proof, or the old one no longer holds.
+- A proof is kept in the checking worker, keyed by the lemma's text. Not by the knowledge base's
+  fingerprint: that changes with every edit on the page, and most edits leave a proof intact.
+- A check replays it first (`checkByReplay`, checker.ts). It is used only if the hypotheses unfold
+  to the same facts as when it was found, every rule it cites is still in the knowledge base (by the
+  rule's text), and every step replays. The search runs only when there is no proof, or the old one
+  no longer holds. Landed (November 2026): the book's second check is 0.1 s against 34.4 s of
+  search, every verdict the same (review-notes.md, *Kept proofs*).
 - A workbench user who edits a hypothesis usually keeps most of the old proof: replay what still
   holds, and search from there.
 - **"Write it in"** copies the extracted proof's steps into the source as `?` lines, the metric
@@ -422,7 +426,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    Found (November 2026): provenance in `saturate.ts`, `Saturation.explain`, `proof.ts` (the proof
    object and `replay`), every book proof explained and replayed, at no measurable cost. Still to do:
    the proof on the page, folded.
-4. **The cache.** Replay before search, in the worker.
+4. **The cache.** Replay before search, in the worker. Done (November 2026): kept in memory, by
+   the lemma's text. Still open: keeping proofs across sessions (rules stored by their text and
+   resolved again on load).
 5. **Written proofs.**
    - The parser accepts `?` lines in a lemma's body.
    - The three ways of checking a step, with per-step verdicts.

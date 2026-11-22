@@ -208,6 +208,16 @@ It is skipped for heads that are defined or answered by a solver.
 - **Cost:** none measurable. The book checks in 34.4 s with provenance, against 34.5 without.
 - **Measured:** every book lemma's proof explains and replays (`tests/proof.test.ts`). The checker
   returns the proof with a ✓ when asked (`CheckOptions.explain`).
+- **Kept proofs.** The checking worker keeps each ✓'s proof by the lemma's text, and checks the
+  lemma again by replaying it (`checkByReplay`) before any search. A kept proof is used only if:
+  - the hypotheses unfold now to the facts it started from (with the convention's `distinct` facts
+    if it was found under it, so a ✓ apart stays apart);
+  - every rule it cites is in the knowledge base now, matched by the rule's text, since a page's
+    rules are parsed again on every edit;
+  - it replays.
+
+  Consistency is still asked: a witness, or `false` out of reach; otherwise the lemma is searched.
+  Verdicts that are not ✓ keep nothing, since a new rule can change them.
 
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last
