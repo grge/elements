@@ -536,9 +536,9 @@ Order and incidence facts hold of too many tuples for the figure to prune.
 ## Cold-start search (November 2026)
 
 How much faster can a search with no proof to replay be? Measured at c5bf848 (chapters 1 to 7 and
-*Beyond the book*), Node 22 on four CPUs, on a copy of `saturate.ts` with switches. The changes are
-saved as `scripts/prototypes/cold-start.patch`, with its harness `cold-start-harness.ts`. Each
-lemma is searched as the checker does: plain, then under the non-degeneracy convention.
+*Beyond the book*), Node 22 on four CPUs, on a copy of `saturate.ts` with switches. Each lemma is
+searched as the checker does: plain, then under the non-degeneracy convention. The changes have
+since landed (*Landed*, below), and the prototype patch is gone with them.
 
 **Where the time goes.** A CPU profile of the windmill's first lemma (out of budget, 6.4 million
 units of work, 36 s):
@@ -650,8 +650,44 @@ Speed:
   cost (the book's work 28.3 M to 9.6 M with signed classes, indexes and the head check). Combined,
   30 to 50× is the estimate. It is not measured.
 - **Not in the spike:**
+  - flips: since they landed, `fastcore.ts` refuses a knowledge base that has one, and its
+    comparison waits for signed classes in the core;
   - the solvers;
   - chapters 5 to 7;
   - the head check and signed classes in the new core;
   - the full Saturation interface the app uses (`allFacts` with saturate's naming, the marks
     closure's assumptions).
+
+**Landed** (November 2026, after the engine review). The three changes are in `saturate.ts` and
+`structure.ts`, built as the review asked:
+- **Flips recognised by proof.** The structure analysis proves of `supp` and `eq-angle` that `supp`
+  is symmetric, respects `eq-angle`, and that two supplements make an equality: `supp` is
+  `eq-angle`'s *flip*. Nothing is wired to the names, and a test recognises the same of two
+  colourings of a graph's edges. `supp`'s four structural rules become implied (02-angle:106–108,
+  114), and no `supp` fact is stored.
+- **Relevance couples a flip with its equivalence:** each is needed wherever the other is. Without
+  that, the cut drops 02-angle:111, the only rule that makes supplements.
+- **Indexes** for stored relations and for equivalences.
+- **The head check only where exact:** every head variable bound, and none standing for a class at
+  a position where equals do not substitute.
+
+Measured against the engine before the change (2e4a360):
+- **Full closures** of every lemma of the book and *Beyond*: 110 of 110 identical, fact for fact
+  both ways, signs read as flips; 139.7 s against 34.9 s. 8 more were too large for the old engine
+  to finish within 2 million units.
+  - A first comparison showed 45 "different". All were the comparison's own fault: it read a signed
+    class's members as equal without their signs. The fact it showed, a straight angle equal to a
+    zero angle, is derived by neither engine. The reference engine does not derive it either.
+- **As the app checks** (evidence first, the convention, strict):
+  - the book: 184.4 s against 48.2 s, 99 of 99 ✓ against 97;
+  - *Beyond*: 238.4 s against 103.9 s.
+
+  The only verdicts to change are the windmill's two, now ✓; their tests are back in the suite.
+- **`scripts/bench.ts --witness`** (no convention): the goal phase 79.7 s against 29.3 s;
+  derivations 1.84 million against 0.27 million.
+- **The test suite:** 742 pass in 4 minutes.
+  - One test chose a budget of derivations as "too small to finish the search for `false`"; the
+    search now finishes inside it, so it takes 2,000.
+  - The suite's "Timeout calling onTaskUpdate", which failed runs though every test passed (before
+    the change too), came from `saturate.test.ts`'s long comparisons with no macrotask between them.
+    They now yield, as the lemma tests do.

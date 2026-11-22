@@ -59,10 +59,18 @@ const MAX_REFERENCE_OBJECTS = 3
 const objectCount = (l: Lemma) =>
   new Set([...l.hypotheses.flatMap(h => h.args), ...l.head.args]).size
 
+/**
+ * Each comparison is long and synchronous. Yielding to the event loop before each (a macrotask, not
+ * only the microtask an async test gives) lets the worker answer the test runner, which otherwise
+ * reports "Timeout calling onTaskUpdate" and fails the run though every test passes (as lemmas.test.ts).
+ */
+const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
+
 describe('saturate agrees with the reference engine on small lemmas', () => {
   for (const lemma of [...bookLemmas, ...regressionLemmas].filter(l => objectCount(l) <= MAX_REFERENCE_OBJECTS)) {
     const label = `${lemma.head.name} ${lemma.head.args.join(' ')} : ${lemma.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ') || '-'}`
-    it(label, () => {
+    it(label, async () => {
+      await yieldToRunner()
       const seeds = lemma.hypotheses.map(h => g(h.name, ...h.args))
       const goal = g(lemma.head.name, ...lemma.head.args)
       const objs = new Set([...seeds.flatMap(s => s.args), ...goal.args])

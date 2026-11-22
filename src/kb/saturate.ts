@@ -6,6 +6,9 @@
  *                 representatives, so substitution of equals costs nothing
  *   equivalences  a union-find over canonical argument tuples (e.g. unordered pairs of points)
  *   symmetries    facts stored in a canonical argument order
+ *   flips         a relation that is an equivalence with one side's sign reversed (a supplement is an
+ *                 equal angle on the other side): kept as signed classes of the equivalence, each
+ *                 member with a parity, never as facts of its own
  *
  * Every rule that the structure already implies is skipped (`prepare` proves this rule by rule); every
  * other rule is fired normally against the structured store. So the closure is exactly that of the
@@ -221,7 +224,12 @@ function cartesian<T>(lists: T[][]): T[][] {
   return lists.reduce<T[][]>((acc, list) => acc.flatMap(prefix => list.map(x => [...prefix, x])), [[]])
 }
 
-interface TupleClasses { parent: Map<string, string>; members: Map<string, Set<string>> }
+/**
+ * A block equivalence's classes. For an equivalence with a flip (structure.ts, `Flip`), each key's
+ * parity relative to its parent (`par`, absent for 0), and the classes some member of which is its
+ * own flip (`odd`: an angle equal to its own supplement), where every two members are both.
+ */
+interface TupleClasses { parent: Map<string, string>; members: Map<string, Set<string>>; par?: Map<string, number>; odd?: Set<string> }
 
 export class Saturation {
   private readonly st: Structure
@@ -241,6 +249,14 @@ export class Saturation {
   private byName = new Map<string, GroundPredicate[]>()
 
   private version = 0
+  /** Per stored relation, (position, value) to the images of its facts: a bound argument is a lookup. */
+  private index = new Map<string, Map<string, string[][]>>()
+  /** Per equivalence, (position in a block, value) to the keys whose images have that value there. */
+  private tupleIndex = new Map<string, Map<string, string[]>>()
+  /** Equivalences that have a flip: their classes are signed. */
+  private signed = new Set<string>()
+  /** While a rule is matched: its head, if the early head check applies to it (`headCheckable`). */
+  private head: { rule: Rule; vars: string[]; literal: Set<string> } | null = null
   private derivations = 0
   /** Partial matches considered: the search's work, deterministic and in proportion to its time. */
   work = 0
@@ -250,6 +266,7 @@ export class Saturation {
   constructor(private readonly prep: Prepared, private readonly opts: SaturateOptions = {}) {
     this.st = prep.structure
     this.eq = prep.structure.equality
+    for (const f of this.st.flips?.values() ?? []) this.signed.add(f.of)
   }
 
   // ───────────────────────── objects ─────────────────────────
@@ -294,6 +311,8 @@ export class Saturation {
     const old = [...this.facts.values()]
     this.facts = new Map()
     this.byName = new Map()
+    this.index = new Map()
+    this.tupleIndex = new Map()
     for (const f of old) this.store(f.name, this.canonArgs(f.name, f.args))
 
     for (const [p, classes] of this.tuples) {
@@ -302,8 +321,9 @@ export class Saturation {
       this.tuples.set(p, fresh)
       const remap = (key: string) => this.tupleKey(p, e, key.split(SEP))
       for (const [key] of classes.parent) {
-        this.unionTuples(p, remap(key), remap(this.rootIn(classes.parent, key)))
+        this.unionTuples(p, remap(key), remap(this.rootIn(classes.parent, key)), this.parityOf(classes, key))
       }
+      for (const r of classes.odd ?? []) this.unionTuples(p, remap(r), remap(r), 1)
     }
     this.version++
   }
@@ -334,6 +354,17 @@ export class Saturation {
     let list = this.byName.get(p)
     if (!list) this.byName.set(p, list = [])
     list.push(f)
+    let ix = this.index.get(p)
+    if (!ix) this.index.set(p, ix = new Map())
+    const group = this.st.symmetries.get(p)
+    for (const img of group ? orbit(group, args) : [args]) {
+      for (let i = 0; i < img.length; i++) {
+        const k = i + SEP + img[i]
+        let l = ix.get(k)
+        if (!l) ix.set(k, l = [])
+        l.push(img)
+      }
+    }
     return true
   }
 
@@ -361,11 +392,51 @@ export class Saturation {
     return this.rootIn(this.classesOf(p).parent, key)
   }
 
-  private unionTuples(p: string, k1: string, k2: string): boolean {
+  /** A key's parity relative to its class's root: 0 unless the classes are signed. */
+  private parityOf(c: TupleClasses, k: string): number {
+    if (!c.par) return 0
+    let x = 0
+    for (let r = k, up = c.parent.get(r); up !== undefined && up !== r; r = up, up = c.parent.get(r)) x ^= c.par.get(r) ?? 0
+    return x
+  }
+
+  /** Index a key newly mentioned in an equivalence's classes, by each value of each of its images. */
+  private indexTuple(p: string, key: string): void {
+    const e = this.st.equivalences.get(p)!
+    let ix = this.tupleIndex.get(p)
+    if (!ix) this.tupleIndex.set(p, ix = new Map())
+    for (const img of orbitByKey(e.blockGroup, key)) for (let j = 0; j < img.length; j++) {
+      const k = j + SEP + img[j]
+      let l = ix.get(k)
+      if (!l) ix.set(k, l = [])
+      if (l[l.length - 1] !== key) l.push(key)
+    }
+  }
+
+  /**
+   * Join the classes of two keys; `sign` 1 says they are each other's flip (supplements) rather than
+   * equal. In a signed class, a sign that contradicts the parities makes the class odd: every two of
+   * its members are then both equal and flipped (structure.ts, `Flip`).
+   */
+  private unionTuples(p: string, k1: string, k2: string, sign = 0): boolean {
     const c = this.classesOf(p)
     const r1 = this.rootIn(c.parent, k1), r2 = this.rootIn(c.parent, k2)
-    if (r1 === r2) return false
+    if (this.signed.has(p)) {
+      c.par ??= new Map(); c.odd ??= new Set()
+      if (r1 === r2) {
+        if ((this.parityOf(c, k1) ^ this.parityOf(c, k2)) === sign || c.odd.has(r1)) return false
+        if (!c.parent.has(k1)) { this.indexTuple(p, k1); c.parent.set(k1, k1) }
+        c.odd.add(r1)
+        return true
+      }
+    } else if (r1 === r2) return false
+    if (!c.parent.has(k1)) this.indexTuple(p, k1)
+    if (!c.parent.has(k2) && k2 !== k1) this.indexTuple(p, k2)
     const [win, lose] = r1 < r2 ? [r1, r2] : [r2, r1]
+    if (c.par) {
+      c.par.set(lose, this.parityOf(c, k1) ^ this.parityOf(c, k2) ^ sign)
+      if (c.odd!.has(lose)) { c.odd!.delete(lose); c.odd!.add(win) }
+    }
     const wm = c.members.get(win) ?? new Set([win])
     for (const m of c.members.get(lose) ?? [lose]) wm.add(m)
     c.members.set(win, wm)
@@ -382,8 +453,12 @@ export class Saturation {
     this.derivations++
     if (f.name === OBJECT) return this.introduce(f.args)
     let changed = this.introduce(f.args)
+    const flip = this.st.flips?.get(f.name)
     const e = this.st.equivalences.get(f.name)
-    if (f.name === this.eq && f.args.length === 2) {
+    if (flip && f.args.length === 2 * this.st.equivalences.get(flip.of)!.k) {
+      const q = flip.of, qe = this.st.equivalences.get(q)!
+      changed = this.unionTuples(q, this.tupleKey(q, qe, f.args.slice(0, qe.k)), this.tupleKey(q, qe, f.args.slice(qe.k)), 1) || changed
+    } else if (f.name === this.eq && f.args.length === 2) {
       changed = this.mergeObjects(f.args[0], f.args[1]) || changed
     } else if (e && f.args.length === 2 * e.k) {
       // A difference's pair of one point has no value (a line or a segment of one point): a fact naming
@@ -410,6 +485,17 @@ export class Saturation {
     if (f.name === OBJECT) return f.args.every(a => this.names.has(a))
     if (this.prep.defined.has(f.name)) return this.holdsDefined(f)
     if (f.name === this.eq && f.args.length === 2) return this.find(f.args[0]) === this.find(f.args[1])
+    const flip = this.st.flips?.get(f.name)
+    const q = flip ? flip.of : f.name
+    if (this.signed.has(q)) {
+      const qe = this.st.equivalences.get(q)!
+      if (f.args.length !== 2 * qe.k) return false
+      const c = this.classesOf(q)
+      const k1 = this.tupleKey(q, qe, f.args.slice(0, qe.k)), k2 = this.tupleKey(q, qe, f.args.slice(qe.k))
+      const r = this.rootIn(c.parent, k1)
+      if (r !== this.rootIn(c.parent, k2)) return false
+      return !!c.odd?.has(r) || (this.parityOf(c, k1) ^ this.parityOf(c, k2)) === (flip ? 1 : 0)
+    }
     const e = this.st.equivalences.get(f.name)
     if (e && f.args.length === 2 * e.k) {
       if (this.tupleRoot(f.name, this.tupleKey(f.name, e, f.args.slice(0, e.k)))
@@ -558,7 +644,10 @@ export class Saturation {
   private holdsDefined(f: GroundPredicate): boolean {
     const atoms = expandDefined([{ name: f.name, args: [...f.args] }], this.prep.defined)
     const s: Subst = new Map(f.args.map(a => [a, { v: a, flex: true }]))
-    return !this.join(atoms, s).next().done
+    // Not a rule's match: no head to check against (and the variables are the definition's own).
+    const outer = this.head
+    this.head = null
+    try { return !this.join(atoms, s).next().done } finally { this.head = outer }
   }
 
   /** Stored relations, plus each object's equality with its representative. */
@@ -613,7 +702,32 @@ export class Saturation {
       yield* this.matchEquivalence(name, e, args, s, mask)
       return
     }
+    const flip = this.st.flips?.get(name)
+    if (flip) {
+      const qe = this.st.equivalences.get(flip.of)!
+      if (args.length === 2 * qe.k) yield* this.matchEquivalence(flip.of, qe, args, s, this.maskOf(flip.of, args.length), 1)
+      return
+    }
 
+    // A bound argument (exact, or a class where equals substitute) is a lookup: the fewest images
+    // that have its value there.
+    let images: string[][] | null = null
+    const ix = this.index.get(name)
+    for (let i = 0; i < args.length; i++) {
+      const b = s.get(args[i])
+      if (!b || (!mask[i] && b.flex)) continue
+      const l = ix?.get(i + SEP + (mask[i] ? this.find(b.v) : b.v)) ?? []
+      if (!images || l.length < images.length) images = l
+      if (l.length === 0) return
+    }
+    if (images) {
+      for (const img of images) {
+        if (img.length !== args.length) continue
+        const t = this.unifyArgs(s, args, img, mask)
+        if (t) yield t
+      }
+      return
+    }
     const group = this.st.symmetries.get(name)
     for (const f of this.byName.get(name) ?? []) {
       if (f.args.length !== args.length) continue
@@ -624,10 +738,18 @@ export class Saturation {
     }
   }
 
-  private *matchEquivalence(p: string, e: Equivalence, args: readonly string[], s: Subst, mask: boolean[]): Generator<Subst> {
+  /**
+   * Match an atom of an equivalence, or of its flip (`want` 1: members of opposite signs). In a
+   * signed class two members match as equal when their parities agree, as flips when they differ,
+   * and as both in an odd class.
+   */
+  private *matchEquivalence(p: string, e: Equivalence, args: readonly string[], s: Subst, mask: boolean[], want = 0): Generator<Subst> {
     const k = e.k
+    const cls = this.classesOf(p)
     const imagesOf = (key: string) => orbitByKey(e.blockGroup, key)
-    const classMembers = (root: string) => this.classesOf(p).members.get(root) ?? [root]
+    const classMembers = (root: string) => cls.members.get(root) ?? [root]
+    const signed = this.signed.has(p)
+    const fits = (x: string, y: string) => !signed || !!cls.odd?.has(this.rootIn(cls.parent, x)) || (this.parityOf(cls, x) ^ this.parityOf(cls, y)) === want
     // A block can be looked up directly when all its variables are bound and their values are exact.
     const lookup = (vars: readonly string[]) => {
       const bs = vars.map(v => s.get(v))
@@ -638,8 +760,10 @@ export class Saturation {
 
     if (first || second) {
       const known = (first ?? second)!
-      const root = this.tupleRoot(p, this.tupleKey(p, e, known))
+      const knownKey = this.tupleKey(p, e, known)
+      const root = this.tupleRoot(p, knownKey)
       for (const m of classMembers(root)) {
+        if (!fits(knownKey, m)) continue
         for (const img of imagesOf(m)) {
           const t = this.unifyArgs(s, args, first ? [...known, ...img] : [...img, ...known], mask)
           if (t) yield t
@@ -648,24 +772,55 @@ export class Saturation {
       return
     }
 
-    // Every class of tuples mentioned.
-    const mentioned = this.classesOf(p).parent
-    const seen = new Set<string>()
-    for (const key of mentioned.keys()) {
-      this.work++
-      const root = this.tupleRoot(p, key)
-      if (seen.has(root)) continue
-      seen.add(root)
-      const tuples = [...classMembers(root)].flatMap(imagesOf)
-      for (const x of tuples) for (const y of tuples) {
-        const t = this.unifyArgs(s, args, [...x, ...y], mask)
-        if (t) yield t
+    const mentioned = cls.parent
+    // An argument bound (exactly, or a class where equals substitute): only the keys whose images
+    // have its value there, each with every member of its class (the index of keys).
+    let pick: { side: number; j: number; v: string; keys: string[] } | null = null
+    const ix = this.tupleIndex.get(p)
+    for (let side = 0; side < 2; side++) for (let j = 0; j < k; j++) {
+      const b = s.get(args[side * k + j])
+      if (!b || (!mask[0] && b.flex)) continue
+      const v = mask[0] ? this.find(b.v) : b.v
+      const keys = ix?.get(j + SEP + v) ?? []
+      if (!pick || keys.length < pick.keys.length) pick = { side, j, v, keys }
+    }
+    if (pick) {
+      for (const m of pick.keys) {
+        this.work++
+        const xs = imagesOf(m).filter(x => x[pick!.j] === pick!.v)
+        if (!xs.length) continue
+        for (const mm of classMembers(this.tupleRoot(p, m))) {
+          if (!fits(m, mm)) continue
+          for (const y of imagesOf(mm)) for (const x of xs) {
+            const t = this.unifyArgs(s, args, pick.side === 0 ? [...x, ...y] : [...y, ...x], mask)
+            if (t) yield t
+          }
+        }
+      }
+    } else {
+      // Every class of tuples mentioned.
+      const seen = new Set<string>()
+      for (const key of mentioned.keys()) {
+        this.work++
+        const root = this.tupleRoot(p, key)
+        if (seen.has(root)) continue
+        seen.add(root)
+        const ms = [...classMembers(root)]
+        for (const m1 of ms) for (const m2 of ms) {
+          if (!fits(m1, m2)) continue
+          for (const x of imagesOf(m1)) for (const y of imagesOf(m2)) {
+            const t = this.unifyArgs(s, args, [...x, ...y], mask)
+            if (t) yield t
+          }
+        }
       }
     }
     // A tuple never mentioned is a class of its own, so it matches only reflexively: both blocks are
-    // images of the one tuple. Only tuples consistent with what is bound can match: generate them
-    // from the block with fewer unbound variables (bound positions fixed, the rest over every point),
-    // each paired with its images in the other block.
+    // images of the one tuple. (Never as its own flip: a class where a member is its own flip is
+    // mentioned.) Only tuples consistent with what is bound can match: generate them from the block
+    // with fewer unbound variables (bound positions fixed, the rest over every point), each paired
+    // with its images in the other block.
+    if (want === 1) return
     const pool = [...(mask[0] ? this.reps : this.names)]
     const blocks = [args.slice(0, k), args.slice(k)]
     const unbound = (b: readonly string[]) => b.filter(v => !s.has(v)).length
@@ -708,6 +863,14 @@ export class Saturation {
     this.work++
     if (brk && !this.leastSoFar(s, brk)) return
     if (body.length === 0) { yield s; return }
+    // The early head check: once the head is one fact, and the store already has it, nothing this
+    // match goes on to find can add anything. Only where the head is one fact: every head variable
+    // bound, and none standing for a class where equals do not substitute (there the head is a fact
+    // for each member, and one holding says nothing of the others).
+    const h = this.head
+    if (h && h.vars.every(v => { const b = s.get(v); return b && (!b.flex || !h.literal.has(v)) })) {
+      if (this.holds({ name: h.rule.head.name, args: h.rule.head.args.map(a => s.get(a)!.v) })) return
+    }
     // Greedy: match the atom with the largest share of already-bound arguments next. An atom of a
     // solved relation (a difference) waits until the others have bound its arguments, if they can:
     // then it is asked of the solver too (`match`), which knows equalities no stored class has.
@@ -720,6 +883,25 @@ export class Saturation {
     }
     const rest = body.filter((_, i) => i !== best)
     for (const s1 of this.match(body[best], s)) yield* this.join(rest, s1, brk)
+  }
+
+  private checkable = new Map<Rule, { rule: Rule; vars: string[]; literal: Set<string> } | null>()
+  /**
+   * The early head check's view of a rule, or null where it does not apply: a head with a variable
+   * the body does not bind (it ranges over every object), or one whose holding is not a lookup (a
+   * defined relation, or one a solver answers: there the solver may know more than the store, and
+   * asserting it still changes the store).
+   */
+  private headCheckable(rule: Rule): { rule: Rule; vars: string[]; literal: Set<string> } | null {
+    if (this.checkable.has(rule)) return this.checkable.get(rule)!
+    const { name, args } = rule.head
+    const inBody = new Set(rule.body.flatMap(b => b.args))
+    const mask = this.maskOf(name, args.length)
+    const ok = args.every(a => inBody.has(a)) && name !== OBJECT && !this.prep.defined.has(name)
+      && !this.st.differences.has(name) && !this.st.sums.has(name)
+    const out = ok ? { rule, vars: [...new Set(args)], literal: new Set(args.filter((_, i) => !mask[i])) } : null
+    this.checkable.set(rule, out)
+    return out
   }
 
   /** Ground instances of a rule's head under `s`; head-only variables range over all objects. */
@@ -762,7 +944,9 @@ export class Saturation {
         if (this.lastRun.get(rule) === this.version) continue
         this.lastRun.set(rule, this.version)
         // Materialise first: asserting mutates the structures being matched against.
+        this.head = this.headCheckable(rule)
         const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
+        this.head = null
         for (const s of matches) {
           for (const h of this.heads(rule, s)) this.assert(h)
           if (this.done(false)) return
@@ -830,6 +1014,12 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
     // solver rather than fired) is needed wherever that equivalence is, with the faithful rule's body.
     // A sum feeds its values' equivalence back through its solver: needed wherever that is.
     for (const [p, sum] of prep.structure.sums) if (needed.has(sum.values)) grew = add(p) || grew
+    // A flip's facts are its equivalence's signed classes, and the classes answer for both: each is
+    // needed wherever the other is.
+    for (const [p, flip] of prep.structure.flips ?? []) {
+      if (needed.has(flip.of)) grew = add(p) || grew
+      if (needed.has(p)) grew = add(flip.of) || grew
+    }
     for (const [p, d] of prep.structure.differences) {
       if (!d.faithful || !d.pairs || !needed.has(d.pairs)) continue
       for (const b of d.faithful.body) grew = add(b.name) || grew

@@ -43,7 +43,22 @@ export interface Structure {
   differences: Map<string, Difference>
   /** Relations that are sums of values (see below): `p(a b c d e f)` read as value(a b) + value(c d) = value(e f). */
   sums: Map<string, Sum>
+  /** Relations that are an equivalence's flip (see below): `p(X Y)` read as X and Y in one class, of opposite signs. */
+  flips: Map<string, Flip>
 }
+
+/**
+ * A relation between two blocks that is the odd half of an equivalence's signed classes: a
+ * supplement is an equal angle on the other side. Recognised when its rules, with the equivalence's,
+ * prove that it is symmetric (p X Y gives p Y X), that it respects the equivalence (p X Y and q Y Z
+ * give p X Z), and that two of it make the equivalence (p X Y and p X Z give q Y Z). Then its closure
+ * with q's is exactly that of signed classes: q's classes, each member with a sign, p holding between
+ * members of opposite signs, and q between members of the same sign; a class where some member is
+ * both (an angle equal to its own supplement) holds both of every two members. Its block reorderings
+ * and its substitution of equals follow from q's (q's reflexive images, and respect). The store keeps
+ * a p fact as an edge of odd sign in q's classes (saturate.ts), never as a fact of its own.
+ */
+export interface Flip { of: string }
 
 /**
  * A relation of three pairs, read as a sum of their values: value(a b) + value(c d) = value(e f), the
@@ -292,5 +307,25 @@ function analyse(rules: readonly Rule[]): Structure {
     }
   }
 
-  return { arity, equivalences, equality, congruent, symmetries, differences, sums }
+  // ── flips: a relation that is an equivalence with one side's sign reversed ──
+  const flips = new Map<string, Flip>()
+  for (const [p, n] of arity) {
+    if (equivalences.has(p) || n === 0 || n % 2 !== 0 || sums.has(p)) continue
+    const k = n / 2
+    // Candidates: an equivalence on blocks of k that some rule for p substitutes by (its body one p, one q).
+    const named = new Set(rules.filter(r => r.head.name === p && r.body.length === 2 && r.body.some(b => b.name === p))
+      .flatMap(r => r.body.filter(b => b.name !== p).map(b => b.name)))
+    for (const [q, qe] of equivalences) {
+      if (qe.k !== k || q === equality || differences.has(q) || !named.has(q)) continue
+      const fragment = rules.filter(r => (r.head.name === p || r.head.name === q) && r.body.every(b => b.name === p || b.name === q))
+      const [a, b, c] = [consts('a', k), consts('b', k), consts('c', k)]
+      const ok =
+        proves(fragment, [atom(p, [...a, ...b])], atom(p, [...b, ...a])) &&
+        proves(fragment, [atom(p, [...a, ...b]), atom(q, [...b, ...c])], atom(p, [...a, ...c])) &&
+        proves(fragment, [atom(p, [...a, ...b]), atom(p, [...a, ...c])], atom(q, [...b, ...c]))
+      if (ok) { flips.set(p, { of: q }); symmetries.delete(p); break }
+    }
+  }
+
+  return { arity, equivalences, equality, congruent, symmetries, differences, sums, flips }
 }

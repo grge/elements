@@ -402,10 +402,12 @@ cited steps) and from the logic (sides, `right`, sums), not from a bigger budget
 ## The path
 
 Each step is useful alone and measured with `scripts/bench.ts` and the prototypes' harnesses.
-1. **The three changes in `saturate.ts`.**
-   - Indexes and the head check first: they drop straight in (the head check bound to exact heads).
-   - Then signed angle classes, recognised from the rules.
-   - Then one closure per set of hypotheses, and the solver cache.
+1. **The three changes in `saturate.ts`.** Landed (November 2026; review-notes.md, *Landed*):
+   - signed angle classes, recognised from the rules as a flip;
+   - indexes;
+   - the head check bound to exact heads.
+
+   Still to do here: one closure per set of hypotheses, and the solver cache.
 2. **The new core: solvers, then the whole book.**
    - The lattice for differences and sums, with a solver atom answered in the middle of a join.
    - The interface the checker and the marks closure use.

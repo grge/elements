@@ -74,3 +74,50 @@ describe('structure in a knowledge base that is not geometry', () => {
     expect(sat.holds(g('clash a c'))).toBe(false)
   })
 })
+
+describe('flips: an equivalence with one side reversed, recognised by proof (November 2026)', () => {
+  // Two-colouring the edges of a graph: an edge a-b has the same colour as c-d, or the other one. Same
+  // colour is an equivalence on edges (blocks of two points), other colour its flip. Nothing geometric.
+  // (On single points, same colour would be the knowledge base's equality, whose classes are of points.)
+  const colours = parseRules(`
+same a b a b: -
+same c d a b: same a b c d
+same a b e f: same a b c d, same c d e f
+other c d a b: other a b c d
+other a b e f: other a b c d, same c d e f
+same c d e f: other a b c d, other a b e f
+`)
+  const st = analyseStructure(colours)
+
+  it('finds other as same with one side reversed, and its rules implied', () => {
+    expect(st.flips.get('other')).toEqual({ of: 'same' })
+    const redundant = prepare(new KnowledgeBase(colours)).redundant.map(showRule)
+    expect(redundant).toEqual(expect.arrayContaining(['other c d a b: other a b c d', 'other a b e f: other a b c d, same c d e f', 'same c d e f: other a b c d, other a b e f']))
+  })
+
+  it('needs all three: without two others making a same, there is no flip', () => {
+    const fewer = colours.filter(r => !(r.head.name === 'same' && r.body.length === 2 && r.body.every(b => b.name === 'other')))
+    expect(analyseStructure(fewer).flips.has('other')).toBe(false)
+  })
+
+  it('computes the closure the rules give: signs along a path, and an odd cycle makes every two both', () => {
+    const kb = new KnowledgeBase(colours)
+    const path = ['other a b b c', 'other b c c d', 'same c d d a'].map(g)
+    const odd = [...path, g('other d a a b')]
+    const edges = ['a b', 'b c', 'c d', 'd a']
+    for (const seeds of [path, odd]) {
+      const sat = saturate(kb, seeds)
+      const ref = new Set(forwardClosure(kb, seeds, 200_000).map(groundKey))
+      for (const p of ['same', 'other']) for (const x of edges) for (const y of edges) {
+        const f = g(`${p} ${x} ${y}`)
+        expect(sat.holds(f), `${p} ${x} ${y}`).toBe(ref.has(groundKey(f)))
+      }
+    }
+    expect(saturate(kb, odd).holds(g('same a b b c'))).toBe(true)
+    expect(saturate(kb, path).holds(g('same a b b c'))).toBe(false)
+  })
+
+  it('finds supplements as the flip of equal angles in the book', () => {
+    expect(analyseStructure(parseRules(chapterSource('01-length.geo') + '\n' + chapterSource('02-angle.geo'))).flips.get('supp')).toEqual({ of: 'eq-angle' })
+  })
+})

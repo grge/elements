@@ -33,7 +33,9 @@ const MAX_SYMMETRIES = 16
 export function argumentGroup(name: string, n: number, st: Structure): number[][] {
   const id = Array.from({ length: n }, (_, i) => i)
   if (name === st.equality && n === 2) return [id, [1, 0]]
-  const e = st.equivalences.get(name)
+  // A flip reads the same with its blocks swapped or reordered, as its equivalence does.
+  const flip = st.flips?.get(name)
+  const e = st.equivalences.get(flip ? flip.of : name)
   if (e && n === 2 * e.k) {
     const out: number[][] = []
     for (const swap of [false, true]) for (const g1 of e.blockGroup) for (const g2 of e.blockGroup) {

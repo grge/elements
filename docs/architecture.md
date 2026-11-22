@@ -9,7 +9,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
                          │  parse (src/language)
                          ▼
                    KnowledgeBase ── definitions.ts   which clause defines each predicate (iff)
-                         │          structure.ts     equivalences, substitution, symmetries (proven)
+                         │          structure.ts     equivalences, substitution, symmetries, flips (proven)
           ┌──────────────┴───────────────┐
           ▼  checking (web worker)       ▼  drawing (main thread)
    unfold hypotheses                  extract: unfold the page's facts, read through relations.ts
@@ -26,7 +26,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 | `src/language/` | Lexer and parser; `book/`, the bundled book, one chapter per `.geo` file; `extra/`, chapters after the book that are not part of it (the stress test), whose lemmas are checked on their pages but never taken as proven for marks |
 | `src/kb/inference.ts` | `KnowledgeBase`, `unfoldTree` and `unfold`, and `forwardClosure` (the plain reference engine) |
 | `src/kb/definitions.ts` | Recognises which clause, if any, defines each predicate |
-| `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, are symmetric, or are differences |
+| `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, are symmetric, are differences or sums, or are an equivalence's flip |
 | `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure, with a solver for differences |
 | `src/kb/lattice.ts` | Integer combinations of linear equations: the solver for differences (turns) and sums (quadrances) |
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
@@ -80,6 +80,22 @@ looked for among those the rules state directly, each proven, closed under compo
 reordering by proof is ruinous for blocks of four.) Nothing in the engine knows a predicate name; a map
 colouring knowledge base with its own equivalence gets the same treatment (see `tests/structure.test.ts`).
 
+**Flips** (November 2026). A relation `p` between two blocks is an equivalence `q`'s *flip* when the
+rules of the two prove three things:
+- `p` is symmetric;
+- `p` respects `q`: `p X Y` and `q Y Z` give `p X Z`;
+- two `p`s make a `q`: `p X Y` and `p X Z` give `q Y Z`.
+
+A supplement is the book's case: an equal angle on the other side. Together `p` and `q` are then
+*signed classes*:
+- `q`'s classes, each member with a sign;
+- `q` holds between members of the same sign, and `p` between members of opposite signs;
+- in a class where some member is its own flip (an angle equal to its own supplement), every two
+  members are both.
+
+`p`'s reorderings and its substitution of equals follow from `q`'s. The candidates are the
+equivalences some rule for `p` substitutes by, as for sums.
+
 ## Checking lemmas and queries
 
 A lemma `? H: B` asks whether `H` follows from `B`. The checker (`checker.ts`):
@@ -91,10 +107,15 @@ A lemma `? H: B` asks whether `H` follows from `B`. The checker (`checker.ts`):
 2. computes the forward closure of the result (`saturate.ts`);
 3. reports whether `H` is in it.
 
-`saturate.ts` keeps objects in union-find classes, stores substitutable argument positions as class
-representatives, keeps tuple equivalences as classes of canonical tuples and symmetric relations in a
-canonical argument order. It skips exactly those rules the structure already implies (each one is
-checked) and fires every other rule normally, so it computes the same closure as the plain
+`saturate.ts` keeps:
+- objects in union-find classes, with substitutable argument positions stored as class
+  representatives;
+- tuple equivalences as classes of canonical tuples, a flip as signs in its equivalence's classes
+  (it stores no fact of its own);
+- symmetric relations in a canonical argument order.
+
+It skips exactly those rules the structure already implies (each one is checked), and fires every
+other rule normally, so it computes the same closure as the plain
 `forwardClosure` in `inference.ts`, which stays as the reference. `tests/saturate.test.ts` checks the two
 agree on every small lemma.
 
@@ -146,9 +167,24 @@ fall ten to fifty times (the windmill's from 20 847 to 1 984); the book checks i
 time. The definitions analysis (`definitions.ts`) keeps every clause firing (`abbreviate: false`), since
 it decides what a definition is.
 
-Matching an equivalence with a block unbound walks its mentioned classes, then the tuples never
-mentioned, which match only reflexively (both blocks images of one tuple): only those consistent with
-what is bound, generated from the block with fewer unbound variables.
+Matching uses indexes (November 2026).
+- **A stored relation** is indexed by (position, value), over the images of its facts, so a bound
+  argument is a lookup.
+- **An equivalence** is indexed by (position in a block, value), over the keys mentioned in its
+  classes. With a block not fully bound, but an argument bound, the match visits only the keys with
+  that value there, each with its class.
+- **With nothing bound,** it walks every mentioned class, then the tuples never mentioned, which
+  match only reflexively (both blocks images of one tuple). Only those consistent with what is bound
+  are generated, from the block with fewer unbound variables.
+
+In a signed class, two members match as equals when their signs agree, as flips when they differ,
+and as both in an odd class.
+
+**The early head check.** A partial match is abandoned once its rule's head is one fact and the store
+already has it, since nothing the match goes on to find could add anything. The head is one fact when
+every head variable is bound, and none stands for a class at a position where equals do not
+substitute: there the head is a fact for each member, and one holding says nothing of the others.
+It is skipped for heads that are defined or answered by a solver.
 
 The search has two budgets, whichever runs out first: derivations, and **work** (partial matches and
 tuples considered, `Saturation.work`), which is in proportion to time. Derivations alone stopped

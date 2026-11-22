@@ -13,7 +13,8 @@
  *     a block, value), so a bound argument is a lookup;
  *   - canonical forms are the least packed image under the relation's group.
  *
- * Out of the spike: the solvers (differences, sums), so knowledge bases that have them are refused.
+ * Out of the spike: the solvers (differences, sums) and flips (signed classes, recognised after it
+ * was measured), so knowledge bases that have them are refused.
  */
 import type { Rule } from '../../src/language/parser'
 import type { GroundPredicate } from '../../src/kb/inference'
@@ -101,6 +102,9 @@ export class Core {
   constructor(private readonly prep: Prepared, private readonly opts: CoreOptions = {}) {
     const st = prep.structure
     if (st.differences.size || st.sums.size) throw new Error('the spike has no solvers')
+    // Measured before flips were recognised (structure.ts, November 2026): it has no signed classes, so
+    // with a flip it would store the flip's facts while its rules count as implied. Flips come with the build.
+    if (st.flips?.size) throw new Error('the spike has no signed classes: flips came after it (engine.md, path)')
     this.eqName = st.equality
     this.compiled = [...prep.axioms, ...prep.rules].map(r => this.compile(r.body, r.head, r, prep.breaks.get(r)))
   }

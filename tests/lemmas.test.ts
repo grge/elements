@@ -44,14 +44,10 @@ const provable = (l: Lemma) => checkLemma(l, kb).result === 'verified'
 const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
 
 /**
- * Lemmas that run past the budget of work since chapter 7 (November 2026), left out of the suite while
- * the engine's efficiency is worked on (roadmap): each theory added widens every search, and the
- * windmill's sat at the edge of its budget. They are true, and were ✓ before; they will be again.
+ * Lemmas left out of the suite because they run past the budget of work. None since November 2026:
+ * the windmill's two came back with signed classes, indexes and the early head check (engine.md).
  */
-const overBudget = new Set([
-  'eq-area a b d f b c: windmill a b c f g d e l x y',
-  'eq-area a b f l b d: windmill a b c f g d e l x y',
-])
+const overBudget = new Set<string>([])
 
 describe('the book', () => {
   for (const lemma of bookLemmas) {

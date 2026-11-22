@@ -50,7 +50,12 @@ appears in statements only because the engine needs it is a cost (the README: th
   guarded. Perhaps `right` should ask c ≠ b; and degenerate angles in `eq-angle`'s classes may carry the
   same risk (a measure that "holds" when there is nothing to measure is not an equality). (November 2026)
 - **`supp`**: an equal angle on the other side (marks.ts flips it). With turns, a supplement is a
-  reversed turn; perhaps `supp` is redundant in the big book. (November 2026)
+  reversed turn; perhaps `supp` is redundant in the big book. (November 2026) The engine now
+  recognises it as `eq-angle`'s flip and keeps it as signed classes, so it costs nothing to keep;
+  whether the book wants the word is a vocabulary question only. An odd class is an angle equal to
+  its own supplement, but degenerate angles (an arm of no length) land in such classes too, so odd
+  classes are not yet right angles (engine-review.md, *Signed classes may give more than speed*).
+  (November 2026)
 
 - **One linear structure, not three?** The engine recognises a difference (turns, ratios) and a sum
   (quadrance); the quarter and Apollonius (coefficients) and Ceva and Menelaus (three terms) want a

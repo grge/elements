@@ -97,8 +97,9 @@ describe('witnesses', () => {
   it('a witness spares the checker its search for a contradiction; without one, a search out of budget is not a ✓', () => {
     const l = lemma('eq-area a b c c d a: parallelogram a b c d')
     expect(checkLemma(l, kb, undefined, { consistent: () => true }).witnessed).toBe(true)
-    // A budget too small to finish the search for `false`, but enough to find the goal.
-    const small = checkLemma(l, kb, 10_000, { strict: true })
+    // A budget too small to finish the search for `false`, but enough to find the goal (between about
+    // 1,000 and 5,000 derivations since signed classes and the head check, November 2026).
+    const small = checkLemma(l, kb, 2_000, { strict: true })
     expect(small.result).toBe('unshown')
     expect(verdict(small, null).type).toBe('unproven')
   })

@@ -59,19 +59,19 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      business), and a cheaper derivation. A theory solver for sums, when sums come, attaches where
      the equivalences are recognised (*Open questions*, sums); abstract the interface once two
      solvers exist.
-   - **Cold start, measured** (November 2026, review-notes.md, *Cold-start search*): three changes
-     that keep every closure as it is take the book from 211 s to 48 s, all 99 proved, the windmill
-     back inside its budget:
+   - **Cold start: three changes, landed** (November 2026, review-notes.md, *Cold-start search*,
+     *Landed*). Every closure is as it was:
+     - supplements as the signed classes of a recognised flip;
      - indexes;
-     - an early head check;
-     - supplements as signed angle classes.
+     - an early head check where it is exact.
 
-     The prototype is in `scripts/prototypes/`. What remains is the cost of a match (about 14 µs,
-     against 0.02 µs for the same join on integers).
+     The book checks in 48 s against 184 s, as the app checks it, all 99 proved: the windmill is
+     back inside its budget and its tests in the suite. What remains is the cost of a match (about
+     14 µs, against 0.02 µs for the same join on integers).
    - **A new matching core, shown on a slice** (November 2026, review-notes.md, *The
      matching-core spike*): on integers, on chapters 1 to 4 without the solvers' words, it gives
      identical closures and verdicts, 10× on full closures and 12× on goal searches (the windmill
-     16×). It passes the bar set before it was built (10×). Next: the solvers, chapters 5 to 7,
+     16×). It passes the bar set before it was built (10×). Next: signed classes (flips), the solvers, chapters 5 to 7,
      the head check and signed classes inside it, and saturate's interface. Then it replaces
      `saturate.ts`, which stays as the oracle in the tests. Also cheap: one closure for lemmas with the same hypotheses, and the turn
      solver's answers cached per version of the store.
