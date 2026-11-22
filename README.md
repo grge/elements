@@ -139,4 +139,4 @@ docs/           documentation
   measurements of the November 2026 review (`npx vite-node scripts/bench.ts` reproduces them).
 - [Engine](docs/engine.md): a design proposal (November 2026). It covers proofs the engine finds,
   the page shows and an author writes, with constructions; and a much faster search, with the
-  matching-core spike.
+  matching-core spike. [Its review](docs/engine-review.md) proposes reordering its path.

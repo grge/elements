@@ -6,6 +6,9 @@ A proposal from November 2026 for the logic engine's next form. It has two halve
 - **cold-start search**: a much faster search for when there is no proof yet, from three changes to
   today's engine and a new matching core.
 
+A review, with a reordered path and the questions still open, is in
+[engine-review.md](engine-review.md).
+
 Nothing here is in the app yet. Every decision rests on a prototype or a measurement. The numbers
 are in [review-notes.md](review-notes.md), in three sections:
 - *Proofs and the search*, measured at 2aef82e;
