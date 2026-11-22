@@ -8,7 +8,8 @@
  * editor shows it.
  */
 
-import type { CheckResponse } from '../kb/checker'
+import type { CheckResponse, StepResult, WrittenCheck } from '../kb/checker'
+import { displayName } from '../kb/names'
 import type { Evidence } from './evidence'
 
 /**
@@ -44,3 +45,45 @@ export function verdict(check: CheckResponse, evidence: Evidence | null): Verdic
   }
 }
 
+
+/** A step of a written proof, as its line's mark shows it. `note`: the message shows under a ✓ too. */
+export interface StepVerdict extends Verdict { line: number; note?: boolean }
+
+function stepVerdict(s: StepResult): StepVerdict {
+  const pts = (s.newPoints ?? []).map(displayName).join(', ')
+  switch (s.result) {
+    case 'follows':
+      return { line: s.line, type: 'verified', message: s.apart ? 'follows from the lines above, for figures whose points are all apart' : 'follows from the lines above' }
+    case 'not-shown':
+      return { line: s.line, type: 'unproven', message: 'not shown from the lines above by a short search; taken as given below' }
+    case 'refused':
+      return { line: s.line, type: 'false', message: `cannot construct ${pts}: ${s.construction?.why ?? 'no figure'}` }
+    case 'constructed': {
+      const c = s.construction!
+      const how = c.determined ? 'determined' : 'freely chosen'
+      const exists = c.existence === 'unconditional' ? 'always exists' : 'exists in every sampled figure'
+      const apart = c.apart ? '' : `; not apart from the other points (${c.why ?? 'in some figure'}), so not taken as different from them`
+      return { line: s.line, type: 'verified', note: true, message: `constructs ${pts}: ${how}, ${exists}${apart}` }
+    }
+  }
+}
+
+/**
+ * A lemma with a written proof: each step's verdict, and the lemma's, from its head and its steps. A
+ * step not shown, or a construction refused, leaves the lemma unproven, even if its head follows
+ * from the steps; a construction that exists only as the figures witness it hedges the ✓ (tools.md).
+ */
+export function writtenVerdicts(check: WrittenCheck, evidence: Evidence | null): { head: Verdict; steps: StepVerdict[] } {
+  const steps = check.steps.map(stepVerdict)
+  const head = verdict(check.head, evidence)
+  const gap = check.steps.find(s => s.result === 'not-shown' || s.result === 'refused')
+  if (gap && (head.type === 'verified' || head.type === 'unproven')) {
+    const what = gap.result === 'refused' ? 'its construction' : 'its step'
+    return { steps, head: { type: 'unproven', message: `${head.type === 'verified' ? 'follows from its steps, but' : 'not shown, and'} ${what} on line ${gap.line} is not shown` } }
+  }
+  const witnessed = check.steps.find(s => s.result === 'constructed' && s.construction?.existence === 'witnessed')
+  if (head.type === 'verified' && witnessed) {
+    return { steps, head: { ...head, message: `${head.message}, given its construction (line ${witnessed.line})` } }
+  }
+  return { steps, head }
+}

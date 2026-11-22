@@ -37,7 +37,7 @@ export interface ProofView {
 /** Predicates of incidence and non-degeneracy: side conditions in a proof. */
 const SIDE = new Set(['distinct', 'triangle', 'collinear', 'between', '__object__'])
 
-const SOLVED: Record<string, string> = { 'eq-turn': 'adding the turns', 'eq-ratio': 'multiplying the ratios' }
+const SOLVED: Record<string, string> = { 'eq-turn': 'adding the turns', 'eq-ratio': 'multiplying the ratios', 'quad-sum': 'adding the quadrances' }
 
 const segment = (a: readonly string[], i: number) => [a[i], a[i + 1]].sort().join(' ')
 /** `eq-ratio a b a b c d c d`, or `eq-ratio a b c d a b c d`: true of any figure. */

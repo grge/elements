@@ -142,6 +142,18 @@ thales-converse a b c o:
 
 ? eq-lines o a o b: thales-converse a b c o
 
+# Written out (engine.md, *Writing a proof*), it proves: continue b-o past o by its own length, to d,
+# and a-b-c-d is a rectangle. Two pairs of triangles are congruent by side-angle-side, about the
+# vertical angles at o; then the rectangle's diagonals are equal, and o halves both.
+? eq-lines o a o b:
+    thales-converse a b c o
+    ? double b o d
+    ? eq-angle a o d c o b
+    ? eq-lines a d c b
+    ? eq-angle a o b c o d
+    ? eq-lines a b c d
+    ? eq-lines b d a c
+
 # The perpendicular from the centre to a chord bisects it.
 #
 # Proves, without angle-angle-side: Pythagoras in quadrances on both sides of the foot, reached from

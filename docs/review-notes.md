@@ -715,3 +715,21 @@ lemma checked as the worker checks it):
 - A lemma ✓ only under the convention stays so on replay, even if the edit would now give it a
   plain ✓: the replay starts from the facts its proof started from. A changed rule it cites sends
   it back to the search, which asks plain first.
+
+## Written proofs (November 2026)
+
+engine.md's fifth step (the review's fourth): `?` lines in a lemma's body, checked a step at a time
+(`checkWrittenProof`, checker.ts), constructions on the figures (`constructionStep.ts`), a mark per
+step on the page. Measured with the book's rules and *Beyond*'s:
+- **Thales' converse** (*Beyond*, written as engine.md has it): `double b o d` constructs d,
+  determined, apart and unconditional; the five other steps follow (two plain, three under the
+  convention); the head follows. 3.0 s, against "not provable" unwritten. On the stress test, 1.7 s.
+- **The midline without ratios** (triangle, two midpoints, `parallel d e b c`): doubling d-e to f,
+  then congruent triangles about the vertical angles at e, a-b parallel to c-f, d-b-c-f a
+  parallelogram. Seven steps, 2.9 s. Chapter 6 proves it by ratios; this is chapter 3's own proof.
+- **The centroid,** with `line-line-intersection c f a d h`: refused, "h is g in every figure: say
+  so (eq-point), or use g", as tools.md found. The uniqueness gap stays.
+- **The first check had to be loosened.** Planned with the step, the figure placed d before
+  `right`'s auxiliary point on a-b. That is no dependence: the check is now that no point above is
+  placed by means of a new one.
+- **A step's search** has a tenth of a lemma's budget (300,000 units). No step above came near it.

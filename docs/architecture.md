@@ -225,6 +225,16 @@ It is skipped for heads that are defined or answered by a solver.
   A rule step names its rule by text; the page shows where it is written (`ruleWrittenAt` in
   `useKB.ts` for the book, the page's own lines first), and clicking opens the page of the
   predicate it concludes.
+- **Written proofs.** A lemma's `?` steps (`Lemma.steps`) are checked by `checkWrittenProof`: each
+  step by a short search (`STEP_WORK`) from the unfolded hypotheses and the steps above, plain first,
+  then under the convention; each construction (a step naming new points) through a callback, so the
+  logic stays free of figures. The page answers it with `checkConstruction`
+  (`geometry/constructionStep.ts`): the step is planned with the figure above it, its inputs kept,
+  and sampled for four things: no point above placed by means of a new one; determined or freely
+  chosen; apart from every other point (only then covered by the convention); existing always or
+  only as witnessed. A figure with no sample names the point the new one falls on, where it can.
+  `writtenVerdicts` (verdict.ts) turns the result into marks: one per step (a construction's says
+  what it constructs, under its ✓), and the lemma's, unproven while any step is not shown.
 
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last

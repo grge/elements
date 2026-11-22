@@ -9,12 +9,14 @@
 import { parseSource, type Rule } from '../language/parser'
 import { buildRuntimeState } from '../kb/runtime'
 import { KnowledgeBase } from '../kb/inference'
-import { checkByReplay, checkGroundQuery, checkLemma } from '../kb/checker'
+import { checkByReplay, checkGroundQuery, checkLemma, checkWrittenProof } from '../kb/checker'
+import { checkConstruction } from '../geometry/constructionStep'
 import { showRule } from '../kb/rules'
 import type { Proof } from '../kb/proof'
 import { proofView, type ProofView } from '../kb/proofView'
 import { numericEvidence, type Evidence } from '../geometry/evidence'
-import { verdict, type Verdict } from '../geometry/verdict'
+import { verdict, writtenVerdicts, type Verdict } from '../geometry/verdict'
+import type { Predicate } from '../language/parser'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 interface VerifyRequest {
@@ -49,11 +51,39 @@ self.onmessage = (event: MessageEvent<VerifyRequest>) => {
     for (const item of parsed) {
       if (item.kind !== 'lemma' && item.kind !== 'ground-query') continue
       const line = (item.sourceRef?.startLine ?? 1) - 1
-      const endLine = (item.sourceRef?.endLine ?? line + 1) - 1
+      // A written proof's steps have marks of their own: the lemma's reason goes under its first line.
+      const endLine = item.kind === 'lemma' && item.lemma.steps ? line : (item.sourceRef?.endLine ?? line + 1) - 1
       try {
         let v: Verdict
         let proof: ProofView | undefined
-        if (item.kind === 'lemma') {
+        if (item.kind === 'lemma' && item.lemma.steps) {
+          // A written proof: its steps' marks, then the lemma's. The hypotheses' figure, with the
+          // constructions, witnesses that they are consistent; the lemma's own is the evidence.
+          const lemma = item.lemma
+          let ev: Evidence | null = null
+          try { ev = numericEvidence(lemma, runtime.kb) } catch { ev = null }
+          const built: Predicate[] = []
+          const written = checkWrittenProof(lemma, runtime.kb, {
+            strict: true, distinctNames: true,
+            construct: (step, above, newPoints) => {
+              const c = checkConstruction(runtime.kb, step, above, newPoints)
+              if (c.ok) built.push(step)
+              return c
+            },
+            consistent: () => {
+              if (!built.length) return !!ev?.witness
+              try { return !!numericEvidence({ head: lemma.head, hypotheses: [...lemma.hypotheses, ...built] }, runtime.kb).witness } catch { return false }
+            },
+          })
+          const vs = writtenVerdicts(written, ev)
+          written.steps.forEach((s, i) => {
+            const sv = vs.steps[i]
+            const proof = s.proof ? proofView(s.proof) : undefined
+            post({ requestId, kind: 'mark', mark: { line: s.line - 1, type: sv.type, message: sv.message, ...(sv.note ? { note: true } : {}), ...(proof ? { proof } : {}) } })
+          })
+          v = vs.head
+          if (v.type === 'verified' && written.head.proof) proof = proofView(written.head.proof)
+        } else if (item.kind === 'lemma') {
           // Evidence first: its figures also witness that the hypotheses are consistent, which spares the
           // checker its search for a contradiction.
           let ev: Evidence | null = null

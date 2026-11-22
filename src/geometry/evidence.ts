@@ -34,7 +34,7 @@ export type Evidence =
 const SAMPLES = 24
 
 /** Distinct points this far apart, as a share of the figure's size, and triangles this much area. */
-const MARGIN = 1e-3
+export const MARGIN = 1e-3
 
 /**
  * Is this figure a witness of these facts? Each must hold (the figure was constructed to make them

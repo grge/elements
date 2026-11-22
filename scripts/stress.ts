@@ -15,7 +15,8 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { parseSource, parseRules, parseLemmas, type Lemma } from '../src/language/parser'
 import { KnowledgeBase } from '../src/kb/inference'
-import { checkLemma } from '../src/kb/checker'
+import { checkLemma, checkWrittenProof } from '../src/kb/checker'
+import { checkConstruction } from '../src/geometry/constructionStep'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise } from '../src/geometry/construction'
 import { numericEvidence, type Evidence } from '../src/geometry/evidence'
@@ -57,9 +58,13 @@ for (const written of parseLemmas(source)) {
   let ev: Evidence | null = null
   try { ev = numericEvidence(lemma, kb) } catch (e) { ev = { kind: 'none', why: `${e}` } }
   const t0 = performance.now()
-  const check = checkLemma(lemma, kb, budget, { consistent: () => !!ev?.witness, strict: true, distinctNames: true })
+  // A written proof is checked step by step (its constructions on the figures), then its head.
+  const options = { consistent: () => !!ev?.witness, strict: true, distinctNames: true }
+  const steps = lemma.steps ? checkWrittenProof(lemma, kb, { ...options, construct: (s, above, np) => checkConstruction(kb, s, above, np) }, budget) : null
+  const check = steps ? steps.head : checkLemma(lemma, kb, budget, options)
+  const gaps = steps?.steps.filter(s => s.result === 'not-shown' || s.result === 'refused').map(s => `l. ${s.line} ${s.result}`) ?? []
   const ms = performance.now() - t0
-  const v = verdict(check, ev)
-  console.log(`${v.type.padEnd(9)} ${text}`)
+  const v = gaps.length && check.result === 'verified' ? { type: 'unproven' } : verdict(check, ev)
+  console.log(`${v.type.padEnd(9)} ${text}${steps ? ` (written: ${steps.steps.length} steps${gaps.length ? `; ${gaps.join(', ')}` : ''})` : ''}`)
   console.log(`          figure: ${figure}; evidence: ${describeEvidence(ev)}; check: ${check.result} in ${(ms / 1000).toFixed(1)} s, ${check.facts.length} facts`)
 }

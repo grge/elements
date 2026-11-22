@@ -30,6 +30,18 @@ export interface Rule {
 export interface Lemma {
   head: Predicate
   hypotheses: Predicate[]
+  /**
+   * A written proof: the `?` lines of the lemma's body, after its hypotheses, in order (engine.md,
+   * *Writing a proof*). Each is shown from the hypotheses and the steps above it; one naming points
+   * not above it is a construction. The head is shown from all of them.
+   */
+  steps?: ProofLine[]
+}
+
+/** One `?` line of a written proof, with its line (1-based). */
+export interface ProofLine {
+  pred: Predicate
+  line: number
 }
 
 export interface SourceRef {
@@ -126,8 +138,9 @@ class Parser {
     const head = this.parsePredicate()
     if (this.current.type === TokenType.COLON) {
       this.advance()
-      const hypotheses = this.parseBody()
-      return { kind: 'lemma', lemma: { head, hypotheses } }
+      const steps: ProofLine[] = []
+      const hypotheses = this.parseBody(steps)
+      return { kind: 'lemma', lemma: { head, hypotheses, ...(steps.length ? { steps } : {}) } }
     }
     this.expectLineEnd()
     return { kind: 'ground-query', pred: head }
@@ -163,7 +176,8 @@ class Parser {
     }
   }
 
-  private parseBody(): Predicate[] {
+  /** A clause's body; a lemma's (with `steps`) may go on with `?` lines, its written proof. */
+  private parseBody(steps?: ProofLine[]): Predicate[] {
     if (this.current.type === TokenType.DASH) {
       this.advance()
       this.expectLineEnd()
@@ -182,7 +196,7 @@ class Parser {
       if ((this.current.type as TokenType) !== TokenType.INDENT) {
         throw new ParseError("expected a body after ':': indented lines below, or - for none", line)
       }
-      return this.parseMultiLineBody()
+      return this.parseMultiLineBody(steps)
     }
 
     throw new ParseError(`expected a body after ':', found ${this.describe()}`, this.current.line)
@@ -197,13 +211,23 @@ class Parser {
     return body
   }
 
-  private parseMultiLineBody(): Predicate[] {
+  private parseMultiLineBody(steps?: ProofLine[]): Predicate[] {
     const body: Predicate[] = []
     while (true) {
       this.consume(TokenType.NEWLINE, TokenType.COMMENT)
       if (this.current.type === TokenType.DEDENT || this.current.type === TokenType.EOF) break
       this.consume(TokenType.INDENT)
+      if (this.current.type === TokenType.QUESTION) {
+        const at = this.current.line
+        if (!steps) throw new ParseError("a ? line in a body belongs to a lemma's proof, not to a clause", at)
+        this.advance()
+        steps.push({ pred: this.parsePredicate(), line: at })
+        if ((this.current.type as TokenType) === TokenType.COMMA) throw new ParseError('a proof has one step per line', this.current.line)
+        if ((this.current.type as TokenType) === TokenType.COMMENT) this.advance()
+        continue
+      }
       if (this.current.type !== TokenType.IDENTIFIER) break
+      if (steps?.length) throw new ParseError("a hypothesis after the proof's steps: hypotheses come first", this.current.line)
       body.push(this.parsePredicate())
       const current = this.current
       if (current.type === TokenType.COMMA) {

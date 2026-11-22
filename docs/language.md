@@ -40,6 +40,27 @@ eq-triangle a b c:
 Lemmas can be indented the same way. Mixing the two (`circle a b c, circle b a c` on an indented line)
 is an error.
 
+**A written proof.** An indented lemma may go on with `?` lines, after its hypotheses: its proof, read in
+order. Each step is shown from the hypotheses and the steps above it, and gets its own mark. A step
+naming points not above it is a construction: the figure builds them from the points above, and the
+step's mark says so ("constructs d"), so that a misspelt name is never silently a new point. The head
+is shown from everything above. Comments give the reasons, as prose; there is no citation syntax.
+
+```txt
+? eq-lines o a o b:
+    right a b c
+    midpoint o a c
+    ? double b o d           # continue b-o past o by its own length, to d
+    ? eq-angle a o d c o b   # vertical angles
+    ? eq-lines a d c b       # side-angle-side
+    ? eq-angle a o b c o d
+    ? eq-lines a b c d
+    ? eq-lines b d a c       # a rectangle's diagonals are equal
+```
+
+A step adds to what is known, never to what the lemma means: the lemma says what it said without its
+proof.
+
 The book's `.geo` files hold clauses, axioms and lemmas only. A page holds anything: its clauses extend
 the knowledge base while the page is open, its facts are drawn, and its `?` lines are checked. Your own
 predicates, made from the contents, are kept in your browser.
@@ -126,6 +147,13 @@ and the verdict weighs the two:
 2. **Forward chaining**: compute the closure of the unfolded facts under every clause.
 3. **Look** for the head. The search stops as soon as the head appears, unless `false` is derivable at
    all from the kinds of facts involved; then it runs to the end to rule out a contradiction.
+
+A written proof is checked a step at a time (`checkWrittenProof`): each step by a short search from what
+is known (a step's budget, a tenth of a lemma's), each construction on sampled figures. A step not
+shown is still taken as given below, so later steps are checked; the lemma is then not ✓. A
+construction's new points are taken as different from the others (the convention, below) only if
+they stand apart from them in every figure; one that exists only as the figures witness it (two
+circles meeting) hedges the ✓: "follows, given its construction".
 
 Forward chaining terminates: over a finite set of objects a set of Horn clauses reaches its least
 fixpoint after finitely many new facts. A recursive clause is never a definition, so unfolding cannot

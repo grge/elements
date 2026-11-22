@@ -352,9 +352,9 @@ come instead, if at all: set aside any chosen clauses of the knowledge base and 
 still follows. That would answer the parallel postulate's question without naming it (recognised
 structure counts: a proof that leans on `parallel` being an equivalence leans on I.30).
 
-**Parked: proofs that need points no hypothesis names** (November 2026). [engine.md](engine.md)
-proposes the construction as a step of a written proof, built by the planner with Euclid's moves
-(Thales' converse proves with it). The stress test's main wall
+**Proofs that need points no hypothesis names** (November 2026): now written proofs, whose
+construction steps the planner builds ([language.md](language.md), *A written proof*; Thales'
+converse proves with it). The history: The stress test's main wall
 after non-degeneracy: the midline's proof begins "through c draw the parallel to a-b", and forward
 chaining reasons only about the points it has. Sketched, not adopted: existence statements (`!
 parallel-through a b c f: distinct a b`, "there is an f"), whose head points not in the body are new,

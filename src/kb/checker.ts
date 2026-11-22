@@ -64,8 +64,8 @@ const EQUAL = 'eq-point'
  * `distinct` for every two points of the facts and the goal, except those the facts or goal say are
  * one point (by `eq-point`, through any chain of them).
  */
-function nonDegeneracy(facts: readonly GroundPredicate[], goal: GroundPredicate): GroundPredicate[] {
-  const points = [...new Set([...facts, goal].flatMap(f => f.args))]
+function nonDegeneracy(facts: readonly GroundPredicate[], goal: GroundPredicate, exclude?: ReadonlySet<string>): GroundPredicate[] {
+  const points = [...new Set([...facts, goal].flatMap(f => f.args))].filter(p => !exclude?.has(p))
   const parent = new Map(points.map(p => [p, p]))
   const find = (p: string): string => { const q = parent.get(p)!; if (q === p) return p; const r = find(q); parent.set(p, r); return r }
   for (const f of [...facts, goal]) if (f.name === EQUAL && f.args.length === 2) parent.set(find(f.args[0]), find(f.args[1]))
@@ -125,7 +125,19 @@ function runCheckPipeline(
   // One supply of fresh names for the whole check, so auxiliaries of different hypotheses stay distinct.
   const fresh = new FreshNames()
   const unfolded = dedupeFacts(seeds.flatMap(seed => unfold(seed, kb, new Set(), { fresh }).frontier))
-  const assumed = options.distinctNames ? nonDegeneracy(unfolded, goal) : []
+  return checkFrom(goal, unfolded, kb, maxDerivations, options)
+}
+
+/** The pipeline from facts already unfolded; `exclude` are points the convention does not cover. */
+function checkFrom(
+  goal: GroundPredicate,
+  unfolded: readonly GroundPredicate[],
+  kb: KnowledgeBase,
+  maxDerivations: number,
+  options: CheckOptions = {},
+  exclude?: ReadonlySet<string>,
+): CheckResponse {
+  const assumed = options.distinctNames ? nonDegeneracy(unfolded, goal, exclude) : []
   const frontier = [...unfolded, ...assumed]
   const budget = { maxDerivations }
   const sat = saturate(kb, frontier, { goal, ...budget })
@@ -234,4 +246,117 @@ export function checkByReplay(
   const witnessed = mayDerive(kb, frontier, FALSE.name)
   if (witnessed && !options.consistent?.()) return null
   return { result: 'verified', facts: [], proof, ...(witnessed ? { witnessed: true } : {}), ...(kept.apart ? { apart: true } : {}) }
+}
+
+// ── written proofs ──
+
+/**
+ * What the figures say of a construction step (geometry/constructionStep.ts): the logic knows nothing
+ * of figures, so the caller answers. `ok` when its new points are built from the points above, in
+ * every sampled figure; `apart` when each new point stands apart from every other point in every one
+ * of them (only then does the convention cover it); `determined` when the figure's freedom is
+ * unchanged; `existence` from the planner's step that places each new point.
+ */
+export interface ConstructionCheck {
+  ok: boolean
+  apart: boolean
+  determined: boolean
+  existence: 'unconditional' | 'witnessed'
+  /** Why not, when not ok. */
+  why?: string
+}
+
+/** Check a construction: the step, what is drawn above it (hypotheses and earlier constructions), its new points. */
+export type Construct = (step: Predicate, above: readonly Predicate[], newPoints: readonly string[]) => ConstructionCheck
+
+export interface StepResult {
+  /** The step's line (1-based). */
+  line: number
+  step: Predicate
+  /**
+   * follows: shown from what is above it; not-shown: a short search did not find it (it is taken
+   * as given below, so later steps are still checked); constructed: a construction the figures
+   * allow; refused: a construction they do not.
+   */
+  result: 'follows' | 'not-shown' | 'constructed' | 'refused'
+  /** Shown only under the convention, for figures whose points are all apart. */
+  apart?: boolean
+  proof?: Proof
+  newPoints?: string[]
+  construction?: ConstructionCheck
+}
+
+export interface WrittenCheck {
+  steps: StepResult[]
+  /** The head, from the hypotheses and every step. */
+  head: CheckResponse
+}
+
+/** A step's search: enough for one rule or a few, not a lemma's whole search (engine.md, *How a step is checked*). */
+export const STEP_WORK = 300_000
+
+/**
+ * Check a lemma's written proof (engine.md, *Writing a proof*): each `?` step from the hypotheses and
+ * the steps above it, in order, then the head from all of them.
+ * - A step naming points not above it is a construction, checked on the figures (`construct`); its
+ *   facts, unfolded, join what is known, its new points named. The convention covers them only if
+ *   the figures show them apart.
+ * - Any other step is searched for from what is known, with a step's budget (`stepWork`): plain
+ *   first, then under the convention (`distinctNames`). A step not found is still taken as given
+ *   below, so one gap does not hide the rest; the lemma is then not ✓.
+ * - The head is checked as a lemma is (`checkLemma`), from everything known, with `options`. Its
+ *   `consistent` should answer for the hypotheses with the constructions.
+ */
+export function checkWrittenProof(
+  lemma: Lemma,
+  kb: KnowledgeBase,
+  options: CheckOptions & { construct?: Construct; stepWork?: number } = {},
+  maxDerivations = 2_000_000,
+): WrittenCheck {
+  const fresh = new FreshNames()
+  const unfoldAll = (ps: readonly Predicate[]) => ps.flatMap(p => unfold(toGroundPredicate(p), kb, new Set(), { fresh }).frontier)
+  const hypotheses = lemma.hypotheses.map(toGroundPredicate)
+  let known = dedupeFacts(unfoldAll(lemma.hypotheses))
+  const above = new Set(hypotheses.flatMap(h => h.args))
+  const drawn: Predicate[] = [...lemma.hypotheses]
+  const notApart = new Set<string>()
+  const stepWork = options.stepWork ?? STEP_WORK
+  const steps: StepResult[] = []
+  const addFacts = (p: Predicate, notCovered: boolean) => {
+    const facts = unfoldAll([p])
+    if (notCovered) for (const f of facts) for (const a of f.args) if (!above.has(a)) notApart.add(a)
+    known = dedupeFacts([...known, ...facts])
+    for (const a of p.args) above.add(a)
+  }
+
+  for (const { pred, line } of lemma.steps ?? []) {
+    const newPoints = [...new Set(pred.args.filter(a => !above.has(a)))]
+    if (newPoints.length) {
+      const construction: ConstructionCheck = options.construct?.(pred, drawn, newPoints)
+        ?? { ok: false, apart: false, determined: false, existence: 'witnessed', why: 'constructions are checked on figures, and there are none here' }
+      steps.push({ line, step: pred, result: construction.ok ? 'constructed' : 'refused', newPoints, construction })
+      if (construction.ok) { drawn.push(pred); addFacts(pred, !construction.apart) }
+      else for (const a of newPoints) { above.add(a); notApart.add(a) }
+      continue
+    }
+    const goal = toGroundPredicate(pred)
+    const attempt = (convention: boolean) => {
+      const frontier = [...known, ...(convention ? nonDegeneracy(known, goal, notApart) : [])]
+      const sat = saturate(kb, frontier, { goal, maxWork: stepWork, maxDerivations })
+      return sat.holds(goal) ? sat.explain(goal, frontier) ?? undefined : null
+    }
+    let proof = attempt(false), apart = false
+    if (proof === null && options.distinctNames) { proof = attempt(true); apart = proof !== null }
+    steps.push({ line, step: pred, result: proof === null ? 'not-shown' : 'follows', ...(apart ? { apart } : {}), ...(proof ? { proof } : {}) })
+    addFacts(pred, false)
+  }
+
+  // The head, from everything known, as a lemma's head is checked: plain first, then the convention.
+  const goal = toGroundPredicate(lemma.head)
+  const missing = lemma.head.args.filter(a => !above.has(a)).map(a => ({ name: '__object__', args: [a] }))
+  const facts = dedupeFacts([...known, ...missing])
+  const plain = checkFrom(goal, facts, kb, maxDerivations, { ...options, distinctNames: false })
+  if (!options.distinctNames || plain.result === 'verified' || plain.result === 'vacuous' || plain.result === 'unshown') return { steps, head: plain }
+  const apart = checkFrom(goal, facts, kb, maxDerivations, options, notApart)
+  return { steps, head: apart.result === 'verified' ? { ...apart, apart: true } : apart }
 }

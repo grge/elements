@@ -38,6 +38,8 @@ export interface EditorMark {
   message: string
   /** A ✓'s proof, to unfold under the lemma. */
   proof?: ProofView
+  /** Show the message under the line even with a ✓ (a written proof's construction step). */
+  note?: boolean
 }
 
 export interface EditorPredicate {
@@ -154,7 +156,7 @@ const errorField = StateField.define<{ line: number; message: string } | null>({
 
 class MarkMarker extends GutterMarker {
   constructor(readonly mark: EditorMark) { super() }
-  eq(other: MarkMarker) { return other.mark.type === this.mark.type && other.mark.message === this.mark.message }
+  eq(other: MarkMarker) { return other.mark.type === this.mark.type && other.mark.message === this.mark.message && !!other.mark.proof === !!this.mark.proof }
   toDOM() {
     const el = document.createElement('span')
     el.className = `mark ${this.mark.type}${this.mark.proof ? ' has-proof' : ''}`
@@ -263,7 +265,7 @@ function reasons(state: EditorState): DecorationSet {
       const start = lineOf(m.line + 1), end = lineOf((m.endLine ?? m.line) + 1)
       out.push(Decoration.widget({ widget: new ProofWidget(m.proof, indentOf(start.text) + 2), block: true, side: 1 }).range(end.to))
     }
-    if (m.type === 'verified' || m.type === 'unknown') continue
+    if ((m.type === 'verified' && !m.note) || m.type === 'unknown') continue
     if (m.line + 1 > doc.lines) continue
     const start = lineOf(m.line + 1), end = lineOf((m.endLine ?? m.line) + 1)
     out.push(Decoration.widget({ widget: new ReasonWidget(m.message, m.type, indentOf(start.text) + 2), block: true, side: 1 }).range(end.to))
@@ -618,6 +620,7 @@ const theme = EditorView.theme({
     color: 'var(--ed-pending, #888)',
   },
   '.mark.has-proof': { cursor: 'pointer' },
+  '.cm-reason.verified': { color: 'var(--ed-ok, #8ec88e)' },
   '.cm-proof': {
     fontSize: '0.78em', lineHeight: '1.5', padding: '0.1rem 0 0.5rem', textShadow: 'var(--ed-halo, none)',
     color: 'var(--ed-ink, #c8c8e8)',
