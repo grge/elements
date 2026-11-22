@@ -505,6 +505,14 @@ the first step for every item in this section; do it when a lens or a sibling bo
   engine found, shown on the page; proofs an author writes as `?` lines in a lemma's body, with
   constructions built by Euclid's moves; proofs kept and replayed instead of searched again. The
   diagnosis there covers the engine's power and efficiency too.
+- **Lemmas promoted by profiling** (an idea, November 2026; after the current engine work). Profile
+  the extracted proofs for steps an earlier lemma would give in one go: chapter 1's equal radii,
+  `transfer`, `cut` and `parallel-through` would each shorten 16 to 22 later proofs. Promoting the
+  profile's picks to rules of the search gained nothing and cost 6 to 7%. A lemma shortens a proof's
+  depth, and the search's cost is its breadth (3 to 5 rounds). Worth more:
+  - **citing lemmas in found proofs,** where they apply, for the reader (option A of tools.md);
+  - **promotion revisited** if searches become deep, once rules are cheap in the new core, and only
+    as a second pass that cannot lose a proof.
 - **Show the recognised status** of each predicate: defined (by which clause) or open, and any
   recognised equivalence, substitution or symmetry.
 - **Replace the `__object__` bootstrap** the checker uses for a lemma's head-only objects with an
