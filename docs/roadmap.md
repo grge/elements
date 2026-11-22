@@ -501,10 +501,20 @@ the first step for every item in this section; do it when a lens or a sibling bo
 - **Show a ✗'s counterexample**: clicking the mark draws the figure that breaks the lemma, the failing
   fact marked. Lemmas whose head introduces points of their own get no evidence yet: they need a
   witness search.
-- **Proofs** (proposed November 2026, [engine.md](engine.md)): every ✓ carrying the proof the
-  engine found, shown on the page; proofs an author writes as `?` lines in a lemma's body, with
-  constructions built by Euclid's moves; proofs kept and replayed instead of searched again. The
-  diagnosis there covers the engine's power and efficiency too.
+- **Proofs** (built November 2026, [engine.md](engine.md)): every ✓ carries the proof the engine
+  found, folded under it on the page; proofs an author writes as `?` lines in a lemma's body, with
+  constructions checked on the figures; proofs kept and replayed instead of searched again; the
+  search made by the matching core (`core.ts`). Later, when we come back to the engine:
+  - **Kept proofs in the browser's storage,** so a reload or a new session replays instead of
+    searching. Today they live in the checking worker's memory, by the lemma's text. Stored, a
+    proof's rules go by their text and are resolved again on load (`checkByReplay` already matches
+    them so); a size cap and a way to clear them are needed.
+  - **A page's lemmas checked in parallel workers.** They are independent, so a pool of workers is
+    a multiplier on top of the core; the kept proofs would then be shared through storage.
+  - **More speed in the core.** It is 6.7× `Saturation` (review-notes.md, *The matching core*),
+    against the spike's 10× without solvers. The solvers are the place to look: the lattice is
+    sparse maps reduced row by row; dense arrays, or reducing a query once per equation rather than
+    per atom, may pay. The profile has no single hot spot left, so measure before building.
 - **Lemmas promoted by profiling** (an idea, November 2026; after the current engine work). Profile
   the extracted proofs for steps an earlier lemma would give in one go: chapter 1's equal radii,
   `transfer`, `cut` and `parallel-through` would each shorten 16 to 22 later proofs. Promoting the
@@ -576,9 +586,14 @@ layers, the boffin panel and an entry page.
   status.
 - Inline proof marks in reading mode.
 - **More of a ✓'s proof on the page.** Clicking a ✓ unfolds its proof (November 2026: the argument's
-  steps, rules linked to where they are written, side conditions folded). Still to come: hovering a
-  step lights up its points in the figure; citing the book's lemmas where a step is one (tools.md,
-  option A); "write it in", which copies the proof into the source as `?` lines.
+  steps, rules linked to where they are written, side conditions folded). Still to come:
+  - **proofs and the figure, together:** hovering a step lights up its points and the relation it
+    states in the figure (as hovering a `?` line does for marks); hovering a figure's element shows
+    which steps use it; a written proof's constructed points drawn in the figure, marked as
+    constructed;
+  - citing the book's lemmas in found proofs, where a step is one (tools.md, option A; written
+    proofs already cite them);
+  - "write it in", which copies a found proof into the source as `?` lines.
 
 ## Code structure
 
