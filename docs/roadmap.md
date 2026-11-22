@@ -67,8 +67,13 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
      - supplements as signed angle classes.
 
      The prototype is in `scripts/prototypes/`. What remains is the cost of a match (about 14 µs,
-     against 0.02 µs for the same join on integers): a new matching core, to be shown on a slice
-     before it is built. Also cheap: one closure for lemmas with the same hypotheses, and the turn
+     against 0.02 µs for the same join on integers).
+   - **A new matching core, shown on a slice** (November 2026, review-notes.md, *The
+     matching-core spike*): on integers, on chapters 1 to 4 without the solvers' words, it gives
+     identical closures and verdicts, 10× on full closures and 12× on goal searches (the windmill
+     16×). It passes the bar set before it was built (10×). Next: the solvers, chapters 5 to 7,
+     the head check and signed classes inside it, and saturate's interface. Then it replaces
+     `saturate.ts`, which stays as the oracle in the tests. Also cheap: one closure for lemmas with the same hypotheses, and the turn
      solver's answers cached per version of the store.
 4. **What a page shows.**
    - Marks chosen by the page's statement first, its sub-constructions receding: done (November

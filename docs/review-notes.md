@@ -611,3 +611,47 @@ in units of work, so a faster engine proves nothing more until `MAX_WORK` is re-
 - generic machinery throughout: `unifyArgs` 11%, `matchEquivalence` 11%, `orbitMin` 8%, the
   prototype's naive parity lookup 6%, garbage collection 7%;
 - the turn solver asked again for the same atoms: `differenceHolds` 16% inclusive.
+
+**The matching-core spike** (November 2026). A new core on integers, `scripts/prototypes/fastcore.ts`,
+on the same `Prepared` rules as `saturate.ts`, computing the same closure rule by rule and round by
+round:
+- points are small integers, and tuples are packed numbers;
+- a rule is compiled once, its variables numbered slots bound and undone by a trail;
+- the atoms still to match are a bit mask, with no generators;
+- every stored relation and equivalence is indexed;
+- canonical forms are the least packed image.
+
+It has no solvers, so it ran on chapters 1 to 4 without the words that need one (`eq-turn`,
+`quad-sum`, `eq-ratio`, `cyclic`): 143 of 175 rules, 68 lemmas. `fastcore-compare.ts` runs both
+engines on the same rules and hypotheses.
+
+Correctness:
+- **full closures:** 64 of 64 identical, fact for fact both ways. The other four were too large for
+  saturate's 3 million units; one of them, the rectangle's diagonals (8,522 facts), was run to the
+  end and is identical too;
+- **goal searches, as the checker runs them:** 68 of 68 verdicts agree.
+
+Speed:
+
+| What | saturate | core | Gain |
+|---|---|---|---|
+| full closures, all 64 | 110.0 s | 11.0 s | 10.0× |
+| goal searches, all 68 | 65.3 s | 5.3 s | 12.4× |
+| goal searches over 200 ms (13) | 63.5 s | 5.0 s | 12.8× |
+| the windmill's first lemma | 13.7 s | 0.83 s | 16.5× |
+| the rectangle's diagonals, full closure | 30.7 s | 3.0 s | 10.1× |
+
+- **The first cut was 7 to 8×.** The rest came from taking allocation out of the inner loops: the
+  head emitted without building arrays, the goal asked only when the store has changed, a scratch
+  buffer for keys.
+- **What is left is matching itself:** `unify`, `join`, `matchEquiv`, `find`, about 2.5 µs per
+  match, where saturate takes 14.
+- **The gain multiplies with the structural changes above,** which cut matches rather than their
+  cost (the book's work 28.3 M to 9.6 M with signed classes, indexes and the head check). Combined,
+  30 to 50× is the estimate. It is not measured.
+- **Not in the spike:**
+  - the solvers;
+  - chapters 5 to 7;
+  - the head check and signed classes in the new core;
+  - the full Saturation interface the app uses (`allFacts` with saturate's naming, the marks
+    closure's assumptions).
