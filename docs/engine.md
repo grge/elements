@@ -472,23 +472,27 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
   - The planner's Euclid mode answers "can it be drawn". Something must also answer "is it
     determined", perhaps the count of conditions the planner already makes.
   - Constructions were added by hand in the prototype. Building them is new work.
+  - Answered (November 2026): tools.md's four checks, made on the figures (`constructionStep.ts`).
 - **Existence beyond the figures.** Should the book state Euclid's postulates (the `!` form), so
   that "follows, given its construction" can become a plain ✓? Only if the book wants to be a
   proof-checked Euclid (README, *What the book is for*).
 - **Uniqueness.** Concurrence proofs (the centroid, Euler's line) end in `eq-point`, which the book
   barely derives: that two points cutting one segment in one ratio are one point. A gap in the
-  logic that a proof cannot fill by itself.
+  logic that a proof cannot fill by itself. Still open: the centroid's construction is refused
+  with "h is g", and the nine-point circle's circle form waits on a circle's centre being unique.
 - **Folding.** Which steps count as bookkeeping on the page, decided without naming relations.
   Candidates: steps whose conclusion the figure makes obvious, or steps of rules with no metric
-  relation.
+  relation. For now (November 2026) `proofView.ts` names them: `distinct`, `triangle`, `collinear`,
+  `between`, rules resting only on those, and ratios of one.
 - **Keeping proofs as the book changes.** A kept proof cites rules by content, so an edit to an
   unrelated chapter need not invalidate it. Whether the key should be the fingerprint of the
-  rules a proof uses, rather than of the whole knowledge base.
+  rules a proof uses, rather than of the whole knowledge base. Answered for the worker (November
+  2026): keyed by the lemma's text, each cited rule matched by its text. Kept in memory only.
 
 **Search:**
 - **The solvers in the new core.** A bound solver atom is answered by the solver in the middle of a
   join, and solvers feed facts back between rounds. The spike had none: the least certain part of
-  the build.
+  the build. Answered (November 2026): built, join step for join step `Saturation`'s.
 - **Signed classes in general.** `supp` is one case of "an equivalence and its image under an
   involution". Turns and their reversal may be another. Recognised from the rules, they need a
   proof shape in `structure.ts` (the four rules of a flip) and a relevance rule.
@@ -497,7 +501,9 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
   the windmill; on the current engine they dominate. Cached proofs make this matter less; the
   benchmark should report full closures as well as goal searches, since those are stable.
 - **The budget's unit.** Work, matches or time? Work is deterministic, but its meaning changes
-  with the engine.
+  with the engine. Answered (November 2026): join steps, which both engines count alike;
+  `MAX_WORK` stays 3 million with the core (George's decision), so the speed goes to waiting
+  less, not to searching further.
 
 **Not in this proposal:**
 - **cases:** a written proof is their natural home later, with steps under each case and a
