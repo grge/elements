@@ -478,9 +478,17 @@ the book.
   everything at once, not from sides. No engine work was needed for this much.
 - **A guard the suite caught.** Without "short of its far end", the crossing rule took the far end as
   the crossing point (`between b a a` holds) and put a point of the line on one side of it.
-- **The windmill** proved with its chapter's rules but ran out of budget with the whole book's. There
-  chapter 6's `eq-ratio` filled 42k of its 70k derivations. The book's tests now check each lemma
-  with its own chapter's rules and those before, as its page does (`tests/book.ts`, `kbOf`).
+- **The windmill** proves with chapter 4's rules (44k derivations) but runs out of budget with the
+  whole book's, which the suite checks with. Chapter 6 joins its search through two rules concluding
+  earlier words: equal ratios give `eq-lines`, and the intercept converse gives `parallel`. Then its
+  ratio rules, wide and many in a figure of squares, parallels and right angles, take 42k of 70k
+  derivations and spend the budget of work. Before sides it squeezed through (39.5k).
+  - It is left out of the suite as over budget (`tests/book.ts`, `overBudget`), not checked with
+    fewer rules. Chapter scoping is not the fix.
+  - It is the first build's wall again, in another theory: a rule concluding a common word pulls a
+    whole theory into every search that needs that word. The fix is modules that can be included
+    and left out, and strata run independently, a theory's results flowing out without its
+    machinery joining every search.
 
 ## What next (proposed, not decided)
 
@@ -489,7 +497,8 @@ the book.
    2. The inventory's experiment: only the side rules that chapter 3's four same-side lemmas and
       chapter 2's angle addition need. Done: it pays (*Sides: the narrow experiment*).
    3. Find which rules escape, on which lemmas, and test the order stratum by hand on one of them.
-      The engine work is chosen from that.
+      The engine work is chosen from that. The windmill is a second case, in chapter 6's ratios
+      (*Sides: the narrow experiment*): strata and modules are general, not for sides alone.
    4. Write down where order sits in the module plan, which the reorganisation needs at any speed.
 1. **An order module, modelled on E's diagram axioms.**
    - `same-side`/`opposite` and `inside`/`outside`;

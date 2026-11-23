@@ -43,6 +43,10 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
         skipping "which ✓ need the parallel postulate" (November 2026, George).
       - Checking by module uses the general tool: set aside chosen clauses and see whether a lemma
         still follows.
+      - Modules included and left out explicitly, not by chapter, and strata run independently: a
+        theory's results flow out without its machinery joining every search (November 2026,
+        George). Cases so far: the side rules, and chapter 6's ratios in the windmill, which the
+        suite skips as over budget until then (foundations.md, *Sides: the narrow experiment*).
    4. **The hyperbolic plane** in the Poincaré disk. What a geometry supplies (points and how to sample
       them, each word's measure, loci and where they meet, drawing) is separated from what stays
       shared. Then:
