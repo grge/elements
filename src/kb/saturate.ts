@@ -81,6 +81,18 @@ export interface SaturateOptions {
   provenance?: boolean
   /** Which engine `saturate()` uses: the core (the default, where it can) or `Saturation` (the oracle). */
   engine?: 'core' | 'saturation'
+  /**
+   * Experimental, the strata spike (foundations.md, *Modules and strata: the design*): each rule's
+   * stratum. Each stratum's rules run as a pass to their own fixpoint, lowest first; a pass that adds
+   * anything sends the search back to the lowest stratum; the search ends when a sweep adds nothing.
+   * The closure is the same; only the order of work changes. `Saturation` only; not resumable.
+   */
+  stratumOf?: (rule: Rule) => number
+  /**
+   * With `stratumOf`, how strata run. 'separate': each stratum alone, alternating. 'widening': level s
+   * runs the rules of strata 0 to s together, interleaved, to their fixpoint, then the next level.
+   */
+  strataPolicy?: 'separate' | 'widening'
 }
 
 /** A search, by either engine: what `saturate()` returns. */
@@ -1160,6 +1172,7 @@ export class Saturation {
   private round: { i: number; before: number; rule: Rule | null; matches: Subst[]; m: number } | null = null
 
   run(): void {
+    if (this.opts.stratumOf) { this.runStrata(this.opts.stratumOf); return }
     const rules = [...this.prep.axioms, ...this.prep.rules]
     for (;;) {
       if (!this.round) {
@@ -1199,6 +1212,69 @@ export class Saturation {
       const fed = fedDifferences || fedSums
       if (this.done()) return
       if (this.version === r.before && !fed) return
+    }
+  }
+
+  /** The strata spike's counts: passes run, and returns to the lowest stratum. */
+  passes = 0
+  returns = 0
+  /** Per stratum, the work its passes did. */
+  workByStratum = new Map<number, number>()
+
+  private runStrata(stratumOf: (rule: Rule) => number): void {
+    const byStratum = new Map<number, Rule[]>()
+    for (const r of [...this.prep.axioms, ...this.prep.rules]) {
+      const k = stratumOf(this.original(r))
+      if (!byStratum.has(k)) byStratum.set(k, [])
+      byStratum.get(k)!.push(r)
+    }
+    const strata = [...byStratum.keys()].sort((a, b) => a - b).map(k => [k, byStratum.get(k)!] as const)
+    if (this.done()) return
+    if (this.opts.strataPolicy === 'widening') {
+      const widened = strata.map(([k], i) => [k, strata.slice(0, i + 1).flatMap(([, rs]) => rs)] as const)
+      for (const [k, rules] of widened) {
+        const workBefore = this.work
+        this.passes++
+        const stopped = this.runPass(rules)
+        this.workByStratum.set(k, (this.workByStratum.get(k) ?? 0) + this.work - workBefore)
+        if (stopped) return
+      }
+      return
+    }
+    for (let s = 0; s < strata.length;) {
+      const [k, rules] = strata[s]
+      const before = this.version, workBefore = this.work
+      this.passes++
+      const stopped = this.runPass(rules)
+      this.workByStratum.set(k, (this.workByStratum.get(k) ?? 0) + this.work - workBefore)
+      if (stopped) return
+      if (this.version !== before && s > 0) { this.returns++; s = 0 } else s++
+    }
+  }
+
+  /** One pass: the rules' rounds to their own fixpoint. True if the search is over. */
+  private runPass(rules: readonly Rule[]): boolean {
+    for (;;) {
+      const before = this.version
+      for (const rule of rules) {
+        if (this.lastRun.get(rule) === this.version) continue
+        this.lastRun.set(rule, this.version)
+        this.head = this.headCheckable(rule)
+        const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
+        this.matches += matches.length
+        this.head = null
+        for (const m of matches) {
+          this.cause = { kind: 'rule', rule, premises: () => rule.body.map(b => ({ name: b.name, args: b.args.map(a => m.get(a)!.v) })) }
+          for (const h of this.heads(rule, m)) this.assert(h)
+          this.cause = GIVEN
+          if (this.done(false)) return true
+        }
+        if (this.done()) return true
+      }
+      const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
+      const fed = fedDifferences || fedSums
+      if (this.done()) return true
+      if (this.version === before && !fed) return false
     }
   }
 

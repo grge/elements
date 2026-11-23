@@ -37,7 +37,13 @@ import { checkConstruction } from '../src/geometry/constructionStep'
 const bookDir = resolve(__dirname, '../src/language/book')
 const files = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
 const source = (f: string) => readFileSync(resolve(bookDir, f), 'utf8')
-const rulesTo = (chapter: number) => files.slice(0, chapter + 1).flatMap(f => parseRules(source(f)))
+// Each rule's file, for --strata (the strata spike: a stratum per file, in book order).
+const fileOf = new WeakMap<object, number>()
+const rulesTo = (chapter: number) => files.slice(0, chapter + 1).flatMap((f, i) => {
+  const rules = parseRules(source(f))
+  for (const r of rules) fileOf.set(r, i)
+  return rules
+})
 const args = process.argv.slice(2)
 const flag = (name: string) => args.includes(name)
 const only = args.find(a => a.startsWith('--only='))?.slice(7)
@@ -47,6 +53,7 @@ const FALSE: GroundPredicate = { name: 'false', args: [] }
 
 // Every assertion is a derivation; the ones that return true added a fact.
 let derived = 0, added = 0
+let passes = 0, returns = 0, lastStrata: object | null = null
 const assert = Saturation.prototype.assert
 Saturation.prototype.assert = function (f: GroundPredicate) {
   derived++
@@ -55,12 +62,31 @@ Saturation.prototype.assert = function (f: GroundPredicate) {
   return changed
 }
 
+// --goal-first: the modules a goal needs first. A word's module is the first file with a rule concluding
+// it; a module uses those whose words its rule bodies mention. Level 0 is the goal word's module and all
+// it uses, interleaved; level 1 adds the rest (the strata spike, foundations.md).
+const moduleRules = files.map(f => parseRules(source(f)))
+const ownerOf = new Map<string, number>()
+moduleRules.forEach((rs, i) => { for (const r of rs) if (!ownerOf.has(r.head.name)) ownerOf.set(r.head.name, i) })
+const usesOf = moduleRules.map((rs, i) => new Set(rs.flatMap(r => r.body.map(b => ownerOf.get(b.name))).filter((o): o is number => o !== undefined && o !== i)))
+function needs(word: string): Set<number> {
+  const out = new Set<number>(), start = ownerOf.get(word)
+  const todo = start === undefined ? [] : [start]
+  while (todo.length) { const m = todo.pop()!; if (out.has(m)) continue; out.add(m); todo.push(...usesOf[m]) }
+  return out
+}
+
 function saturateFrom(kb: KnowledgeBase, frontier: GroundPredicate[], goal: GroundPredicate) {
   derived = added = 0
   const t = performance.now()
-  const sat = new Saturation(relevant(prepare(kb), [goal.name]), { goal, maxDerivations: 200_000 })
+  const core = new Set([goal, ...frontier].flatMap(f => [...needs(f.name)]))
+  const stratumOf = flag('--goal-first') ? (r: object) => core.has(fileOf.get(r) ?? -1) ? 0 : 1
+    : flag('--strata') ? (r: object) => fileOf.get(r) ?? -1 : undefined
+  const sat = new Saturation(relevant(prepare(kb), [goal.name]), { goal, maxDerivations: 200_000, stratumOf, strataPolicy: flag('--widening') || flag('--goal-first') ? 'widening' : 'separate' })
   for (const f of frontier) sat.assert(f)
   sat.run()
+  passes += sat.passes; returns += sat.returns
+  lastStrata = { work: sat.work, ...(stratumOf ? { passes: sat.passes, returns: sat.returns, byStratum: Object.fromEntries(sat.workByStratum) } : {}) }
   return { ms: performance.now() - t, holds: sat.holds(goal), exhausted: sat.exhausted, derived, added }
 }
 
@@ -100,7 +126,7 @@ function checking() {
         derived: goal.derived + (contra?.derived ?? 0), added: goal.added + (contra?.added ?? 0), proved: goal.holds,
       }
       rows.push(row)
-      if (flag('--json')) console.log(JSON.stringify({ lemma: show(lemma), ...row, goalMs: Math.round(row.goalMs), falseMs: Math.round(row.falseMs) }))
+      if (flag('--json')) console.log(JSON.stringify({ lemma: show(lemma), ...row, goalMs: Math.round(row.goalMs), falseMs: Math.round(row.falseMs), search: lemma.steps ? null : lastStrata }))
     }
   })
   console.log(`${flag('--scoped') ? 'each chapter with its own and earlier rules' : 'the whole book for every lemma'}`)
@@ -113,6 +139,7 @@ function checking() {
   line('all', rows)
   const d = rows.reduce((t, r) => t + r.derived, 0), a = rows.reduce((t, r) => t + r.added, 0)
   console.log(`derivations ${d}, of which added a fact ${a} (${(100 * a / d).toFixed(1)}%)`)
+  if (flag('--strata') || flag('--goal-first')) console.log(`strata: ${passes} passes, ${returns} returns to the lowest`)
 }
 
 function pages() {

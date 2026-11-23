@@ -24,12 +24,14 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
       a round adds nothing: scheduling, not meaning. The book declares its groups; no axiom is
       special in the code (November 2026, George). Not chapter scoping: modules are included and
       left out explicitly. In order:
-      1. the strata spike: the windmill with the whole book's rules, and the first build's side rules
-         with order split out. The decision point;
-      2. the module analysis as a tool, with a test;
-      3. strata in the engine, with diagnostics;
-      4. a book as a set of modules, in the app, the tests and the bench;
-      5. rules into theory modules, order first, and constructions into their own files.
+      1. the module analysis as a tool, with a test;
+      2. strata in the engine, goal first: the modules a lemma's words need, interleaved, then the
+         rest. The spike (November 2026; foundations.md, *Modules and strata: the spike*): a third
+         less work on the book, the windmill 1.20M to 250k, and the first build's full side rules
+         81 proved in 11.5 s against 437 s, when Pasch's pieces are a module owning no words;
+      3. a book as a set of modules, in the app, the tests and the bench;
+      4. rules into theory modules, order first (Pasch's pieces a module of their own), and
+         constructions into their own files.
    2. **The order module grows:** Pasch's other half, `inside`/`outside` for circles, negations as
       paired words, contrapositives written by hand, then the rest of the six workarounds and the
       blocked list. Then checking by module: set aside chosen clauses and see whether a lemma still

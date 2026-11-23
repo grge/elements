@@ -542,7 +542,8 @@ module that is left out, constructions and pages included, drops out with it, by
 
 **Strata: scheduling, not meaning.**
 - Each module's rules run as a pass, in the uses order, and the passes alternate until a round adds
-  nothing.
+  nothing. (As first proposed. The spike found the schedule that pays is per goal: the modules a
+  lemma's words need, interleaved, then the rest. *Modules and strata: the spike*.)
 - Each pass is forward chaining over the one shared store. Horn clauses have one least model,
   whatever order rules fire in, so the closure is the one a single saturation reaches.
 - Soundness is untouched: every fact is still a rule applied to facts already there, so proofs and
@@ -567,26 +568,84 @@ module that is left out, constructions and pages included, drops out with it, by
 **Not a new language.** Files, and the convention of own rules, are enough. The only declaration is
 which modules a book includes.
 
+## Modules and strata: the spike
+
+November 2026. Modules were the chapter files, and a word's module the first file with a rule
+concluding it. Bench with the whole book's rules, as the suite checks, with work in join steps.
+`--strata`, `--widening` and `--goal-first` are in `scripts/bench.ts`; the schedule is
+`SaturateOptions.stratumOf`, in `Saturation` only.
+
+**Bottom up loses.** Strata in book order cost more than one search:
+- **Each stratum alone, alternating:** the windmill took 1.66M work against 1.20M. The angle pass
+  alone took 1.19M, closing angle completely before area's rules could start.
+- **Widening, each level adding the next file:** 1.43M. The level of length, angle and direction took
+  965k to close.
+
+A single search finds the goal before the theories under it are closed. Closing them first is work
+the proof does not need.
+
+**Goal first wins.** The first level is the modules the lemma's words need: those owning the goal's
+word and the hypotheses' words, and everything those use, interleaved as one search. Only if it
+closes without the goal do the other modules join.
+
+| | Proved | Goal time | Work |
+|---|---|---|---|
+| one search | 75 | 14.3 s | 5.01M |
+| goal first | 75 | 8.9 s | 3.11M |
+
+- **The windmill:** 1.20M to 250k, what chapter 4's rules alone give. Ratio never runs.
+- **The second level** was needed by 27 searches. Four were proved, all cheap: chapter 2's midpoint
+  and vesica lemmas and the midsegment, whose proofs with the whole book use a rule from outside the
+  modules their words need. The rest are lemmas that do not prove either way.
+- **More work** only for four ratio lemmas that do not prove either way, by up to 54k each.
+
+The order is per goal, derived from content: no declaration.
+
+**Sides: the grain decides.** The first build's side rules (`scripts/prototypes/sides.geo`, Pasch's
+pieces included) were put in as a file of their own:
+- **The file owning none of its words** (chapter 2 concludes `same-side` and `opposite` first): it
+  is a module of rules about other modules' words, never in a first level.
+  - Goal first: 81 proved, 11.5 s, 3.69M.
+  - One search: 79 proved, 437 s, 18.5M.
+
+  Gained against the book (75): the complements, the parallel through a point, the bisector's feet,
+  three parallels, the medians, the bisector's cut, and the trisection's two. Lost: the midline and
+  the tangent-chord, both written proofs, which the bench checks without strata, and which one
+  search lost too.
+- **The file owning the side words,** with chapter 2's side block moved into it: angle addition
+  uses them, so the module is in the first level of nearly every lemma. 79 proved, 362 s: the wall
+  again.
+
+**What it shows.**
+- Strata are scheduling, and the schedule that pays is goal first: the modules a lemma's words need,
+  then the rest. It defers theories above the goal (ratio for the windmill), not those under it.
+- What it defers depends on the grain. A module of rules about other modules' words, owning none of
+  its own, is never needed by a lemma's words, so it always waits for the second level. The
+  first-level search stays the size of the lemma's own theories, and the module's rules come in
+  only where those fall short.
+- So the order module wants two parts: the basic side words and their rules, which angle addition
+  needs; and Pasch's pieces, the rules concluding `between` and `triangle`, as a module owning no
+  words. That is how the first build's full rules become affordable without changing how the engine
+  stores facts.
+
 ## What next
 
 The plan, agreed November 2026 (*Modules and strata: the design*). Steps 1 and 2 of *Sides, step by
 step* are done: the `false` option reverted, and the narrow experiment.
 
-1. **The strata spike.**
-   - Each rule tagged with its file.
-   - An experimental schedule: a pass per module, in the uses order, alternating until a round adds
-     nothing.
-   - Two cases: the windmill with the whole book's rules (it proves again, but chapter 6 still doubles
-     its work), and the first build's side rules with order split out by hand.
-   - Measured on the whole book against one search: proved, derivations, work, rounds.
-   - The decision point. If strata pay, go on; if not, rethink.
+1. **The strata spike:** done (*Modules and strata: the spike*). Goal first pays: a third less work
+   on the book, and the first build's full side rules affordable when Pasch's pieces are a module
+   owning no words. Strata go ahead, goal first.
 2. **The module analysis as a tool.** Ownership, uses and crossings, as a script, with a test that
    every word has one home and the uses graph has no cycle.
-3. **Strata in the engine.** A pass per module, a budget policy, provenance unchanged, and
-   per-stratum diagnostics in the bench. The windmill leaves the over-budget list.
+3. **Strata in the engine,** goal first: in the core as well as `Saturation`, and in `saturate()`, so
+   the checker, the pages and the marks use them. A budget policy, provenance unchanged,
+   per-level diagnostics in the bench. Searches kept and resumed across goals of different words
+   need thought, since the first level is per goal.
 4. **A book as a set of modules,** the order derived, in the app, the tests and the bench.
 5. **Rules into theory modules,** the first half of the reorganisation:
-   - order first (`between`, `collinear`, `triangle`, the side words);
+   - order first (`between`, `collinear`, `triangle`, the side words), with Pasch's pieces as a
+     module of their own that owns no words;
    - constructions into their own files;
    - chapters keep their lemmas and prose until pages share by reference.
 6. **The order module grows:**
