@@ -15,39 +15,26 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
 
 1. **Foundations.** The book's axioms made sound enough to share with another geometry, and a second
    geometry to prove it. The analysis is in [foundations.md](foundations.md): where the axioms live,
-   which geometries could share them, and System E mapped onto elements. In order:
-   1. **An inventory** of every place the book works around sides of a line: done (November 2026;
-      foundations.md, *Sides: the inventory*). Six ways round, six things blocked; the planner treats
-      sides as it treats `between`.
-   2. **The order module.** Built from System E's diagram axioms, said with points only:
-      - sides of a line (`same-side`, `opposite`), with Pasch;
-      - `inside` and `outside` for circles;
-      - negations as words paired with their positives, as `distinct` is;
-      - contrapositives written by hand, with their guards.
-
-      Tried first on chapters 1–3, measuring the cost in work and seeing which workaround axioms become
-      lemmas.
-
-      First build (November 2026; foundations.md, *Sides: the first build*): the rules work (I.43 proves
-      with them) but cost too much as plain rules, over 600 s against 19.7 s for the book. The wall is
-      the rules concluding `between` and `triangle`, not `false` or lines as pairs. Next, as in
-      foundations.md, *Sides: taking stock*: the inventory's narrow experiment, then the escaping
-      rules found and an order stratum tested. The rules wait in `scripts/prototypes/sides.geo`.
-
-      Narrow experiment (November 2026; foundations.md, *Sides: the narrow experiment*): `same-side`,
-      `opposite` and `inside` in chapter 2, with only the rules that chapter 3's same-side lemmas and
-      angle addition need. It pays: 75 proved still, the midline gained, a third more derivations,
-      no engine work.
-   3. **Modules.** The neutral rules split from the parallel ones, and lemmas checked by module.
-      - The book declares its groups; no axiom is special in the code. This keeps the reason for
-        skipping "which ✓ need the parallel postulate" (November 2026, George).
-      - Checking by module uses the general tool: set aside chosen clauses and see whether a lemma
-        still follows.
-      - Modules included and left out explicitly, not by chapter, and strata run independently: a
-        theory's results flow out without its machinery joining every search (November 2026,
-        George). Cases so far: the side rules, and chapter 6's ratios in the windmill, which the
-        suite skips as over budget until then (foundations.md, *Sides: the narrow experiment*).
-   4. **The hyperbolic plane** in the Poincaré disk. What a geometry supplies (points and how to sample
+   which geometries could share them, and System E mapped onto elements. Done there: the inventory
+   of the book's workarounds for sides, and the first side words in the book (`same-side`,
+   `opposite`, `inside`). In order:
+   1. **Modules and strata** (foundations.md, *Modules and strata: the design*). A module is a file.
+      A word belongs to the file holding its own rules, and the order comes from which modules use
+      which. A book is a set of modules. Search runs in strata, a pass per module, alternating until
+      a round adds nothing: scheduling, not meaning. The book declares its groups; no axiom is
+      special in the code (November 2026, George). Not chapter scoping: modules are included and
+      left out explicitly. In order:
+      1. the strata spike: the windmill with the whole book's rules, and the first build's side rules
+         with order split out. The decision point;
+      2. the module analysis as a tool, with a test;
+      3. strata in the engine, with diagnostics; the windmill leaves the over-budget list;
+      4. a book as a set of modules, in the app, the tests and the bench;
+      5. rules into theory modules, order first, and constructions into their own files.
+   2. **The order module grows:** Pasch's other half, `inside`/`outside` for circles, negations as
+      paired words, contrapositives written by hand, then the rest of the six workarounds and the
+      blocked list. Then checking by module: set aside chosen clauses and see whether a lemma still
+      follows, which keeps the reason for skipping "which ✓ need the parallel postulate".
+   3. **The hyperbolic plane** in the Poincaré disk. What a geometry supplies (points and how to sample
       them, each word's measure, loci and where they meet, drawing) is separated from what stays
       shared. Then:
       - figures drawn in the disk;
@@ -63,7 +50,8 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
    - which words are of the plane and which are defined;
    - which rules are axioms and which theorems;
    - which construction words are descriptions and which are problems;
-   - chapters against modules;
+   - pages sharing content by reference, the chapters' half of modules (the rules' half is in
+     *Foundations*);
    - how a proved lemma becomes a tool ([tools.md](tools.md), option B), which is how the axioms that
      are Euclid's theorems would be demoted;
    - what a reader sees of a proof.

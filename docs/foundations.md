@@ -490,24 +490,111 @@ the book.
     and left out, and strata run independently, a theory's results flowing out without its
     machinery joining every search.
 
-## What next (proposed, not decided)
+## Modules and strata: the design
 
-0. **Sides, step by step** (*Sides: taking stock*):
-   1. Stop the engine optimisations. The `false` option is reverted.
-   2. The inventory's experiment: only the side rules that chapter 3's four same-side lemmas and
-      chapter 2's angle addition need. Done: it pays (*Sides: the narrow experiment*).
-   3. Find which rules escape, on which lemmas, and test the order stratum by hand on one of them.
-      The engine work is chosen from that. The windmill is a second case, in chapter 6's ratios
-      (*Sides: the narrow experiment*): strata and modules are general, not for sides alone.
-   4. Write down where order sits in the module plan, which the reorganisation needs at any speed.
-1. **An order module, modelled on E's diagram axioms.**
-   - `same-side`/`opposite` and `inside`/`outside`;
+Agreed November 2026, after the narrow experiment and the windmill. The book becomes theory modules,
+construction files and pages. A search runs module by module, in strata.
+
+**Why.** One search per goal brings in every rule whose head can feed the goal. One rule concluding
+a common word then brings a whole theory into every search that needs that word, with its rules
+firing on every new fact and spending the one budget. This happened twice:
+- the first build's side rules, through `between` and `triangle`;
+- chapter 6's ratios in the windmill, through `eq-lines` and `parallel`.
+
+**Three kinds of file.**
+1. **Theory modules:** words with their axioms (order, length, angle, the triangle criteria,
+   parallels, area, circle, ratio, turns, at about Hilbert's grain). This is what search runs over,
+   and what a geometry includes or leaves out. Modules come in as the book needs them, not all at the
+   front: ratio is a theory module, though chapter 6 brings it.
+2. **Construction files:** definitions only. They cost nothing in search, since definitions are
+   abbreviations, never stored and never fired (saturate.ts, `Prepared.defined`). They also feed the
+   planner, so they carry the figure's side of a geometry.
+3. **Pages:** lemmas, written proofs and prose, citing words and constructions from both. Chapters
+   are pages, and the reading order is the author's. That is presentation, not logic.
+
+A module is a file, so a rule's module is its file. Nothing else is declared.
+
+**Ownership, from content.** A word belongs to the file holding its own rules: those whose body
+mentions nothing but the word and equality (symmetries, equivalence axioms, swapping equal points).
+A defined word belongs to the file holding its definition.
+- **The convention:** every primitive word has at least one rule about itself alone. Every word in
+  the book already does, since that is how the engine recognises structure.
+- **Errors, naming the word:** a word whose own rules are in two files, or in none. That is "one
+  fact, one home", checked.
+- **Logic is not a theory.** `false`, and arguably `eq-point`, belong to no module.
+
+**Order, from content.** Module M uses module N when M's rule bodies mention a word N owns. The uses
+graph gives a partial order. A cycle in it is an error: merge the two modules, or move the word.
+- Rules concluding another module's word are **crossings**, not uses. They are what make strata
+  alternate.
+- Tried on the book as it is, with the files shuffled, it gives back the book's order:
+  length < angle < direction < {area, circle, ratio}, then regular. Area, circle and ratio are
+  unordered among themselves.
+- 17 rules cross. The windmill's two are chapter 6's.
+
+**A book is a set of modules.** No list and no order. The Euclidean book is every module; the
+hyperbolic book is every module except parallels, with its own parallels module. Whatever uses a
+module that is left out, constructions and pages included, drops out with it, by the uses graph.
+
+**Strata: scheduling, not meaning.**
+- Each module's rules run as a pass, in the uses order, and the passes alternate until a round adds
+  nothing.
+- Each pass is forward chaining over the one shared store. Horn clauses have one least model,
+  whatever order rules fire in, so the closure is the one a single saturation reaches.
+- Soundness is untouched: every fact is still a rule applied to facts already there, so proofs and
+  replay are unchanged.
+- Completeness is untouched given budget: a strict two passes would lose proofs that cross back and
+  forth, so the passes alternate.
+- A badly placed boundary costs time, never truth. That is why boundaries can be the author's
+  judgement.
+- **Where it saves:**
+  - the goal found before a later module runs (the windmill never needed ratios);
+  - budgets per stratum, so one theory's flood cannot spend another's work;
+  - a stratum closed once and reused across a written proof's steps, the search for a
+    contradiction and the figure's marks;
+  - a store per stratum where it pays: lines as classes and sides as signed classes per line belong
+    inside the order stratum.
+- **What it may cost:** a round for every crossing a proof makes; facts that wait for the next round
+  instead of helping at once; bookkeeping per pass. Too many small modules multiply these.
+- **Meaning and scheduling may want different grains.** The parallel postulate is a module (leaving
+  it out gives the neutral book) but far too small to be a pass. Small modules may run inside the
+  pass of a module they use. That is decided from measurements.
+
+**Not a new language.** Files, and the convention of own rules, are enough. The only declaration is
+which modules a book includes.
+
+## What next
+
+The plan, agreed November 2026 (*Modules and strata: the design*). Steps 1 and 2 of *Sides, step by
+step* are done: the `false` option reverted, and the narrow experiment.
+
+1. **The strata spike.**
+   - Each rule tagged with its file.
+   - An experimental schedule: a pass per module, in the uses order, alternating until a round adds
+     nothing.
+   - Two cases: the windmill with the whole book's rules, and the first build's side rules with order
+     split out by hand.
+   - Measured on the whole book against one search: proved, derivations, work, rounds.
+   - Also `inside` made a definition again: angle addition says its two `same-side` facts, as rules
+     say `right`'s body.
+   - The decision point. If strata pay, go on; if not, rethink.
+2. **The module analysis as a tool.** Ownership, uses and crossings, as a script, with a test that
+   every word has one home and the uses graph has no cycle.
+3. **Strata in the engine.** A pass per module, a budget policy, provenance unchanged, and
+   per-stratum diagnostics in the bench. The windmill leaves the over-budget list.
+4. **A book as a set of modules,** the order derived, in the app, the tests and the bench.
+5. **Rules into theory modules,** the first half of the reorganisation:
+   - order first (`between`, `collinear`, `triangle`, the side words);
+   - constructions into their own files;
+   - chapters keep their lemmas and prose until pages share by reference.
+6. **The order module grows:**
+   - `same-side`/`opposite` and `inside`/`outside`, with Pasch's other half;
    - negations paired with their positives;
    - contrapositives written by hand, with their guards;
-   - all said with points only ("on L" is collinear with the two points naming L).
+   - the rest of the six workarounds, then the blocked list (*Sides: the inventory*).
+7. **Checking by module, then the hyperbolic plane**: another set of modules, with its parallels
+   module and its figure.
 
-   First experiment: E's same-side and Pasch axioms alone, on chapters 1–3, measuring how the work
-   changes and which workarounds go (*Sides: the inventory*).
-2. **Continuity as rules:** E's intersection axioms, so that construction checks prove existence.
-3. **Inequalities,** a later module (on the ledger).
-4. **The second geometry** then shares a sounder neutral core.
+Later, on the ledger:
+- continuity as rules (E's intersection axioms, so that construction checks prove existence);
+- inequalities.
