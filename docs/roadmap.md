@@ -29,9 +29,10 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
       lemmas.
 
       First build (November 2026; foundations.md, *Sides: the first build*): the rules work (I.43 proves
-      with them) but cost too much as plain rules, over 600 s against 19.7 s for the book. First, the
-      engine structure it showed is needed: lines as classes, sides as signed classes per line,
-      `false` left out of a witnessed goal search. The rules wait in `scripts/prototypes/sides.geo`.
+      with them) but cost too much as plain rules, over 600 s against 19.7 s for the book. The wall is
+      the rules concluding `between` and `triangle`, not `false` or lines as pairs. Next, as in
+      foundations.md, *Sides: taking stock*: the inventory's narrow experiment, then the escaping
+      rules found and an order stratum tested. The rules wait in `scripts/prototypes/sides.geo`.
    3. **Modules.** The neutral rules split from the parallel ones, and lemmas checked by module.
       - The book declares its groups; no axiom is special in the code. This keeps the reason for
         skipping "which ✓ need the parallel postulate" (November 2026, George).

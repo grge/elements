@@ -3,8 +3,8 @@
 # System E's same-side, Pasch and inside axioms, said with points, as tried in chapter 2 after the
 # triangle section, with a relation entry for each word (relations.ts: holds is the sign of each
 # point's distance from the line; read only keeps a and b apart). Not in the book: as plain rules
-# they cost too much. Kept to be measured again once the engine has lines as classes and sides as
-# signed classes per line.
+# they cost too much, mostly through the rules concluding between and triangle. Kept as the source for
+# the narrower experiments of docs/foundations.md, *Sides: taking stock*.
 
 # ── sides of a line
 

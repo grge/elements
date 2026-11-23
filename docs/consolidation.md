@@ -93,7 +93,7 @@ From [foundations.md](foundations.md), where each is argued.
 - **Sides of a line**: no plane separation anywhere, so the book works around it (angle addition
   through `between`, "same side" as opposite twice, facts about sides taken as axioms). Foundational,
   and shared by every geometry with `between`. Candidate: System E's same-side, Pasch and
-  triple-incidence axioms, with negations as paired words and contrapositives generated. (November
+  triple-incidence axioms, with negations as paired words and contrapositives written by hand. (November
   2026)
 - **Inequalities**: no `<` in the book. Euclid needs it for I.6, I.7, I.18–20 and the triangle
   inequality. (November 2026)

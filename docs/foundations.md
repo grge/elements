@@ -395,27 +395,61 @@ The parallelogram's opposite sides cost almost nothing more (1,183 derivations a
 
 **What it shows.**
 - The axioms work: the complements proved with them where they did not before.
-- The cost is a matter of representation, not logic. The fixes are engine structure, of the kinds
-  the engine already has:
-  - **Lines as classes:** a pair of points standing for its line, with a side fact's line block
-    rewritten to its class, as equal points are rewritten to theirs. That is substitution of
-    equals, generalised from points to blocks. It answers the open question of lines as objects.
-  - **Sides as signed classes per line:** for each line, the points off it in two classes. This is
-    `ParityUnionFind`, as supplements are signed classes of angles. One fact per point per line, not
-    one per pair of points per pair naming the line. It would be recognised from the rules as an
-    equivalence with a parameter, the line, and `opposite` as its flip.
-  - **`false` only when it can matter:** with a witness, the rules that lead only to a
-    contradiction are left out of the goal search. That is general, and useful before sides too.
+- The table ranks the three mechanisms, and the wall is the second. Leaving out `false` saves about
+  2 s, and so does leaving out line-naming. Leaving out the rules that conclude `between` and
+  `triangle` takes the run from over 320 s to about 20 s.
+- Leaving `false` out was then tried as an engine option: with a witness, the goal search left out
+  the rules that lead only to a contradiction. It made no difference. On the book: 194,369
+  derivations against 196,339. With the side rules, all 98 lemmas: 686,454 against 685,060, and
+  483 s against 550 s, within noise. Not kept.
+- Lines as classes and sides as signed classes per line would make each step cheaper. They would
+  not stop the side theory joining nearly every search, which is the wall. Their case is
+  cleanliness, not speed.
 - Contrapositives cannot be generated mechanically as planned (*What it teaches*, 1). The negation
   of `same-side p q a b` is not one word: it is "p is on the line, or q is, or they are opposite".
   Paired words cover a negation only where it is a single literal (`distinct`, `triangle`), so the
   side contrapositives are written by hand, each with its "off the line" guards.
 
+## Sides: taking stock
+
+After the first build (November 2026), the work had drifted from the inventory's plan.
+- **Drift.** The inventory said to measure cheaply first: chapter 3's four same-side lemmas,
+  chapter 2's angle addition with "inside", and the blocked list. The first build put all of E's
+  side axioms into chapter 2 and benched the whole book. The engine work that followed was tuned to
+  that test, and aimed at the two costs the table shows are small.
+- **Where the wall points.** E has no such wall because of its architecture. Diagram facts are
+  closed once per figure by unit propagation, and metric reasoning takes them as given. Elements
+  saturates everything, for every goal. The idea that follows is an **order stratum**:
+  - close the order and side facts once from a lemma's hypotheses;
+  - run the metric search with them as inputs, without the rules that conclude `between` and
+    `triangle`.
+
+  A few metric rules do conclude order facts ("a line meets a circle at most twice" concludes
+  `triangle`), so the two may have to alternate until nothing new follows. A stratum is the order
+  module with an engine boundary, so here performance and foundations point the same way.
+- **What sides is for.** The workarounds are not slow: the book checks in 9–20 s partly because of
+  them. Their costs are elsewhere:
+  - extra named points in statements and constructions;
+  - about eight theorems taken as axioms;
+  - a short blocked list;
+  - a planner that guesses sides.
+
+  Sides is about expressiveness and foundations, not speed. The reorganisation leads: another
+  geometry needs to know where order lives, and that does not need the module to be fast on the
+  whole book. Unblocking and removing workarounds are what the module pays back, lemma by lemma.
+- **Completeness stays a non-goal.** E's full axiom set is what pulled the first build into adding
+  everything at once. A sound partial module is enough.
+
 ## What next (proposed, not decided)
 
-0. **Engine structure for sides** (*Sides: the first build*): lines as classes, sides as signed
-   classes per line, and `false` left out of a witnessed goal search. Then the prototype measured
-   again.
+0. **Sides, step by step** (*Sides: taking stock*):
+   1. Stop the engine optimisations. The `false` option is reverted.
+   2. The inventory's experiment: only the side rules that chapter 3's four same-side lemmas and
+      chapter 2's angle addition need, in those chapters only. Does sides pay before it is made
+      cheap?
+   3. Find which rules escape, on which lemmas, and test the order stratum by hand on one of them.
+      The engine work is chosen from that.
+   4. Write down where order sits in the module plan, which the reorganisation needs at any speed.
 1. **An order module, modelled on E's diagram axioms.**
    - `same-side`/`opposite` and `inside`/`outside`;
    - negations paired with their positives;
