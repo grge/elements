@@ -3,12 +3,14 @@
 import { readdirSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { parseLemmas, parseRules } from '../src/language/parser'
+import { inModule } from '../src/kb/modules'
 
 const bookDir = resolve(__dirname, '../src/language/book')
 
 export const chapterFiles = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
 export const chapterSource = (file: string) => readFileSync(resolve(bookDir, file), 'utf8')
-export const bookRules = chapterFiles.flatMap(f => parseRules(chapterSource(f)))
+/** The book's rules, each file a module (kb/modules.ts), as the app loads them. */
+export const bookRules = chapterFiles.flatMap(f => inModule(parseRules(chapterSource(f)), f.replace(/\.geo$/, '')))
 export const bookLemmas = chapterFiles.flatMap(f => parseLemmas(chapterSource(f)))
 
 const fixture = (name: string) => readFileSync(resolve(__dirname, 'fixtures', name), 'utf8')

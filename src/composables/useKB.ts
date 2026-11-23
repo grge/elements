@@ -9,6 +9,7 @@
  * defined latest in the book (so `? eq-lines a c b d: vesica a b c d` belongs to vesica).
  */
 
+import { inModule } from '../kb/modules'
 import { ref, computed } from 'vue'
 import { parseRules, parseSource, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
@@ -88,7 +89,8 @@ export function pageLemmas(name: string): Lemma[] {
 }
 
 export const bookLemmas: Lemma[] = loaded.filter(c => !c.extra).flatMap(c => c.items.flatMap(i => i.kind === 'lemma' ? [i.lemma] : []))
-const bookRules: Rule[] = loaded.flatMap(c => parseRules(c.source))
+// Each file a module (kb/modules.ts): its rules marked with it.
+const bookRules: Rule[] = loaded.flatMap(c => inModule(parseRules(c.source), c.id))
 
 /** The book chapter (1 for the first) a rule is first written in, by its text; none for `extra/`. */
 const ruleChapterMap = new Map<string, number>()

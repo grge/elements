@@ -1,7 +1,7 @@
 /**
  * The engine's benchmark, the baseline for the roadmap's engine work (measurements in docs/review-notes.md).
  *
- *   npx vite-node scripts/bench.ts [--scoped] [--witness] [--only=text] [--json]   checking: every book lemma
+ *   npx vite-node scripts/bench.ts [--scoped] [--witness] [--one-level] [--only=text] [--json]   checking: every book lemma
  *   npx vite-node scripts/bench.ts pages                               drawing: every defined predicate's page
  *
  * Checking runs each lemma as the checker does (unfold the hypotheses, saturate until the goal), then,
@@ -11,7 +11,8 @@
  * are counted in all, and those that added a fact. `--witness` checks as the app does: a figure of the
  * hypotheses (evidence.ts) shows them consistent, and the search for `false` runs only without one.
  * `--scoped` checks each chapter with its own rules
- * and the earlier chapters' only. `--json` prints a line per lemma.
+ * and the earlier chapters' only. Searches run in strata, as saturate() runs them (kb/modules.ts):
+ * `--one-level` runs each as one search, for comparison. `--json` prints a line per lemma.
  *
  * Pages plans and realises each defined predicate's signature as its page does, and times the closure
  * that merges its marks (useClosure.ts), which the app runs in a worker and remembers.
@@ -22,7 +23,8 @@ import { readdirSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { parseLemmas, parseRules, type Lemma } from '../src/language/parser'
 import { KnowledgeBase, unfold, type GroundPredicate } from '../src/kb/inference'
-import { Saturation, prepare, relevant } from '../src/kb/saturate'
+import { Saturation, prepare, relevant, strata } from '../src/kb/saturate'
+import { inModule } from '../src/kb/modules'
 import { FreshNames } from '../src/kb/names'
 import { extract } from '../src/geometry/extraction'
 import { buildModel, plan, realise } from '../src/geometry/construction'
@@ -37,13 +39,8 @@ import { checkConstruction } from '../src/geometry/constructionStep'
 const bookDir = resolve(__dirname, '../src/language/book')
 const files = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
 const source = (f: string) => readFileSync(resolve(bookDir, f), 'utf8')
-// Each rule's file, for --strata (the strata spike: a stratum per file, in book order).
-const fileOf = new WeakMap<object, number>()
-const rulesTo = (chapter: number) => files.slice(0, chapter + 1).flatMap((f, i) => {
-  const rules = parseRules(source(f))
-  for (const r of rules) fileOf.set(r, i)
-  return rules
-})
+// Each file a module (kb/modules.ts), as the app loads the book.
+const rulesTo = (chapter: number) => files.slice(0, chapter + 1).flatMap(f => inModule(parseRules(source(f)), f.replace(/\.geo$/, '')))
 const args = process.argv.slice(2)
 const flag = (name: string) => args.includes(name)
 const only = args.find(a => a.startsWith('--only='))?.slice(7)
@@ -53,7 +50,7 @@ const FALSE: GroundPredicate = { name: 'false', args: [] }
 
 // Every assertion is a derivation; the ones that return true added a fact.
 let derived = 0, added = 0
-let passes = 0, returns = 0, lastStrata: object | null = null
+let secondLevel = 0, lastSearch: object | null = null
 const assert = Saturation.prototype.assert
 Saturation.prototype.assert = function (f: GroundPredicate) {
   derived++
@@ -62,31 +59,16 @@ Saturation.prototype.assert = function (f: GroundPredicate) {
   return changed
 }
 
-// --goal-first: the modules a goal needs first. A word's module is the first file with a rule concluding
-// it; a module uses those whose words its rule bodies mention. Level 0 is the goal word's module and all
-// it uses, interleaved; level 1 adds the rest (the strata spike, foundations.md).
-const moduleRules = files.map(f => parseRules(source(f)))
-const ownerOf = new Map<string, number>()
-moduleRules.forEach((rs, i) => { for (const r of rs) if (!ownerOf.has(r.head.name)) ownerOf.set(r.head.name, i) })
-const usesOf = moduleRules.map((rs, i) => new Set(rs.flatMap(r => r.body.map(b => ownerOf.get(b.name))).filter((o): o is number => o !== undefined && o !== i)))
-function needs(word: string): Set<number> {
-  const out = new Set<number>(), start = ownerOf.get(word)
-  const todo = start === undefined ? [] : [start]
-  while (todo.length) { const m = todo.pop()!; if (out.has(m)) continue; out.add(m); todo.push(...usesOf[m]) }
-  return out
-}
-
 function saturateFrom(kb: KnowledgeBase, frontier: GroundPredicate[], goal: GroundPredicate) {
   derived = added = 0
   const t = performance.now()
-  const core = new Set([goal, ...frontier].flatMap(f => [...needs(f.name)]))
-  const stratumOf = flag('--goal-first') ? (r: object) => core.has(fileOf.get(r) ?? -1) ? 0 : 1
-    : flag('--strata') ? (r: object) => fileOf.get(r) ?? -1 : undefined
-  const sat = new Saturation(relevant(prepare(kb), [goal.name]), { goal, maxDerivations: 200_000, stratumOf, strataPolicy: flag('--widening') || flag('--goal-first') ? 'widening' : 'separate' })
+  // Strata, as saturate() runs them (the modules the words need first), unless --one-level.
+  const levels = flag('--one-level') ? undefined : strata(kb, [goal.name, ...frontier.map(f => f.name)])
+  const sat = new Saturation(relevant(prepare(kb), [goal.name]), { goal, maxDerivations: 200_000, levelOf: levels?.levelOf })
   for (const f of frontier) sat.assert(f)
   sat.run()
-  passes += sat.passes; returns += sat.returns
-  lastStrata = { work: sat.work, ...(stratumOf ? { passes: sat.passes, returns: sat.returns, byStratum: Object.fromEntries(sat.workByStratum) } : {}) }
+  if (sat.level > 0) secondLevel++
+  lastSearch = { work: sat.work, level: sat.level }
   return { ms: performance.now() - t, holds: sat.holds(goal), exhausted: sat.exhausted, derived, added }
 }
 
@@ -126,7 +108,7 @@ function checking() {
         derived: goal.derived + (contra?.derived ?? 0), added: goal.added + (contra?.added ?? 0), proved: goal.holds,
       }
       rows.push(row)
-      if (flag('--json')) console.log(JSON.stringify({ lemma: show(lemma), ...row, goalMs: Math.round(row.goalMs), falseMs: Math.round(row.falseMs), search: lemma.steps ? null : lastStrata }))
+      if (flag('--json')) console.log(JSON.stringify({ lemma: show(lemma), ...row, goalMs: Math.round(row.goalMs), falseMs: Math.round(row.falseMs), search: lemma.steps ? null : lastSearch }))
     }
   })
   console.log(`${flag('--scoped') ? 'each chapter with its own and earlier rules' : 'the whole book for every lemma'}`)
@@ -139,7 +121,7 @@ function checking() {
   line('all', rows)
   const d = rows.reduce((t, r) => t + r.derived, 0), a = rows.reduce((t, r) => t + r.added, 0)
   console.log(`derivations ${d}, of which added a fact ${a} (${(100 * a / d).toFixed(1)}%)`)
-  if (flag('--strata') || flag('--goal-first')) console.log(`strata: ${passes} passes, ${returns} returns to the lowest`)
+  if (!flag('--one-level')) console.log(`searches that reached the second level: ${secondLevel}`)
 }
 
 function pages() {

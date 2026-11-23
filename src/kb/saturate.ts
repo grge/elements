@@ -24,10 +24,11 @@ import type { GroundPredicate, KnowledgeBase } from './inference'
 import { analyseStructure, type Difference, type Equivalence, type Structure, type Sum } from './structure'
 import { Lattice, type Vector } from './lattice'
 import { ruleSymmetries, type SymmetryBreak } from './symmetry'
-import { fingerprint, Lru } from './rules'
+import { fingerprint, Lru, showRule } from './rules'
 import type { Proof } from './proof'
 import { explain, GIVEN, type Cause, type ExplainStore, type Recorded, type SolverCause } from './explain'
 import { Core, CoreRefused } from './core'
+import { analyseModules, needs, type ModuleAnalysis } from './modules'
 
 const OBJECT = '__object__'
 const key2 = (f: GroundPredicate) => f.name + '\u0001' + f.args.join('\u0001')
@@ -82,17 +83,12 @@ export interface SaturateOptions {
   /** Which engine `saturate()` uses: the core (the default, where it can) or `Saturation` (the oracle). */
   engine?: 'core' | 'saturation'
   /**
-   * Experimental, the strata spike (foundations.md, *Modules and strata: the design*): each rule's
-   * stratum. Each stratum's rules run as a pass to their own fixpoint, lowest first; a pass that adds
-   * anything sends the search back to the lowest stratum; the search ends when a sweep adds nothing.
-   * The closure is the same; only the order of work changes. `Saturation` only; not resumable.
+   * Strata (modules.ts; foundations.md, *Modules and strata*): each rule's level, by the rule as
+   * written. The search runs the rules of level 0 to their fixpoint, then those of levels 0 and 1
+   * together, and so on, the store carried over. The closure is the same as one search's: only the
+   * order of the work changes, so that a goal found among the first rules never waits on the rest.
    */
-  stratumOf?: (rule: Rule) => number
-  /**
-   * With `stratumOf`, how strata run. 'separate': each stratum alone, alternating. 'widening': level s
-   * runs the rules of strata 0 to s together, interleaved, to their fixpoint, then the next level.
-   */
-  strataPolicy?: 'separate' | 'widening'
+  levelOf?: (rule: Rule) => number
 }
 
 /** A search, by either engine: what `saturate()` returns. */
@@ -1171,10 +1167,24 @@ export class Saturation {
    */
   private round: { i: number; before: number; rule: Rule | null; matches: Subst[]; m: number } | null = null
 
+  /** The rules of each level, cumulative: level k runs the rules of levels 0 to k (`levelOf`). */
+  private levels: Rule[][] | null = null
+  /** The level the search has reached (0 for the first). */
+  level = 0
+
+  private levelRules(): Rule[] {
+    if (!this.levels) {
+      const all = [...this.prep.axioms, ...this.prep.rules], levelOf = this.opts.levelOf
+      const lv = all.map(r => levelOf ? levelOf(this.original(r)) : 0)
+      const top = Math.max(0, ...lv)
+      this.levels = Array.from({ length: top + 1 }, (_, k) => all.filter((_, i) => lv[i] <= k))
+    }
+    return this.levels[this.level]
+  }
+
   run(): void {
-    if (this.opts.stratumOf) { this.runStrata(this.opts.stratumOf); return }
-    const rules = [...this.prep.axioms, ...this.prep.rules]
     for (;;) {
+      const rules = this.levelRules()
       if (!this.round) {
         if (this.done()) return
         this.round = { i: 0, before: this.version, rule: null, matches: [], m: 0 }
@@ -1211,70 +1221,11 @@ export class Saturation {
       const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
       const fed = fedDifferences || fedSums
       if (this.done()) return
-      if (this.version === r.before && !fed) return
-    }
-  }
-
-  /** The strata spike's counts: passes run, and returns to the lowest stratum. */
-  passes = 0
-  returns = 0
-  /** Per stratum, the work its passes did. */
-  workByStratum = new Map<number, number>()
-
-  private runStrata(stratumOf: (rule: Rule) => number): void {
-    const byStratum = new Map<number, Rule[]>()
-    for (const r of [...this.prep.axioms, ...this.prep.rules]) {
-      const k = stratumOf(this.original(r))
-      if (!byStratum.has(k)) byStratum.set(k, [])
-      byStratum.get(k)!.push(r)
-    }
-    const strata = [...byStratum.keys()].sort((a, b) => a - b).map(k => [k, byStratum.get(k)!] as const)
-    if (this.done()) return
-    if (this.opts.strataPolicy === 'widening') {
-      const widened = strata.map(([k], i) => [k, strata.slice(0, i + 1).flatMap(([, rs]) => rs)] as const)
-      for (const [k, rules] of widened) {
-        const workBefore = this.work
-        this.passes++
-        const stopped = this.runPass(rules)
-        this.workByStratum.set(k, (this.workByStratum.get(k) ?? 0) + this.work - workBefore)
-        if (stopped) return
+      if (this.version === r.before && !fed) {
+        // This level's fixpoint, without the goal: the next level's rules join.
+        if (this.level + 1 < this.levels!.length) { this.level++; continue }
+        return
       }
-      return
-    }
-    for (let s = 0; s < strata.length;) {
-      const [k, rules] = strata[s]
-      const before = this.version, workBefore = this.work
-      this.passes++
-      const stopped = this.runPass(rules)
-      this.workByStratum.set(k, (this.workByStratum.get(k) ?? 0) + this.work - workBefore)
-      if (stopped) return
-      if (this.version !== before && s > 0) { this.returns++; s = 0 } else s++
-    }
-  }
-
-  /** One pass: the rules' rounds to their own fixpoint. True if the search is over. */
-  private runPass(rules: readonly Rule[]): boolean {
-    for (;;) {
-      const before = this.version
-      for (const rule of rules) {
-        if (this.lastRun.get(rule) === this.version) continue
-        this.lastRun.set(rule, this.version)
-        this.head = this.headCheckable(rule)
-        const matches = [...this.join(rule.body, new Map(), this.prep.breaks.get(rule))]
-        this.matches += matches.length
-        this.head = null
-        for (const m of matches) {
-          this.cause = { kind: 'rule', rule, premises: () => rule.body.map(b => ({ name: b.name, args: b.args.map(a => m.get(a)!.v) })) }
-          for (const h of this.heads(rule, m)) this.assert(h)
-          this.cause = GIVEN
-          if (this.done(false)) return true
-        }
-        if (this.done()) return true
-      }
-      const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
-      const fed = fedDifferences || fedSums
-      if (this.done()) return true
-      if (this.version === before && !fed) return false
     }
   }
 
@@ -1382,15 +1333,54 @@ export function relevant(prep: Prepared, names: readonly string[]): Prepared {
 const searches = new WeakMap<Prepared, Map<string, Search>>()
 const SEARCHES_KEPT = 8
 
+/**
+ * The modules of a knowledge base's rules (modules.ts): of the rules as written, every one, by their
+ * text and module (prepared rules are shared between knowledge bases by text alone).
+ */
+const analysesByKB = new WeakMap<KnowledgeBase, ModuleAnalysis>()
+const analysesByRules = new Lru<ModuleAnalysis>(16)
+export function modulesOf(kb: KnowledgeBase): ModuleAnalysis {
+  const hit = analysesByKB.get(kb)
+  if (hit) return hit
+  const rules = kb.allRules()
+  const key = rules.map(r => `${r.module ?? ''}\u0002${showRule(r)}`).sort().join('\n')
+  let a = analysesByRules.get(key)
+  if (!a) {
+    const equality = prepare(kb).structure.equality
+    const defined = new Set([...kb.definitions()].filter(([, s]) => s.kind === 'definition').map(([n]) => n))
+    a = analysesByRules.set(key, analyseModules(rules, { defined, logic: new Set(['false', OBJECT, ...(equality ? [equality] : [])]) }))
+  }
+  analysesByKB.set(kb, a)
+  return a
+}
+
+/**
+ * Strata (modules.ts): level 0 is the rules of the modules the search's words need (the goal's, or
+ * those asked about, and the seeds'), with the rules of no module; level 1 is the rest. Undefined when
+ * the words need every module, or the rules have none.
+ */
+export function strata(kb: KnowledgeBase, words: Iterable<string>): { levelOf: (r: Rule) => number; first: string } | undefined {
+  const analysis = modulesOf(kb)
+  if (!analysis.modules.length) return undefined
+  const first = needs(analysis, words)
+  if (analysis.modules.every(m => first.has(m))) return undefined
+  return { levelOf: r => !r.module || first.has(r.module) ? 0 : 1, first: [...first].sort().join(' ') }
+}
+
 export function saturate(
   kb: KnowledgeBase,
   seeds: readonly GroundPredicate[],
   opts: SaturateOptions = {},
 ): Search {
+  const full = prepare(kb, opts.abbreviate ?? true)
+  const asked = opts.relevant ?? (opts.goal ? [opts.goal.name] : [])
+  const levels = opts.levelOf ? undefined : strata(kb, [...asked, ...seeds.map(f => f.name)])
+  if (levels) opts = { ...opts, levelOf: levels.levelOf }
   if (opts.goal && !opts.relevant) {
-    const prep = relevant(prepare(kb, opts.abbreviate ?? true), [opts.goal.name])
+    const prep = relevant(full, [opts.goal.name])
     const engine = opts.engine === 'saturation' ? 'saturation' : opts.provenance ? 'core with provenance' : 'core'
-    const key = [engine, opts.maxDerivations ?? '', opts.maxWork ?? '', ...seeds.map(f => f.name + ' ' + f.args.join(' '))].join('\n')
+    // Searches with different first levels are different searches.
+    const key = [engine, opts.maxDerivations ?? '', opts.maxWork ?? '', levels?.first ?? '', ...seeds.map(f => f.name + ' ' + f.args.join(' '))].join('\n')
     let byKey = searches.get(prep)
     if (!byKey) searches.set(prep, byKey = new Map())
     const kept = byKey.get(key)
@@ -1404,9 +1394,8 @@ export function saturate(
     if (byKey.size > SEARCHES_KEPT) byKey.delete(byKey.keys().next().value!)
     return sat
   }
-  const prep = prepare(kb, opts.abbreviate ?? true)
   const names = opts.relevant ?? (opts.goal ? [opts.goal.name] : null)
-  return search(names ? relevant(prep, names) : prep, seeds, opts)
+  return search(names ? relevant(full, names) : full, seeds, opts)
 }
 
 /** One search: by the core, unless `Saturation` is asked for or the core refuses the figure (core.ts). */

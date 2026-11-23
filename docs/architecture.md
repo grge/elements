@@ -29,6 +29,7 @@ see [design.md](design.md). For what it is for and where it is going, see the [R
 | `src/kb/structure.ts` | Proves which predicates are equivalences, admit substitution, are symmetric, are differences or sums, or are an equivalence's flip |
 | `src/kb/saturate.ts` | The fast forward closure used for checking, built on that structure, with a solver for differences |
 | `src/kb/lattice.ts` | Integer combinations of linear equations: the solver for differences (turns) and sums (quadrances) |
+| `src/kb/modules.ts` | Modules: each book file is one. Which module owns each word, which modules use which, and the rules that cross; strata worked out from them |
 | `src/kb/checker.ts` | Checks a lemma or ground query: unfold, saturate, look for the goal |
 | `src/kb/runtime.ts`, `configuration.ts` | A page's runtime: the knowledge base extended with its rules, and its ground facts |
 | `src/kb/names.ts`, `rules.ts` | Fresh names for auxiliary objects; rule printing, fingerprints, a small cache |
@@ -252,6 +253,21 @@ makes the same search, join step for join step, in another representation:
   unchanged (each relation's stamp, and the merges), not only for one version of the store; a
   question with a value no equation mentions is answered no at once;
 - the classes of blocks compress their paths, parities kept.
+
+**Searches run in strata** (November 2026; foundations.md, *Modules and strata*). Each book file is
+a module, and each rule carries its file (`Rule.module`, set where the book is loaded). From the
+rules alone, `modules.ts` works out:
+- which module owns each word: the one holding its own rules (those mentioning only the word and the
+  equality), or its definition;
+- which modules use which: the words their rule bodies mention.
+
+A search's first level is the rules of the modules its words need: those owning the goal's (or the
+asked) words and the seeds' words, everything those use, and every rule of no module. Only if that
+level reaches its fixpoint without the goal do the other modules' rules join (`levelOf`, in both
+`Saturation` and the core). The closure is the same, so verdicts are too. Measured on the book with
+all its rules: the same 75 lemmas, with 3.11M join steps against 5.01M; the windmill 250k against
+1.20M, since ratio never runs. `scripts/modules.ts` prints the analysis; `bench --one-level` runs
+without strata. Kept searches are keyed by their first level as well.
 
 **Searches are shared and resumable** (November 2026). A run that stops inside a round keeps its
 place: the rule it was at, and that rule's matches not yet asserted. `saturate` keeps the last

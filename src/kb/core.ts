@@ -1071,9 +1071,24 @@ export class Core {
   /** Where a run stopped inside a round, as saturate.ts keeps it, so `resume` carries on from there. */
   private round: { i: number; before: number; c: Compiled | null; snaps: number[]; full: Int32Array[]; count: number; m: number } | null = null
 
+  /** The compiled rules of each level, cumulative (saturate.ts, `levelOf`). */
+  private levels: Compiled[][] | null = null
+  /** The level the search has reached (0 for the first). */
+  level = 0
+
+  private levelRules(): Compiled[] {
+    if (!this.levels) {
+      const all = [...this.prep.axioms, ...this.prep.rules], levelOf = this.opts.levelOf
+      const lv = all.map(r => levelOf ? levelOf(this.prep.origins?.get(r) ?? r) : 0)
+      const top = Math.max(0, ...lv)
+      this.levels = Array.from({ length: top + 1 }, (_, k) => this.compiled.filter((_, i) => lv[i] <= k))
+    }
+    return this.levels[this.level]
+  }
+
   run(): void {
-    const rules = this.compiled
     for (;;) {
+      const rules = this.levelRules()
       if (!this.round) {
         if (this.done()) return
         this.round = { i: 0, before: this.version, c: null, snaps: [], full: [], count: 0, m: 0 }
@@ -1111,7 +1126,11 @@ export class Core {
       const fedDifferences = this.feedBackDifferences(), fedSums = this.feedBackSums()
       const fed = fedDifferences || fedSums
       if (this.done()) return
-      if (this.version === r.before && !fed) return
+      if (this.version === r.before && !fed) {
+        // This level's fixpoint, without the goal: the next level's rules join.
+        if (this.level + 1 < this.levels!.length) { this.level++; continue }
+        return
+      }
     }
   }
 

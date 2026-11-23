@@ -636,12 +636,12 @@ step* are done: the `false` option reverted, and the narrow experiment.
 1. **The strata spike:** done (*Modules and strata: the spike*). Goal first pays: a third less work
    on the book, and the first build's full side rules affordable when Pasch's pieces are a module
    owning no words. Strata go ahead, goal first.
-2. **The module analysis as a tool.** Ownership, uses and crossings, as a script, with a test that
-   every word has one home and the uses graph has no cycle.
-3. **Strata in the engine,** goal first: in the core as well as `Saturation`, and in `saturate()`, so
-   the checker, the pages and the marks use them. A budget policy, provenance unchanged,
-   per-level diagnostics in the bench. Searches kept and resumed across goals of different words
-   need thought, since the first level is per goal.
+2. **The module analysis as a tool:** done (`src/kb/modules.ts`, `scripts/modules.ts`,
+   `tests/modules.test.ts`). The book has no problems, and every module uses only earlier files.
+3. **Strata in the engine, goal first:** done. In both engines, through `saturate()`, so the
+   checker, the pages and the marks use them. Same verdicts, a third less work, and the suite takes
+   about 150 s against 270 s. Still open: a budget policy per level, and per-level diagnostics
+   beyond the bench's count of searches reaching the second level.
 4. **A book as a set of modules,** the order derived, in the app, the tests and the bench.
 5. **Rules into theory modules,** the first half of the reorganisation:
    - order first (`between`, `collinear`, `triangle`, the side words), with Pasch's pieces as a

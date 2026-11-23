@@ -25,6 +25,11 @@ export interface Predicate {
 export interface Rule {
   head: Predicate
   body: Predicate[]
+  /**
+   * The module the rule is written in: its book file (kb/modules.ts). Set where the book is loaded;
+   * a rule of no module (the user's) is in every search's first level.
+   */
+  module?: string
 }
 
 export interface Lemma {
