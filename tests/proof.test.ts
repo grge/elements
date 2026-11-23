@@ -11,11 +11,10 @@ import { showRule } from '../src/kb/rules'
 import { Saturation, prepare } from '../src/kb/saturate'
 import { replay, showProof } from '../src/kb/proof'
 import { parseLemmas, type Lemma } from '../src/language/parser'
-import { bookLemmas, bookRules } from './book'
+import { bookLemmas, bookRules, kbAgainOf, kbOf } from './book'
 
 const kb = new KnowledgeBase(bookRules)
 const show = (l: Lemma) => `${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`
-const kbAgain = new KnowledgeBase(structuredClone(bookRules))
 const fresh = () => new Saturation(prepare(kb), {})
 const yieldToRunner = () => new Promise(resolve => setTimeout(resolve, 0))
 
@@ -23,6 +22,9 @@ describe('every book lemma has a proof that replays', () => {
   for (const lemma of bookLemmas) {
     it(show(lemma), async () => {
       await yieldToRunner()
+      // Its chapter's rules and those before, as its page checks it.
+      const kb = kbOf(lemma), kbAgain = kbAgainOf(lemma)
+      const fresh = () => new Saturation(prepare(kb), {})
       if (lemma.steps) {
         // A written proof: each step's proof, and the head's, replays.
         const written = checkWrittenProof(lemma, kb, {

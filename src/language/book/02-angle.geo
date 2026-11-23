@@ -40,23 +40,19 @@ eq-angle a b c x b c: between b a x, distinct b a
 
 # ── adding and taking away angles
 
-# Common notions 2 and 3, for angles: a point x of the segment a-c cuts the angle a-b-c into a-b-x and
-# x-b-c. Angles cut into equal parts are equal (equals added to equals); and from equal angles, equal
-# parts taken away leave equal parts. A point on a segment says that the arm b-x lies inside the angle,
-# so no side of a line is needed. (x may be an end: then one part is no angle at all, the other the
-# whole.) Said of a triangle's angle, which either angle may be.
+# Common notions 2 and 3, for angles: an arm b-x inside the angle a-b-c cuts it into a-b-x and x-b-c.
+# Angles cut into equal parts are equal (equals added to equals); and from equal angles, equal parts
+# taken away leave equal parts.
 eq-angle a b c d e f:
-    triangle a b c
-    between a x c
+    inside x a b c
     eq-angle a b x d e y
     eq-angle x b c y e f
-    between d y f
+    inside y d e f
 eq-angle x b c y e f:
-    triangle a b c
-    between a x c
+    inside x a b c
     eq-angle a b x d e y
     eq-angle a b c d e f
-    between d y f
+    inside y d e f
 
 # ── triangles
 
@@ -81,6 +77,41 @@ triangle a b d: triangle a b c, between a y d, distinct b y, collinear b y c
 
 # A point off a line is off it however the line is named: c is off a-b, and d is on a-b, so c is off a-d.
 triangle c a d: triangle c a b, collinear a b d, distinct a d
+
+# ── sides of a line
+#
+# p and q are on the same side of the line a-b; p and q are on opposite sides of it. Either says that
+# p and q are off the line. (System E's same-side, said with points: a line is two of its points.
+# docs/foundations.md, *Sides: taking stock*.)
+same-side q p a b: same-side p q a b
+same-side p q b a: same-side p q a b
+opposite q p a b: opposite p q a b
+opposite p q b a: opposite p q a b
+
+same-side x q a b: same-side p q a b, eq-point x p
+same-side p q x b: same-side p q a b, eq-point x a
+opposite x q a b: opposite p q a b, eq-point x p
+opposite p q x b: opposite p q a b, eq-point x a
+
+triangle a b p: same-side p q a b
+
+# Across the line from a point on one side is across it from every point on that side.
+opposite p r a b: same-side p q a b, opposite q r a b
+
+# A segment crossing the line, from a point off it, joins opposite sides (half of Pasch, in System E's
+# pieces). It crosses short of q: a segment that only reaches the line ends on it.
+opposite p q a b: between p x q, collinear a b x, triangle a b p, distinct x q
+
+# x is inside the angle a-b-c: on a's side of b-c and on c's side of b-a.
+inside x a b c:
+    same-side x a b c
+    same-side x c b a
+
+# A point of the segment a-c, short of its ends, is inside the angle a-b-c of a triangle: the segment
+# meets each arm's line only at its end (a segment from a point of a line to a point off it is on
+# one side of the line, System E).
+same-side x c b a: between a x c, triangle a b c, distinct a x
+same-side x a b c: between a x c, triangle a b c, distinct x c
 
 # Side-angle-side (Euclid I.4, an axiom here as in Hilbert): two sides and the angle between them
 # equal, then the third sides are equal, and so are the angles at a and d.

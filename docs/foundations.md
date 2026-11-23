@@ -53,8 +53,8 @@ convention, not a geometric one.
 2. **Plane separation, nowhere.** There is no Pasch axiom and no "same side". Chapter 3 says so:
    "Which side of a line a point lies on is not something the engine can say." The book works around
    it in three ways:
-   - angle addition said through `between` (chapter 2);
-   - "same side" said as "opposite sides twice" (chapter 3);
+   - angle addition said through `between` (chapter 2; replaced by `inside`, November 2026);
+   - "same side" said as "opposite sides twice" (chapter 3; replaced by `same-side`, November 2026);
    - facts about sides taken as axioms (chapter 3, the square; chapter 5, the angle at the centre
      and III.21).
 3. **Distinct names, a convention of the checker.** Under `distinctNames`, different names are
@@ -440,13 +440,54 @@ After the first build (November 2026), the work had drifted from the inventory's
 - **Completeness stays a non-goal.** E's full axiom set is what pulled the first build into adding
   everything at once. A sound partial module is enough.
 
+## Sides: the narrow experiment
+
+November 2026: the inventory's cheapest test, ways 2 and 3, with only the rules they need. Now in
+the book.
+
+**What went in.**
+- **Chapter 2:**
+  - `same-side` and `opposite`, with their symmetries and equal points exchanged;
+  - one point with a side is off the line (the one rule concluding `triangle`);
+  - across from one point of a side is across from all of it;
+  - a segment crossing the line, short of its far end, joins opposite sides (half of Pasch);
+  - `inside x a b c` defined from `same-side`, and two bridge rules from a point of the segment a-c
+    of a triangle.
+- **Angle addition** says `inside x a b c` where it said `between a x c` with a triangle.
+- **I.27 and I.29** say `opposite a d e f` where they said a crossing point m.
+- **The four same-side lemmas** of chapter 3 say `same-side a d e f` where they said opposite twice.
+  x stays: the point past f that the proof needs, which the engine cannot introduce.
+- **I.31's construction** requires p off the line a-b, as Euclid's does.
+- **The figure:** a relation entry for each word, checked by the sign of a cross product, drawn as
+  the line and the segment p-q.
+
+**What it cost.** The bench, each chapter with its own rules:
+
+| | Proved | Goal time | Derivations |
+|---|---|---|---|
+| before | 75 | 20.8 s | 194,369 |
+| after | 75, and I.31 | 20.8 s | 259,744 |
+
+- **Gained:** the midline. **Lost:** nothing.
+- **I.31** proves only under the distinct-names convention, which the bench does not apply.
+- **The four lemmas** take about twice the derivations, under 120 ms each.
+- **The rectangle's angle lemma** is the dearest change, from 0.09 s to 0.5 s.
+
+**What it showed.**
+- Sides said with only the rules a lemma needs is cheap. The first build's wall came from adding
+  everything at once, not from sides. No engine work was needed for this much.
+- **A guard the suite caught.** Without "short of its far end", the crossing rule took the far end as
+  the crossing point (`between b a a` holds) and put a point of the line on one side of it.
+- **The windmill** proved with its chapter's rules but ran out of budget with the whole book's. There
+  chapter 6's `eq-ratio` filled 42k of its 70k derivations. The book's tests now check each lemma
+  with its own chapter's rules and those before, as its page does (`tests/book.ts`, `kbOf`).
+
 ## What next (proposed, not decided)
 
 0. **Sides, step by step** (*Sides: taking stock*):
    1. Stop the engine optimisations. The `false` option is reverted.
    2. The inventory's experiment: only the side rules that chapter 3's four same-side lemmas and
-      chapter 2's angle addition need, in those chapters only. Does sides pay before it is made
-      cheap?
+      chapter 2's angle addition need. Done: it pays (*Sides: the narrow experiment*).
    3. Find which rules escape, on which lemmas, and test the order stratum by hand on one of them.
       The engine work is chosen from that.
    4. Write down where order sits in the module plan, which the reorganisation needs at any speed.

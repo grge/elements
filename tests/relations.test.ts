@@ -14,7 +14,7 @@ const kb = new KnowledgeBase(bookRules)
 
 describe('the relation table', () => {
   it('is where extraction learns which relations are constraints and which are drawn', () => {
-    expect([...CONSTRAINT_RELATIONS].sort()).toEqual(['between', 'circle', 'collinear', 'cyclic', 'distinct', 'eq-angle', 'eq-area', 'eq-lines', 'eq-ratio', 'eq-spread', 'eq-turn', 'parallel', 'quad-sum', 'supp', 'triangle'])
+    expect([...CONSTRAINT_RELATIONS].sort()).toEqual(['between', 'circle', 'collinear', 'cyclic', 'distinct', 'eq-angle', 'eq-area', 'eq-lines', 'eq-ratio', 'eq-spread', 'eq-turn', 'opposite', 'parallel', 'quad-sum', 'same-side', 'supp', 'triangle'])
     expect(DEPICTED_RELATIONS.has('circle')).toBe(true)
     expect(DEPICTED_RELATIONS.has('right')).toBe(true)     // drawn as itself, read through its definition
     expect(CONSTRAINT_RELATIONS.has('right')).toBe(false)

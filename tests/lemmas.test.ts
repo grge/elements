@@ -1,6 +1,7 @@
 /**
- * Every lemma in the book must be provable, as the app checks it: derived, with a witness, a figure in
- * which every hypothesis holds (geometry/evidence.ts). Here the search for a contradiction still runs
+ * Every lemma in the book must be provable, as the app checks it: with its own chapter's rules and
+ * those before (bookScope.ts), derived, with a witness, a figure in which every hypothesis holds
+ * (geometry/evidence.ts). Here the search for a contradiction still runs
  * in full, so a false axiom still shows even though the app no longer searches; and every fact the
  * closure derives about the lemma's points must hold in the witness.
  *
@@ -15,7 +16,7 @@ import { checkConstruction } from '../src/geometry/constructionStep'
 import { numericEvidence } from '../src/geometry/evidence'
 import { holds, relationOf } from '../src/geometry/relations'
 import type { Lemma } from '../src/language/parser'
-import { bookLemmas, bookRules, regressionLemmas } from './book'
+import { bookLemmas, bookRules, kbOf, regressionLemmas } from './book'
 
 const kb = new KnowledgeBase(bookRules)
 
@@ -55,6 +56,7 @@ describe('the book', () => {
     const test = overBudget.has(show(lemma)) ? it.skip : it
     test(`✓ ? ${show(lemma)}`, async () => {
       await yieldToRunner()
+      const kb = kbOf(lemma) // its chapter's rules and those before, as its page checks it
       // Derived (as the page derives it: under the convention that different names are different
       // points, where it must), and no contradiction found by the full search (which may run out of
       // budget).

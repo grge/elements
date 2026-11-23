@@ -33,6 +33,11 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
       the rules concluding `between` and `triangle`, not `false` or lines as pairs. Next, as in
       foundations.md, *Sides: taking stock*: the inventory's narrow experiment, then the escaping
       rules found and an order stratum tested. The rules wait in `scripts/prototypes/sides.geo`.
+
+      Narrow experiment (November 2026; foundations.md, *Sides: the narrow experiment*): `same-side`,
+      `opposite` and `inside` in chapter 2, with only the rules that chapter 3's same-side lemmas and
+      angle addition need. It pays: 75 proved still, the midline gained, a third more derivations,
+      no engine work.
    3. **Modules.** The neutral rules split from the parallel ones, and lemmas checked by module.
       - The book declares its groups; no axiom is special in the code. This keeps the reason for
         skipping "which ✓ need the parallel postulate" (November 2026, George).
@@ -144,8 +149,8 @@ cannot be written honestly without them, and designed as a whole.
   existentials in heads, as provers such as ArgoCLP use), at the price of a lemma's meaning no longer
   being one least model. The one fork that changes what a lemma means.
 - **Sides of a line.** The figure knows which side a point is on; the logic does not, so every proof
-  across a line is told by a crossing point in its hypotheses. Now *Next*, 1: the inventory and System E
-  are in foundations.md. Options as first weighed:
+  across a line was told by a crossing point in its hypotheses. Now *Next*, 1: the inventory, System E
+  and the first words (`same-side`, `opposite`, `inside`) are in foundations.md. Options as first weighed:
   - `same-side` and `opposite-side` with their own axioms, as `between` has, following the
     diagrammatic consequences of Avigad, Dean and Mumma's system E (2009). Tarski defines the same two
     relations by exactly our crossing. Much is Horn; Pasch and "one side, the other or the line" need

@@ -125,7 +125,8 @@ closing (the angle sum, chapter 3), the compass-only midpoint (similar triangles
 3 for angles, as chapter 1 has them for segments: a point x of the segment a-c cuts the angle a-b-c into
 a-b-x and x-b-c; angles cut into equal parts are equal, and equal parts taken from equal angles leave
 equal parts. A point on a segment puts the arm inside the angle, so no side of a line is needed; the
-parts are never added up. Pythagoras's windmill needs it (each of its two angles at b is a right angle
+parts are never added up. (Since November 2026 the rules say `inside x a b c`, and a point of the
+segment is one way in: foundations.md, *Sides: the narrow experiment*.) Pythagoras's windmill needs it (each of its two angles at b is a right angle
 and the angle a-b-c). The rules are said of a triangle's angle (`triangle a b c` in the body), which
 makes them fire far less often; with them, a rule that a crossing keeps a corner off a line (a-d
 crosses b-c at y, short of b, so d is off a-b). Together they cost the book's checks about 15%.
@@ -162,7 +163,9 @@ the engine recognises it; parallel in Euclid's sense, never meeting, is `paralle
 opposite sides of the line crossing the parallels (on the same side, equal unsigned angles make the
 lines meet). The engine cannot say which side of a line a point is on, but it can say that a segment
 crosses a line: a and d are on opposite sides of e-f when some m has `between a m d` and
-`collinear e m f`. That crossing is a hypothesis wherever sides matter.
+`collinear e m f`. That crossing is a hypothesis wherever sides matter. (Since November 2026, I.27
+and I.29 say `opposite a d e f`, and a crossing is one way to it: foundations.md, *Sides: the narrow
+experiment*.)
 
 **As written (November 2026).** The postulate is two axioms: lines parallel to a third are parallel
 (I.30, which with the axioms of 1 is Playfair's), and I.29, which Euclid proves by a sum of angles;
@@ -208,6 +211,8 @@ of a crossing line (supplements: I.29's third part needs no sum) and their conve
 two points on the same side of a line. That is said through a third point opposite both, as Tarski
 defines it: the line d-f continued past f to x, which is across the crossing line from d (at f) and
 from a (a-x crosses it at m). Then corresponding angles are alternate angles and vertical angles.
+(Since November 2026 the four lemmas say `same-side a d e f`; x stays, the point past f that the
+proof needs: foundations.md, *Sides: the narrow experiment*.)
 
 Also left out: the angle sum (I.32), a sum, until the engine can add quantities (open questions).
 

@@ -6,8 +6,8 @@
 # alternate angles, is Euclid's fifth postulate at work: everything after it holds in Euclid's plane
 # and not in the hyperbolic one.
 #
-# Which side of a line a point lies on is not something the engine can say. That two points are on
-# opposite sides of a line it can: the segment between them crosses the line at some point.
+# Two points off a line are on the same side of it or on opposite sides (chapter 2): the segment between
+# them crosses the line at some point, or it does not.
 
 # ══ Axioms ═══════════════════════════════════════════════════════════════════════════════════════
 
@@ -42,12 +42,11 @@ triangle a b d: parallel a b d c, triangle a b c, distinct d c
 # ── alternate angles
 
 # Equal alternate angles make parallels (Euclid I.27): the line e-f crosses e-a at e and f-d at f, with
-# a and d on opposite sides of it (the segment a-d crosses e-f at m), and the angles a-e-f and d-f-e are
-# equal. No postulate is needed: this holds in hyperbolic geometry too.
+# a and d on opposite sides of it, and the angles a-e-f and d-f-e are equal. No postulate is needed:
+# this holds in hyperbolic geometry too.
 parallel e a f d:
     eq-angle a e f d f e
-    between a m d
-    collinear e m f
+    opposite a d e f
     distinct e f
     distinct e a
     distinct f d
@@ -66,8 +65,7 @@ parallel a b e f: parallel a b c d, parallel c d e f
 # (on one line, e-a and f-d would be the same line, and its angles at e and f 0 or straight).
 eq-angle a e f d f e:
     parallel e a f d
-    between a m d
-    collinear e m f
+    opposite a d e f
     triangle a e f
     distinct f d
 
@@ -77,8 +75,7 @@ eq-angle a e f d f e:
 # ── corresponding angles, and angles on the same side
 #
 # Below, the line e-g crosses e-a at e and f-d at f, in the order e, f, g, and d is on the same side of
-# it as a. Same side is said as opposite sides twice: the line d-f continued past f to x has x on the
-# far side from d (it crosses at f) and on the far side from a (a-x crosses e-f at m).
+# it as a. The line d-f continued past f to x has x on the far side from d, and so from a.
 
 # Parallels make equal corresponding angles (I.29): a-e-f and x-f-e are alternate, and x-f-e and d-f-g
 # are vertical angles.
@@ -86,8 +83,7 @@ eq-angle a e f d f e:
     parallel e a f d
     between e f g
     between d f x
-    between a m x
-    collinear e m f
+    same-side a d e f
     triangle a e f
     distinct f d
     distinct f x
@@ -98,8 +94,7 @@ eq-angle a e f d f e:
 ? supp a e f e f d:
     parallel e a f d
     between d f x
-    between a m x
-    collinear e m f
+    same-side a d e f
     triangle a e f
     distinct f d
     distinct f x
@@ -110,8 +105,7 @@ eq-angle a e f d f e:
     eq-angle a e f d f g
     between e f g
     between d f x
-    between a m x
-    collinear e m f
+    same-side a d e f
     triangle a e f
     distinct f d
     distinct f x
@@ -119,8 +113,7 @@ eq-angle a e f d f e:
 ? parallel e a f d:
     supp a e f e f d
     between d f x
-    between a m x
-    collinear e m f
+    same-side a d e f
     triangle a e f
     distinct f d
     distinct f x
@@ -129,13 +122,15 @@ eq-angle a e f d f e:
 
 # The parallel to a-b through p (Euclid I.31): copy the angle a-b-p to p, on the far side of b-p from a.
 # Then a-b-p and q-p-b are equal alternate angles. Its q is p moved as b is moved from a: the same
-# construction translates the segment a-b to p.
+# construction translates the segment a-b to p. p is off the line a-b: the crossing of a-q with b-p puts
+# a and q on opposite sides of b-p only when a is off it.
 parallel-through a b p q:
+    triangle a b p
     copy-angle a b p p b q
     between a m q
     collinear b m p
 
-? parallel a b p q: parallel-through a b p q, distinct a b, distinct b p
+? parallel a b p q: parallel-through a b p q
 ? eq-lines p q a b: parallel-through a b p q
 
 # ══ Parallelograms ═══════════════════════════════════════════════════════════════════════════════

@@ -131,6 +131,14 @@ function farthestPair(ps: readonly Point[]): [Point, Point] {
   return best
 }
 
+/** Which side of the line a-b the point p is on: 1, -1, or 0 when on it (or a-b names no line). */
+function side(p: Point, a: Point, b: Point, tol: number): number {
+  const ab = d(a, b)
+  if (ab <= tol) return 0
+  const c = ((b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0])) / ab
+  return Math.abs(c) <= tol ? 0 : Math.sign(c)
+}
+
 const TABLE: Relation[] = [
   {
     name: 'collinear', arity: { min: 3 }, depicted: true,
@@ -176,6 +184,27 @@ const TABLE: Relation[] = [
     holds: ([a, b, c], tol) => {
       const ab = d(a, b)
       return ab > tol && Math.abs((b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0])) / ab > tol
+    },
+  },
+  {
+    // p and q off the line a-b, on one side of it, or on opposite sides: the signs of their cross
+    // products with a-b. Order facts like triangle: read as a and b kept apart, the side only checked.
+    // Drawn as the line and the segment p-q, which crosses it or does not.
+    name: 'same-side', arity: 4, depicted: true,
+    read: ([, , a, b], m) => m.distinct(a, b),
+    draw: ([p, q, a, b], pen) => { pen.line([a, b]); pen.segment(p, q, [p, q]) },
+    holds: ([p, q, a, b], tol) => {
+      const s = side(p, a, b, tol), t = side(q, a, b, tol)
+      return s !== 0 && s === t
+    },
+  },
+  {
+    name: 'opposite', arity: 4, depicted: true,
+    read: ([, , a, b], m) => m.distinct(a, b),
+    draw: ([p, q, a, b], pen) => { pen.line([a, b]); pen.segment(p, q, [p, q]) },
+    holds: ([p, q, a, b], tol) => {
+      const s = side(p, a, b, tol), t = side(q, a, b, tol)
+      return s !== 0 && s === -t
     },
   },
   {
