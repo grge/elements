@@ -86,6 +86,22 @@ appears in statements only because the engine needs it is a cost (the README: th
   (quadrance); the quarter and Apollonius (coefficients) and Ceva and Menelaus (three terms) want a
   general linear relation recognised from rules. Perhaps one structure kind covers all. (November 2026)
 
+## Foundations (November 2026)
+
+From [foundations.md](foundations.md), where each is argued.
+
+- **Sides of a line**: no plane separation anywhere, so the book works around it (angle addition
+  through `between`, "same side" as opposite twice, facts about sides taken as axioms). Foundational,
+  and shared by every geometry with `between`. Candidate: System E's same-side, Pasch and
+  triple-incidence axioms, with negations as paired words and contrapositives generated. (November
+  2026)
+- **Inequalities**: no `<` in the book. Euclid needs it for I.6, I.7, I.18–20 and the triangle
+  inequality. (November 2026)
+- **Existence in code**: continuity lives in the planner and the construction checks, not in rules.
+  Candidate: E's intersection axioms, which also let a construction choose a side. (November 2026)
+- **Rules in modules, not only chapters**: a lemma's chapter is where it sits; the axiom groups it
+  needs are what it rests on. Books per geometry, sharing pages by reference. (November 2026)
+
 ## Where things live
 
 - **Turns in chapter 3**, used mostly by chapter 5 and the stress test. Chapter 3 is their home (they

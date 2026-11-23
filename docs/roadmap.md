@@ -306,7 +306,8 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
       supply (points and how to sample them, each word's measure, loci and where they meet, how a
       figure is drawn) and what stays the same (the logic, the book's language). With it, a list of
       the geometries that interface could carry, and those it could not, and why. The reorganisation
-      then knows what is Euclid's and what is any plane's.
+      then knows what is Euclid's and what is any plane's. The list, and what it showed of
+      the foundations (sides, existence, System E), is in [foundations.md](foundations.md).
    3. Moved after the reorganisation (November 2026): the quarter and Apollonius revisited (how the
       engine could discover quadrance laws with coefficients; Thales' converse now proves written,
       so III.14 and Ceva/Menelaus are what is left of the case); an exploration of conics.

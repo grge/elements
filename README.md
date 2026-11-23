@@ -142,3 +142,5 @@ docs/           documentation
   matching-core spike. [Its review](docs/engine-review.md) proposes reordering its path.
 - [Tools](docs/tools.md): a design (November 2026) for a book's construction moves and for proved
   lemmas as tools; the second step of the engine review's path.
+- [Foundations](docs/foundations.md): where the axioms live, which geometries could share them,
+  and how System E maps onto elements (November 2026).
