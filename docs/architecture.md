@@ -342,10 +342,14 @@ as it should be. The whole book samples, at about 6 ms a lemma.
 
 The page checks its `?` lines in a web worker (`useVerification` → `lemmaCheckWorker`), so typing never
 blocks. The checking itself is `geometry/pageCheck.ts` (`checkPage`), which the worker runs and the
-tests call: evidence, then replay or search, written proofs, citations, the book's order. On a book page, each lemma is checked in the book's order: with the rules of the chapter it is
-written in and those before, citing only lemmas of those chapters (`bookScope.ts`), never with its
-page's own clauses, which on a word's page come from every chapter. A lemma of `extra/` or the user's
-is checked with everything. A lemma with a written proof reaches its page as written, steps and
+tests call: evidence, then replay or search, written proofs, citations. Every lemma is checked with
+the whole knowledge base, as the book's tests check it, in strata (*Searches run in strata*), so a
+lemma's own modules come first. A page's clauses join the knowledge base only where they are new
+(`runtime.ts`): on a book page they are the book's own, there already with their modules. A written
+proof cites only lemmas above it, so citations cannot go round in a circle: a book lemma, the book's
+lemmas before it; any other, the book's and the page's own found ✓ above it. (Until November 2026 a
+book lemma was checked with its chapter's rules and those before; strata took over what that was
+for.) A lemma with a written proof reaches its page as written, steps and
 comments with it. `tests/pageChecks.test.ts` checks the pages themselves, as the worker does.
 
 ## From facts to a figure

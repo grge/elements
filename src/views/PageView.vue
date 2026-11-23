@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
 
 // ── source, verification, contents ──
 
-const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value, () => ws.clauseChapters.value)
+const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value)
 
 const marks = computed(() => verificationMarks.value)
 // A lemma that checks lends its marks to the figure.

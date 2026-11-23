@@ -27,7 +27,8 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
 
       Done: the module analysis (`src/kb/modules.ts`) and strata in the engine, goal first (the same
       75 lemmas with a third less work; architecture.md, *Searches run in strata*). Next:
-      1. a book as a set of modules, in the app, the tests and the bench, replacing chapter scoping;
+      1. a book as a set of modules, in the app, the tests and the bench (chapter scoping is gone:
+         every lemma is checked with the whole book, in strata);
       2. rules into theory modules, order first (Pasch's pieces a module of their own), and
          constructions into their own files.
    2. **The order module grows:** Pasch's other half, `inside`/`outside` for circles, negations as

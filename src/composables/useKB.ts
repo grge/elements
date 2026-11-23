@@ -13,7 +13,6 @@ import { inModule } from '../kb/modules'
 import { ref, computed } from 'vue'
 import { parseRules, parseSource, parseGeoFile, validateConsistentArities, type Lemma, type Rule, type TopLevel, type SourceRef } from '../language/parser'
 import { KnowledgeBase } from '../kb/inference'
-import { showRule } from '../kb/rules'
 
 /** A chapter's id (its file name without `.geo`), or 'user'. */
 export type Namespace = string
@@ -52,12 +51,6 @@ export interface ClauseItem {
   args?: string[]
   /** For a rule, the first paragraph of its doc comment. */
   doc?: string
-  /**
-   * The book chapter it is written in (1 for the first), whatever page it shows on; none for a clause
-   * of `extra/` or the user's. A lemma of the book is checked with the rules of its chapter and those
-   * before it, as Euclid's order has it (bookScope.ts).
-   */
-  chapter?: number
 }
 
 const chapterSources = import.meta.glob('../language/book/*.geo', { query: '?raw', import: 'default', eager: true }) as Record<string, string>
@@ -92,13 +85,6 @@ export const bookLemmas: Lemma[] = loaded.filter(c => !c.extra).flatMap(c => c.i
 // Each file a module (kb/modules.ts): its rules marked with it.
 const bookRules: Rule[] = loaded.flatMap(c => inModule(parseRules(c.source), c.id))
 
-/** The book chapter (1 for the first) a rule is first written in, by its text; none for `extra/`. */
-const ruleChapterMap = new Map<string, number>()
-loaded.filter(c => !c.extra).forEach((c, i) => c.items.forEach(item => {
-  if (item.kind === 'rule' && !ruleChapterMap.has(showRule(item.rule))) ruleChapterMap.set(showRule(item.rule), i + 1)
-}))
-export const ruleChapter = (text: string): number | undefined => ruleChapterMap.get(text)
-
 // Where each predicate is first defined in the book (chapter, then position), for ordering.
 const definedAt = new Map<string, number>()
 loaded.forEach((c, ci) => c.items.forEach((item, ii) => {
@@ -117,12 +103,8 @@ loaded.forEach(c => c.items.forEach(item => {
   if (item.kind === 'rule' && !homeOf.has(item.rule.head.name)) homeOf.set(item.rule.head.name, c.id)
 }))
 
-const bookChapterNumber = (c: typeof loaded[number]) => c.extra ? undefined : loaded.filter(x => !x.extra).indexOf(c) + 1
 const builtinClauses: ClauseItem[] = loaded.flatMap(c => c.items.flatMap(item =>
-  toClauseItem(item, c.id, c.source).map(ci => {
-    const chapter = bookChapterNumber(c)
-    return { ...ci, namespace: homeOf.get(ci.predName) ?? ci.namespace, ...(chapter ? { chapter } : {}) }
-  })))
+  toClauseItem(item, c.id, c.source).map(ci => ({ ...ci, namespace: homeOf.get(ci.predName) ?? ci.namespace }))))
 
 /** A clause with its doc comment above it, each paragraph of the comment on one line (the editor wraps it). */
 function withDocComment(source: string, item: TopLevel): string {

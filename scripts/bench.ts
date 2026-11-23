@@ -1,7 +1,7 @@
 /**
  * The engine's benchmark, the baseline for the roadmap's engine work (measurements in docs/review-notes.md).
  *
- *   npx vite-node scripts/bench.ts [--scoped] [--witness] [--one-level] [--only=text] [--json]   checking: every book lemma
+ *   npx vite-node scripts/bench.ts [--witness] [--one-level] [--only=text] [--json]   checking: every book lemma
  *   npx vite-node scripts/bench.ts pages                               drawing: every defined predicate's page
  *
  * Checking runs each lemma as the checker does (unfold the hypotheses, saturate until the goal), then,
@@ -10,8 +10,7 @@
  * all; here it always runs, which makes chapter 1 a few seconds dearer than the checker.) Derivations
  * are counted in all, and those that added a fact. `--witness` checks as the app does: a figure of the
  * hypotheses (evidence.ts) shows them consistent, and the search for `false` runs only without one.
- * `--scoped` checks each chapter with its own rules
- * and the earlier chapters' only. Searches run in strata, as saturate() runs them (kb/modules.ts):
+ * Every lemma is checked with the whole book's rules, as the tests and the pages check it. Searches run in strata, as saturate() runs them (kb/modules.ts):
  * `--one-level` runs each as one search, for comparison. `--json` prints a line per lemma.
  *
  * Pages plans and realises each defined predicate's signature as its page does, and times the closure
@@ -40,7 +39,7 @@ const bookDir = resolve(__dirname, '../src/language/book')
 const files = readdirSync(bookDir).filter(f => f.endsWith('.geo')).sort()
 const source = (f: string) => readFileSync(resolve(bookDir, f), 'utf8')
 // Each file a module (kb/modules.ts), as the app loads the book.
-const rulesTo = (chapter: number) => files.slice(0, chapter + 1).flatMap(f => inModule(parseRules(source(f)), f.replace(/\.geo$/, '')))
+const bookRules = files.flatMap(f => inModule(parseRules(source(f)), f.replace(/\.geo$/, '')))
 const args = process.argv.slice(2)
 const flag = (name: string) => args.includes(name)
 const only = args.find(a => a.startsWith('--only='))?.slice(7)
@@ -83,11 +82,10 @@ function writtenFrom(kb: KnowledgeBase, lemma: Lemma) {
 }
 
 function checking() {
-  const all = rulesTo(files.length - 1)
   const rows: { chapter: number; goalMs: number; falseMs: number; witnessMs: number; witnessed: boolean; exhausted: boolean; derived: number; added: number; proved: boolean }[] = []
+  const kb = new KnowledgeBase(bookRules)
+  prepare(kb) // the structure analysis, once, outside the timings
   files.forEach((file, chapter) => {
-    const kb = new KnowledgeBase(flag('--scoped') ? rulesTo(chapter) : all)
-    prepare(kb) // the structure analysis, once per knowledge base, outside the timings
     for (const lemma of parseLemmas(source(file))) {
       if (only && !show(lemma).includes(only)) continue
       const fresh = new FreshNames()
@@ -111,7 +109,6 @@ function checking() {
       if (flag('--json')) console.log(JSON.stringify({ lemma: show(lemma), ...row, goalMs: Math.round(row.goalMs), falseMs: Math.round(row.falseMs), search: lemma.steps ? null : lastSearch }))
     }
   })
-  console.log(`${flag('--scoped') ? 'each chapter with its own and earlier rules' : 'the whole book for every lemma'}`)
   console.log('chapter  lemmas  proved  goal      witness   witnessed  false     out of budget')
   const line = (label: string, rs: typeof rows) => console.log(
     `${label.padEnd(9)}${String(rs.length).padStart(6)}${String(rs.filter(r => r.proved).length).padStart(8)}  ` +
@@ -125,7 +122,7 @@ function checking() {
 }
 
 function pages() {
-  const kb = new KnowledgeBase(rulesTo(files.length - 1))
+  const kb = new KnowledgeBase(bookRules)
   const lemmas = files.flatMap(f => parseLemmas(source(f)))
   const properties = [...RELATIONS.values()].flatMap(r => r.mark && typeof r.arity === 'number' ? [{ name: r.name, arity: r.arity }] : [])
   console.log('page                        points  plan     realise  figure        marks closure')

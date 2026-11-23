@@ -1,8 +1,6 @@
 import { computed, ref, watch, onBeforeUnmount } from 'vue'
 import { parseSource, type Rule } from '../language/parser'
 import type { KnowledgeBase } from '../kb/inference'
-import { showRule } from '../kb/rules'
-import { ruleChapter } from './useKB'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
 type WorkerMessage =
@@ -10,12 +8,8 @@ type WorkerMessage =
   | { requestId: number; kind: 'done' }
   | { requestId: number; kind: 'error'; message: string }
 
-/**
- * Checks the `?` lines of the text in a worker, as marks for the editor's gutter. On a book page,
- * `lineChapters` gives the chapter each line is written in, so that a lemma is checked in the book's
- * order (kb/bookScope.ts).
- */
-export function useVerification(text: () => string, kb: () => KnowledgeBase | null, lineChapters: () => readonly (number | null)[] | null = () => null) {
+/** Checks the `?` lines of the text in a worker, as marks for the editor's gutter (geometry/pageCheck.ts). */
+export function useVerification(text: () => string, kb: () => KnowledgeBase | null) {
   const worker = new Worker(new URL('../workers/lemmaCheckWorker.ts', import.meta.url), { type: 'module' })
   const lastRequestId = ref(0)
   const verificationMarksState = ref<EditorMark[]>([])
@@ -47,14 +41,7 @@ export function useVerification(text: () => string, kb: () => KnowledgeBase | nu
       .map(x => verificationMarksState.value.find(m => m.line === x.i) ?? { line: x.i, type: 'unknown' as const, message: 'checking…' })
   }
 
-  // The chapter of each rule, by the knowledge base (the same rules each time it is unchanged).
-  let chaptersFor: { kb: KnowledgeBase; chapters: (number | null)[] } | null = null
-  const ruleChapters = (k: KnowledgeBase) => {
-    if (chaptersFor?.kb !== k) chaptersFor = { kb: k, chapters: k.allRules().map(r => ruleChapter(showRule(r)) ?? null) }
-    return chaptersFor.chapters
-  }
-
-  watch([text, kb, lineChapters], ([textContent, currentKb, chapters]) => {
+  watch([text, kb], ([textContent, currentKb]) => {
     if (!textContent.trim() || !currentKb) {
       verificationMarksState.value = []
       return
@@ -74,7 +61,6 @@ export function useVerification(text: () => string, kb: () => KnowledgeBase | nu
         requestId,
         text: textContent,
         rules: currentKb.allRules() as Rule[],
-        ...(chapters ? { ruleChapters: ruleChapters(currentKb), lineChapters: [...chapters] } : {}),
       })
     } catch {
       // The text does not parse (a line half typed): keep the marks until it does.

@@ -13,7 +13,7 @@ import { readFileSync } from 'fs'
 import { resolve } from 'path'
 import { KnowledgeBase, unfold, type GroundPredicate } from '../src/kb/inference'
 import { FreshNames } from '../src/kb/names'
-import { Saturation, prepare, relevant, type SaturateOptions } from '../src/kb/saturate'
+import { Saturation, prepare, relevant, strata, type SaturateOptions } from '../src/kb/saturate'
 import { Core } from '../src/kb/core'
 import { parseLemmas, parseRules, type Lemma } from '../src/language/parser'
 import { bookLemmas, bookRules, regressionLemmas } from './book'
@@ -46,12 +46,14 @@ describe('the core agrees with Saturation, step for step', () => {
     it(show(lemma), async () => {
       await yieldToRunner()
       const goal = { name: lemma.head.name, args: lemma.head.args }
-      const { s, c } = both(seedsOf(lemma), [goal.name], { goal, maxWork: 300_000 })
+      // In strata, as saturate() runs them (the book's rules have modules; Beyond's are in every level).
+      const levelOf = strata(kb, [goal.name, ...seedsOf(lemma).map(f => f.name)])?.levelOf
+      const { s, c } = both(seedsOf(lemma), [goal.name], { goal, maxWork: 300_000, levelOf })
       // Counts first: asking whether a defined goal holds is a search of its own, and counts.
-      const p = new Core(relevant(prepare(kb), [goal.name]), { goal, maxWork: 300_000, provenance: true })
+      const p = new Core(relevant(prepare(kb), [goal.name]), { goal, maxWork: 300_000, provenance: true, levelOf })
       for (const f of seedsOf(lemma)) p.assert(f)
       p.run()
-      const count = (e: Saturation | Core) => ({ exhausted: e.exhausted, work: e.work, matches: e.matches })
+      const count = (e: Saturation | Core) => ({ exhausted: e.exhausted, work: e.work, matches: e.matches, level: e.level })
       const [cs, ss, ps] = [count(c), count(s), count(p)]
       expect({ ...cs, holds: c.holds(goal) }).toEqual({ ...ss, holds: s.holds(goal) })
       // Recording provenance changes nothing of the search.

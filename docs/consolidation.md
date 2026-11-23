@@ -99,6 +99,14 @@ From [foundations.md](foundations.md), where each is argued.
   inequality. (November 2026)
 - **Existence in code**: continuity lives in the planner and the construction checks, not in rules.
   Candidate: E's intersection axioms, which also let a construction choose a side. (November 2026)
+- **A word's home, computed twice**: `useKB.ts` gives a word's page to the first chapter with a rule
+  concluding it (by file order); `modules.ts` gives its module to the file holding its own rules (by
+  content). They agree on the book as it is. When pages and modules part, pages should take it from
+  the module analysis. (November 2026)
+- **Chapters and modules are one file each, for now**: a book file is at once a module (meaning and
+  strata), a chapter (reading order) and a page's namespace. The reorganisation parts them: theory
+  modules, construction files and pages by reference (foundations.md, *Modules and strata: the
+  design*). (November 2026)
 - **Rules in modules, not only chapters**: a lemma's chapter is where it sits; the axiom groups it
   needs are what it rests on. Books per geometry, sharing pages by reference. (November 2026)
 

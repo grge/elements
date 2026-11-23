@@ -9,8 +9,10 @@
  *   witness that the hypotheses are consistent, which spares the checker its search for a contradiction.
  * - A lemma with a written proof has a verdict for each step, then one for itself (checker.ts,
  *   `checkWrittenProof`; constructions on the figures, constructionStep.ts).
- * - On a book page, a lemma is checked in the book's order: with the rules of the chapter it is written
- *   in and those before, citing only lemmas of those chapters (kb/bookScope.ts).
+ * - Every lemma is checked with the page's rules (on a book page, the whole book's), as the tests check
+ *   it; the search runs in strata (kb/modules.ts), so a lemma's own modules come first.
+ * - A written proof cites only lemmas above it, so that citations cannot go round in a circle: a book
+ *   lemma, the book's lemmas before it; any other, the book's and the page's own found ✓ above it.
  * - A lemma once found ✓ keeps its proof (`KeptProofs`); a later check replays it before it searches.
  *
  * The verdicts carry the proofs found, for the cache and for tests. The page shows verdicts only:
@@ -23,8 +25,7 @@ import { KnowledgeBase } from '../kb/inference'
 import { checkByReplay, checkGroundQuery, checkLemma, checkWrittenProof } from '../kb/checker'
 import { showRule } from '../kb/rules'
 import type { Proof } from '../kb/proof'
-import { ScopedBases, type RuleChapters } from '../kb/bookScope'
-import { bookLemmas, bookLemmaChapters } from '../language/bookLemmas'
+import { bookLemmas } from '../language/bookLemmas'
 import { checkConstruction } from './constructionStep'
 import { numericEvidence, type Evidence } from './evidence'
 import { verdict, writtenVerdicts, type Verdict } from './verdict'
@@ -32,13 +33,6 @@ import { verdict, writtenVerdicts, type Verdict } from './verdict'
 export interface PageCheckRequest {
   text: string
   rules: readonly Rule[]
-  /**
-   * For a book page: the chapter of each rule (null for one of no book chapter), and the chapter each
-   * line of the text is written in (null for none). A lemma whose first line has a chapter is checked
-   * in the book's order.
-   */
-  ruleChapters?: RuleChapters
-  lineChapters?: readonly (number | null)[]
 }
 
 /** A verdict for one line of the page (0-based), or for a lemma spanning lines up to `endLine`. */
@@ -52,7 +46,7 @@ export interface PageMark extends Verdict {
 }
 
 /**
- * Proofs kept from earlier checks, by the lemma's text and scope, the most recent last: a later check
+ * Proofs kept from earlier checks, by the lemma's text, the most recent last: a later check
  * replays one before it searches (checker.ts, `checkByReplay`), so an edit elsewhere on the page, which
  * changes the knowledge base, does not send every lemma back to its search.
  */
@@ -67,23 +61,26 @@ export class KeptProofs {
   }
 }
 
-const lemmaKey = (l: Lemma, scope: number | null) =>
-  `${scope ?? 'all'}| ${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`
+const lemmaKey = (l: Lemma) =>
+  `${l.head.name} ${l.head.args.join(' ')}: ${l.hypotheses.map(h => `${h.name} ${h.args.join(' ')}`).join(', ')}`
+
+/** Each book lemma's place in the book, by its text (the first, if two are written alike). */
+const bookPlace = new Map<string, number>()
+bookLemmas.forEach((l, i) => { if (!bookPlace.has(lemmaKey(l))) bookPlace.set(lemmaKey(l), i) })
 
 /** Check every `?` line of the page, calling `emit` with each verdict as it is decided. */
 export function checkPage(request: PageCheckRequest, kept: KeptProofs, emit: (mark: PageMark) => void): void {
-  const { text, rules, ruleChapters, lineChapters } = request
+  const { text, rules } = request
   const parsed = parseSource(text)
   const runtime = buildRuntimeState(new KnowledgeBase([...rules]), parsed)
 
-  // A book lemma's own scope: its chapter's rules and those before. Not the page's rules, which on a
-  // word's page may come from later chapters; the book's rules include them.
-  const scoped = ruleChapters ? new ScopedBases(rules, ruleChapters) : null
-
-  // Lemmas a written proof may cite (tools.md, option A): the book's, which are all ✓, and this page's
-  // own as they are found ✓, those above the proof; for a book lemma, only those of its chapter and
-  // before. Each with its chapter (Infinity for none).
-  const citable: { lemma: Lemma; chapter: number }[] = bookLemmas.map((lemma, i) => ({ lemma, chapter: bookLemmaChapters[i] }))
+  // Lemmas a written proof may cite (tools.md, option A), above it: for a book lemma, the book's
+  // before it; for any other, the book's, which are all ✓, and this page's own found ✓ above it.
+  const pageCitable: Lemma[] = []
+  const citableFor = (lemma: Lemma) => {
+    const place = bookPlace.get(lemmaKey(lemma))
+    return place !== undefined ? bookLemmas.slice(0, place) : [...bookLemmas, ...pageCitable]
+  }
 
   for (const item of parsed) {
     if (item.kind !== 'lemma' && item.kind !== 'ground-query') continue
@@ -96,8 +93,7 @@ export function checkPage(request: PageCheckRequest, kept: KeptProofs, emit: (ma
         continue
       }
       const lemma = item.lemma
-      const scope = scoped ? lineChapters?.[line] ?? null : null
-      const kb = scope != null ? scoped!.upTo(scope) : runtime.kb
+      const kb = runtime.kb
       let ev: Evidence | null = null
       try { ev = numericEvidence(lemma, kb) } catch { ev = null }
 
@@ -113,7 +109,7 @@ export function checkPage(request: PageCheckRequest, kept: KeptProofs, emit: (ma
             if (c.ok) built.push(step)
             return c
           },
-          lemmas: citable.filter(c => scope == null || c.chapter <= scope).map(c => c.lemma),
+          lemmas: citableFor(lemma),
           consistent: () => {
             if (!built.length) return !!ev?.witness
             try { return !!numericEvidence({ head: lemma.head, hypotheses: [...lemma.hypotheses, ...built] }, kb).witness } catch { return false }
@@ -125,14 +121,14 @@ export function checkPage(request: PageCheckRequest, kept: KeptProofs, emit: (ma
         proof = written.head.proof
       } else {
         const options = { consistent: () => !!ev?.witness, strict: true, distinctNames: true, explain: true }
-        const key = lemmaKey(lemma, scope)
+        const key = lemmaKey(lemma)
         const keptProof = kept.get(key)
         const check = (keptProof && checkByReplay(lemma, kb, keptProof, showRule, options)) ?? checkLemma(lemma, kb, undefined, options)
         if (check.result === 'verified' && check.proof) kept.set(key, { proof: check.proof, apart: !!check.apart })
         v = verdict(check, ev)
         proof = check.proof
       }
-      if (v.type === 'verified') citable.push({ lemma, chapter: scope ?? Infinity })
+      if (v.type === 'verified' && !bookPlace.has(lemmaKey(lemma))) pageCitable.push(lemma)
       emit({ line, endLine, ...v, ...(v.type === 'verified' && proof ? { proof } : {}) })
     } catch (error) {
       emit({ line, endLine, type: 'unproven', message: `could not be checked: ${error}` })

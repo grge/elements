@@ -4,7 +4,6 @@
  */
 
 import type { Rule } from '../language/parser'
-import type { RuleChapters } from '../kb/bookScope'
 import { checkPage, KeptProofs } from '../geometry/pageCheck'
 import type { EditorMark } from '../components/CodeEditor.vue'
 
@@ -12,8 +11,6 @@ interface VerifyRequest {
   requestId: number
   text: string
   rules: Rule[]
-  ruleChapters?: RuleChapters
-  lineChapters?: readonly (number | null)[]
 }
 
 type VerifyResponse =

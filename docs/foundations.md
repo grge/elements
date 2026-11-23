@@ -153,9 +153,10 @@ rules, the book is the pages.
 - **Books share pages by reference.** A page carries the modules it needs, and is checked under
   each geometry's theory. The hyperbolic book would be the neutral pages plus its own chapters.
 - **Validity can be computed; organisation cannot.** The search shows that a lemma follows from
-  some modules; a model's counterexample shows that it does not follow from fewer. `bookScope.ts`
-  already checks lemmas with "the rules up to chapter n". Checking them with "these modules" is the
-  same mechanism, so it could map which pages a geometry can reuse.
+  some modules; a model's counterexample shows that it does not follow from fewer. Checking a
+  lemma with "these modules" (a set of modules, `modules.ts`) could map which pages a geometry can
+  reuse. (Written when `bookScope.ts` checked lemmas with "the rules up to chapter n"; that is gone,
+  November 2026.)
 - **Cases drive the splits.** The hyperbolic proof of concept needs exactly one split: neutral
   rules from the two parallel axioms. Affine would be the real test, since it cuts chapter 1 into
   order and congruence.
