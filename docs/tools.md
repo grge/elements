@@ -39,13 +39,21 @@ A `?` step whose atom names points not above it is a construction:
     ...
 ```
 
-The new points are built by the planner from the points above. Each step is held to four checks,
-all made on the figures, as witnesses already are.
-1. **Built from the points above.** The step is planned with the hypotheses' inputs kept as inputs,
-   so its new points come after the points above, never the other way round.
-2. **Determined, or freely chosen.** If the figure's freedom is unchanged, the new points are
-   determined ("let d be where…"). If it grows, the step chooses ("let a point be taken on…"), as
-   Euclid allows; the page says which.
+The new points are built by the planner from the points above. A construction is "let d be such
+that…", sound only if the claim does not name d (it says: for any d) and the step says nothing more
+of the points above than where d is. Then every figure of what is above has such a d, and the claim,
+which does not name it, follows from what is above alone. So a step is held to these checks:
+0. **Fresh** (the logic): a point the claim names cannot be constructed.
+1. **Conservative.** The step is planned after the figure of what is above it, that figure's steps
+   kept exactly (the planner's `after`), so it can only place its new points; every equation it adds
+   must be used to place one of them, one left over being a condition on the points above. And its
+   facts that name only points above (an order fact, which is no equation) must be shown by the
+   logic. Added November 2026, after two probes proved false lemmas: a step that also put a right
+   angle on the points above was accepted, and a step could choose a point of the claim
+   (review-notes.md, *Written proofs*).
+2. **Determined, or freely chosen.** If the step fixes its new points, they are determined ("let d
+   be where…"). If some are free, the step chooses ("let a point be taken on…"), as Euclid allows;
+   the page says which.
 3. **Apart from every other point.** In every sampled figure, every new point stands apart from
    every other point.
    - Only then is it granted the distinct-names convention, which the checker uses to take
@@ -56,8 +64,10 @@ all made on the figures, as witnesses already are.
    - The planner already refuses such a point: a meeting point that lands on another point is a
      failure, not a figure. So the page can say what happened plainly, as below.
 4. **Exists: unconditionally, or as witnessed.** From the planner's step that places each new point:
-   - **Unconditional:** a free point; a point on one locus; or a line through a circle's centre
-     meeting that circle (`double`). These always exist.
+   - **Unconditional:** a free point; a point on a locus that always exists; or a line through a
+     circle's centre meeting that circle (`double`). Whether a locus always exists is said by its
+     kind (`locusAlwaysExists`, which every kind must answer): a line or a circle of a length of the
+     figure does; a circle of computed radius (a quadrance leg) or through three points may not.
    - **Witnessed only:** two lines (which may be parallel), two circles, or a line and a circle
      whose centre it misses. They exist in every sampled figure, and Euclid's own gap is here: when
      do two circles meet?

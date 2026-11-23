@@ -13,6 +13,23 @@ reconsidering; an entry leaves when it is settled. Newest at the end of each sec
   promises not kept; comments in two voices. Each with its pages in review-notes.md, *Reading the
   book*. Input to the whole reorganisation, not one entry. (November 2026)
 
+## What a reader sees of a proof (November 2026)
+
+- **A ✓ shows no proof for now.** The first display (clicking a ✓ unfolded the proof found, rules
+  linked by chapter and line, side conditions folded) was taken out a day after it landed: it knew
+  relations by name (which are side conditions, what a solver step is called), and a reading of the
+  book showed a found proof is the search's trace, not an argument (review-notes.md, *Reading the
+  book*). The machinery stays (provenance, `explain`, `replay`, the cache) and names nothing.
+  Questions for the rethink:
+  - granularity: a rule's step, or Euclid's;
+  - how a rule gets a name a reader can read (side-angle-side, common notion 3), from the book, not
+    the code;
+  - which facts are bookkeeping, recognised (by structure) or declared by the book, never named;
+  - whether found proofs are shown at all, or only offered as a draft to write in ("write it in"),
+    a written proof being the reader's proof;
+  - citing the book's lemmas in found proofs, and proofs and the figure together.
+  (November 2026)
+
 ## The test for every tool (November 2026)
 
 A tool can do three jobs, judged separately:

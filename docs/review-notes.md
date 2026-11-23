@@ -736,7 +736,7 @@ step on the page. Measured with the book's rules and *Beyond*'s:
 - **Citing lemmas** (tools.md, option A). A step may cite the book's lemmas and the page's ✓ lemmas
   above it: each joins the step's search as a rule over primitives (its hypotheses unfolded), and
   only for a step whose predicate it concludes. Offering all 99 of the book's changes nothing
-  measurable (Thales' converse 3.2 s, the midline 3.0 s). The proof view says "a lemma" for the step.
+  measurable (Thales' converse 3.2 s, the midline 3.0 s). The proof names the lemma a step cites (`citedLemma`).
 - **The nine-point circle,** as turns (`eq-turn k d k e f d f e`), written in *Beyond* citing Thales'
   converse twice: f and e are as far from k as from a; k is a reflected in e-f, so the angle at k is
   the angle at a, which is the parallelogram a-f-d-e's angle at d; d, e, f and k are cyclic. The head
@@ -748,6 +748,22 @@ step on the page. Measured with the book's rules and *Beyond*'s:
 
   Both are order, the wall *Beyond* already names; neither is a written proof's limit. The circle
   form (`circle n d k`) also needs a circle's centre to be unique, which the book does not have.
+- **Two holes, closed** (November 2026). A construction is "let d be such that…", sound only if the
+  claim does not name d and the step says nothing more of the points above than where d is. Two
+  probes proved false lemmas, both caught only by numeric evidence (as alarms):
+  - *a step that also constrained the points above.* A word doubling a-b to d and saying the angle
+    at b is right, under hypotheses that do not make it right, was accepted: planned jointly with
+    the step, the figure moved an old point onto the new right-angle locus, and the lost freedom
+    counted as "determined". The loosened check above let it through.
+  - *a step that chose a point of the claim.* `? eq-lines o b o d` with `? double b o d` proved for
+    one d what the claim says of any d.
+
+  Now a construction is planned after the figure above it, that figure's steps kept; every equation
+  it adds must place a new point; its facts naming only points above must be shown; and a point of
+  the claim cannot be constructed. Existence is said per locus kind (`locusAlwaysExists`): the
+  quadrance circle added the same week had been labelled "always exists" when it exists only
+  sometimes. Every book and *Beyond* written proof still checks. Regression tests in
+  `tests/written.test.ts`.
 
 ## The budget's unit (November 2026)
 

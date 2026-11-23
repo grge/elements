@@ -95,7 +95,6 @@
             :error="ws.parseError.value"
             :highlight="codeHighlight"
             :highlight-lines="sourceLines"
-            :rule-link="ruleLink"
             placeholder="circle a b c"
             @hover="h => (editorHover = h)"
             @open="openByName"
@@ -194,9 +193,7 @@ import { vocabulary } from '../geometry/vocabulary'
 import { useThumbnails } from '../composables/useThumbnails'
 import { describeFact, describeLocus, type Step } from '../geometry/construction'
 import { displayName } from '../kb/names'
-import { ruleWrittenAt, type Namespace } from '../composables/useKB'
-import { showRule } from '../kb/rules'
-import { parseSource } from '../language/parser'
+import type { Namespace } from '../composables/useKB'
 
 const ws = useWorkspace()
 const contentsOpen = ref(false)
@@ -282,17 +279,6 @@ onBeforeUnmount(() => {
 
 const { verificationMarks } = useVerification(() => ws.text.value, () => ws.kb.value, () => ws.clauseChapters.value)
 
-/** Where a proof step's rule is written: on this page ("l. 5"), or in the book ("ch. 3, l. 40"). */
-const pageRules = computed(() => {
-  const out = new Map<string, string>()
-  try {
-    for (const item of parseSource(ws.text.value)) {
-      if (item.kind === 'rule' && item.sourceRef && !out.has(showRule(item.rule))) out.set(showRule(item.rule), `l. ${item.sourceRef.startLine}`)
-    }
-  } catch { /* half typed: the book's places still serve */ }
-  return out
-})
-const ruleLink = (text: string) => pageRules.value.get(text) ?? ruleWrittenAt(text)
 const marks = computed(() => verificationMarks.value)
 // A lemma that checks lends its marks to the figure.
 watch(verificationMarks, ms => ws.setVerified(ms.filter(m => m.type === 'verified').map(m => m.line)), { immediate: true })

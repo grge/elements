@@ -502,7 +502,7 @@ the first step for every item in this section; do it when a lens or a sibling bo
   fact marked. Lemmas whose head introduces points of their own get no evidence yet: they need a
   witness search.
 - **Proofs** (built November 2026, [engine.md](engine.md)): every ✓ carries the proof the engine
-  found, folded under it on the page; proofs an author writes as `?` lines in a lemma's body, with
+  found (not shown: consolidation.md, *What a reader sees of a proof*); proofs an author writes as `?` lines in a lemma's body, with
   constructions checked on the figures; proofs kept and replayed instead of searched again; the
   search made by the matching core (`core.ts`). Later, when we come back to the engine:
   - **Kept proofs in the browser's storage,** so a reload or a new session replays instead of
@@ -585,15 +585,9 @@ layers, the boffin panel and an entry page.
 - Hovering a predicate name shows its arguments and doc comment; add its provenance and recognised
   status.
 - Inline proof marks in reading mode.
-- **More of a ✓'s proof on the page.** Clicking a ✓ unfolds its proof (November 2026: the argument's
-  steps, rules linked to where they are written, side conditions folded). Still to come:
-  - **proofs and the figure, together:** hovering a step lights up its points and the relation it
-    states in the figure (as hovering a `?` line does for marks); hovering a figure's element shows
-    which steps use it; a written proof's constructed points drawn in the figure, marked as
-    constructed;
-  - citing the book's lemmas in found proofs, where a step is one (tools.md, option A; written
-    proofs already cite them);
-  - "write it in", which copies a found proof into the source as `?` lines.
+- **A written proof's constructed points drawn in the figure**, marked as constructed, and its steps
+  lighting up what they state. What a ✓ shows of a found proof, if anything, is parked with the
+  reorganisation (consolidation.md, *What a reader sees of a proof*).
 
 ## Code structure
 

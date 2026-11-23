@@ -218,21 +218,20 @@ It is skipped for heads that are defined or answered by a solver.
 
   Consistency is still asked: a witness, or `false` out of reach; otherwise the lemma is searched.
   Verdicts that are not ✓ keep nothing, since a new rule can change them.
-- **On the page.** The worker posts each ✓ with its proof as plain data (`proofView.ts`): the steps
-  that carry the argument, and apart from them the side conditions (`distinct`, `triangle`,
-  `collinear`, `between`, rule steps resting only on those, ratios that are one on both sides).
-  Clicking the ✓ unfolds it under the lemma (`CodeEditor.vue`), the side conditions behind one line.
-  A rule step names its rule by text; the page shows where it is written (`ruleWrittenAt` in
-  `useKB.ts` for the book, the page's own lines first), and clicking opens the page of the
-  predicate it concludes.
+- **Not on the page.** A ✓ shows no proof (November 2026). A found proof is a trace of the search,
+  not an argument for a reader, and showing one meant naming relations in code (which are side
+  conditions, what a solver step is called). What a reader should see of a proof is a question for
+  the reorganisation (consolidation.md). Proofs serve the cache and the tests; a written proof is
+  the reader's proof.
 - **Written proofs.** A lemma's `?` steps (`Lemma.steps`) are checked by `checkWrittenProof`: each
   step by a short search (`STEP_WORK`) from the unfolded hypotheses and the steps above, plain first,
   then under the convention; each construction (a step naming new points) through a callback, so the
-  logic stays free of figures. The page answers it with `checkConstruction`
-  (`geometry/constructionStep.ts`): the step is planned with the figure above it, its inputs kept,
-  and sampled for four things: no point above placed by means of a new one; determined or freely
-  chosen; apart from every other point (only then covered by the convention); existing always or
-  only as witnessed. A figure with no sample names the point the new one falls on, where it can.
+  logic stays free of figures. A construction must not name a point of the claim, and its facts
+  naming only points above must be shown. The page answers the rest with `checkConstruction`
+  (`geometry/constructionStep.ts`): the step is planned after the figure above it, that figure's
+  steps kept (`after`), and checked for four things: conservative (every equation it adds places a
+  new point); determined or freely chosen; apart from every other point (only then covered by the
+  convention); existing always (`locusAlwaysExists`) or only as witnessed. A figure with no sample names the point the new one falls on, where it can.
   `writtenVerdicts` (verdict.ts) turns the result into marks: one per step (a construction's says
   what it constructs, under its ✓), and the lemma's, unproven while any step is not shown.
   A step may cite lemmas (`lemmas`: the book's, `language/bookLemmas.ts`, and the page's ✓ lemmas
@@ -326,7 +325,8 @@ distinct points, so a lemma false only when two points coincide holds in every s
 as it should be. The whole book samples, at about 6 ms a lemma.
 
 The page checks its `?` lines in a web worker (`useVerification` → `lemmaCheckWorker`), so typing never
-blocks. On a book page, each lemma is checked in the book's order: with the rules of the chapter it is
+blocks. The checking itself is `geometry/pageCheck.ts` (`checkPage`), which the worker runs and the
+tests call: evidence, then replay or search, written proofs, citations, the book's order. On a book page, each lemma is checked in the book's order: with the rules of the chapter it is
 written in and those before, citing only lemmas of those chapters (`bookScope.ts`), never with its
 page's own clauses, which on a word's page come from every chapter. A lemma of `extra/` or the user's
 is checked with everything. A lemma with a written proof reaches its page as written, steps and

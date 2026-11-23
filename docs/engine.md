@@ -432,9 +432,10 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
    is used. Explanation, and the proof on the page, folded.
    Found (November 2026): provenance in `saturate.ts`, `Saturation.explain`, `proof.ts` (the proof
    object and `replay`), every book proof explained and replayed, at no measurable cost. Shown
-   (November 2026): clicking a ✓ unfolds its proof under the lemma, the steps that carry it in order,
-   each rule a link to where it is written, the side conditions folded into one line (`proofView.ts`,
-   `CodeEditor.vue`). Step 3 is done.
+   (November 2026): clicking a ✓ unfolded its proof under the lemma. Taken out again the next day:
+   it named relations in code (side conditions, solver steps), and a reading of the book showed a
+   found proof is the search's trace, not an argument (review-notes.md, *Reading the book*). What a
+   reader sees of a proof waits for the reorganisation (consolidation.md). Step 3 is done, unshown.
 4. **The cache.** Replay before search, in the worker. Done (November 2026): kept in memory, by
    the lemma's text. Still open: keeping proofs across sessions (rules stored by their text and
    resolved again on load).
@@ -482,8 +483,8 @@ Each step is useful alone and measured with `scripts/bench.ts` and the prototype
   with "h is g", and the nine-point circle's circle form waits on a circle's centre being unique.
 - **Folding.** Which steps count as bookkeeping on the page, decided without naming relations.
   Candidates: steps whose conclusion the figure makes obvious, or steps of rules with no metric
-  relation. For now (November 2026) `proofView.ts` names them: `distinct`, `triangle`, `collinear`,
-  `between`, rules resting only on those, and ratios of one.
+  relation. The first display named them in code, and was taken out (November 2026): part of what
+  a reader sees of a proof (consolidation.md).
 - **Keeping proofs as the book changes.** A kept proof cites rules by content, so an edit to an
   unrelated chapter need not invalidate it. Whether the key should be the fingerprint of the
   rules a proof uses, rather than of the whole knowledge base. Answered for the worker (November

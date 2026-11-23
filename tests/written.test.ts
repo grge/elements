@@ -4,11 +4,10 @@
  */
 import { describe, it, expect } from 'vitest'
 import { KnowledgeBase } from '../src/kb/inference'
-import { checkWrittenProof } from '../src/kb/checker'
+import { checkWrittenProof, citedLemma } from '../src/kb/checker'
 import { checkConstruction } from '../src/geometry/constructionStep'
 import { writtenVerdicts } from '../src/geometry/verdict'
 import { parseLemmas, parseRules, parseSource } from '../src/language/parser'
-import { proofView } from '../src/kb/proofView'
 import { bookRules } from './book'
 
 const kb = new KnowledgeBase(bookRules)
@@ -126,8 +125,8 @@ describe('checking a written proof', () => {
     expect(without.steps[0].result).toBe('not-shown')
     const cited = checkWrittenProof(lemma, kb, { consistent: () => true, distinctNames: true, lemmas: [thalesConverse] })
     expect(cited.steps[0].result).toBe('follows')
-    const view = proofView(cited.steps[0].proof!)
-    expect(view.steps).toEqual([expect.objectContaining({ why: 'lemma', rule: '? eq-lines o a o b: right a b c, midpoint o a c' })])
+    const by = cited.steps[0].proof!.steps.flatMap(st => st.by.kind === 'rule' ? [citedLemma(st.by.rule)] : [])
+    expect(by).toContain(thalesConverse)
     expect(cited.head.result).toBe('verified')
   }, 60_000)
 })

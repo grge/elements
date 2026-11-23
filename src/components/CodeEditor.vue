@@ -9,10 +9,9 @@
  * - Comments are prose: a text face, the `#` hidden except on the line the cursor is on.
  * - Names never break across lines; wrapped lines hang (comments under their first word, clause
  *   lines one indent deeper than they start).
- * - Each `?` line gets ✓, ✗ or ⊥ in the gutter, and a ✗ or ⊥ its reason underneath. Clicking a ✓
- *   unfolds its proof under the lemma (kb/proofView.ts), side conditions folded within; clicking it
- *   again folds it. A syntax error is underlined, with its message underneath; a predicate name
- *   nothing defines or uses is marked.
+ * - Each `?` line gets ✓, ✗ or ⊥ in the gutter, and a ✗ or ⊥ its reason underneath (and a written
+ *   proof's construction its note). A syntax error is underlined, with its message underneath; a
+ *   predicate name nothing defines or uses is marked.
  * - Completion offers predicates with their arguments as fields to fill in; Enter continues a clause
  *   body or a comment, and steps out of either on an empty line.
  */
@@ -26,7 +25,6 @@ import { defaultKeymap, history, historyKeymap } from '@codemirror/commands'
 import { autocompletion, snippetCompletion, type Completion, type CompletionContext } from '@codemirror/autocomplete'
 import { Compartment } from '@codemirror/state'
 import type { VerdictType } from '../geometry/verdict'
-import type { ProofView } from '../kb/proofView'
 
 export interface EditorMark {
   /** 0-based line of the `?`. */
@@ -36,8 +34,6 @@ export interface EditorMark {
   /** What the check found (geometry/verdict.ts). */
   type: VerdictType
   message: string
-  /** A ✓'s proof, to unfold under the lemma. */
-  proof?: ProofView
   /** Show the message under the line even with a ✓ (a written proof's construction step). */
   note?: boolean
 }
@@ -63,8 +59,6 @@ const props = defineProps<{
   highlight?: string[]
   /** Lines (0-based) to light up: where a hovered element of the figure came from. */
   highlightLines?: number[]
-  /** Where a rule is written, for a proof step that uses it (by the rule's text): a short label. */
-  ruleLink?: (ruleText: string) => string | undefined
 }>()
 
 /** What the pointer is over: a name, or a whole atom (when over its predicate). */
@@ -122,27 +116,6 @@ const highlightLinesField = StateField.define<ReadonlySet<number>>({
     return value
   },
 })
-// The lines (0-based) whose ✓ has its proof unfolded, kept on their lines as the text is edited.
-const toggleProof = StateEffect.define<number>()
-const openProofsField = StateField.define<ReadonlySet<number>>({
-  create: () => new Set(),
-  update(value, tr) {
-    let out = value
-    if (tr.docChanged && value.size) {
-      out = new Set([...value].flatMap(l => {
-        if (l + 1 > tr.startState.doc.lines) return []
-        const pos = tr.changes.mapPos(tr.startState.doc.line(l + 1).from, 1)
-        return [tr.state.doc.lineAt(pos).number - 1]
-      }))
-    }
-    for (const e of tr.effects) if (e.is(toggleProof)) {
-      const next = new Set(out)
-      if (next.has(e.value)) next.delete(e.value); else next.add(e.value)
-      out = next
-    }
-    return out
-  },
-})
 const setError = StateEffect.define<{ line: number; message: string } | null>()
 const errorField = StateField.define<{ line: number; message: string } | null>({
   create: () => null,
@@ -156,11 +129,11 @@ const errorField = StateField.define<{ line: number; message: string } | null>({
 
 class MarkMarker extends GutterMarker {
   constructor(readonly mark: EditorMark) { super() }
-  eq(other: MarkMarker) { return other.mark.type === this.mark.type && other.mark.message === this.mark.message && !!other.mark.proof === !!this.mark.proof }
+  eq(other: MarkMarker) { return other.mark.type === this.mark.type && other.mark.message === this.mark.message }
   toDOM() {
     const el = document.createElement('span')
-    el.className = `mark ${this.mark.type}${this.mark.proof ? ' has-proof' : ''}`
-    el.title = this.mark.proof ? `${this.mark.message} (click for the proof)` : this.mark.message
+    el.className = `mark ${this.mark.type}`
+    el.title = this.mark.message
     el.textContent = { verified: '✓', vacuous: '⊥', false: '✗', unproven: '?', alarm: '!', unknown: '…' }[this.mark.type]
     return el
   }
@@ -174,14 +147,6 @@ const markGutter = gutter({
     return mark ? new MarkMarker(mark) : null
   },
   lineMarkerChange: update => update.startState.field(marksField) !== update.state.field(marksField),
-  domEventHandlers: {
-    mousedown(v, line) {
-      const idx = v.state.doc.lineAt(line.from).number - 1
-      if (!v.state.field(marksField).find(m => m.line === idx)?.proof) return false
-      v.dispatch({ effects: toggleProof.of(idx) })
-      return true
-    },
-  },
   initialSpacer: () => new MarkMarker({ line: -1, type: 'verified', message: '' }),
 })
 
@@ -200,71 +165,12 @@ class ReasonWidget extends WidgetType {
   ignoreEvent() { return false }
 }
 
-/** A ✓'s proof under its lemma: the steps that carry it, each rule a link, side conditions folded. */
-class ProofWidget extends WidgetType {
-  constructor(readonly proof: ProofView, readonly indent: number) { super() }
-  eq(o: ProofWidget) { return o.proof === this.proof && o.indent === this.indent }
-  toDOM() {
-    const el = document.createElement('div')
-    el.className = 'cm-proof'
-    el.style.paddingLeft = `calc(${this.indent}ch + 0.25rem)`
-    const list = (steps: ProofView['steps'], start: number) => {
-      const ol = document.createElement('ol')
-      ol.start = start
-      for (const st of steps) {
-        const li = document.createElement('li')
-        const fact = document.createElement('span')
-        fact.className = 'cm-proof-fact'
-        fact.textContent = st.fact
-        const why = document.createElement('span')
-        why.className = 'cm-proof-why'
-        if (st.rule) {
-          const a = document.createElement('a')
-          a.textContent = props.ruleLink?.(st.rule) ?? (st.why === 'lemma' ? 'a lemma' : st.head ?? 'a rule')
-          a.title = st.rule
-          a.href = '#'
-          a.addEventListener('mousedown', e => { e.preventDefault(); e.stopPropagation(); if (st.head) emit('open', st.head) })
-          a.addEventListener('click', e => e.preventDefault())
-          why.append(a)
-        } else why.textContent = st.why
-        li.append(fact, why)
-        ol.append(li)
-      }
-      return ol
-    }
-    el.append(list(this.proof.steps, 1))
-    if (this.proof.side.length) {
-      const toggle = document.createElement('button')
-      const n = this.proof.side.length
-      const label = (open: boolean) => `${open ? '▾' : '▸'} ${n} side condition${n === 1 ? '' : 's'}`
-      toggle.className = 'cm-proof-side'
-      toggle.textContent = label(false)
-      const side = list(this.proof.side, 1)
-      side.className = 'cm-proof-side-list'
-      side.hidden = true
-      toggle.addEventListener('mousedown', e => {
-        e.preventDefault(); e.stopPropagation()
-        side.hidden = !side.hidden
-        toggle.textContent = label(!side.hidden)
-      })
-      el.append(toggle, side)
-    }
-    return el
-  }
-  ignoreEvent() { return true }
-}
-
 function reasons(state: EditorState): DecorationSet {
   const out: Range<Decoration>[] = []
   const doc = state.doc
   const lineOf = (i: number) => doc.line(Math.min(doc.lines, Math.max(1, i)))
   const indentOf = (text: string) => /^\s*/.exec(text)![0].length
-  const open = state.field(openProofsField)
   for (const m of state.field(marksField)) {
-    if (m.proof && open.has(m.line) && m.line + 1 <= doc.lines) {
-      const start = lineOf(m.line + 1), end = lineOf((m.endLine ?? m.line) + 1)
-      out.push(Decoration.widget({ widget: new ProofWidget(m.proof, indentOf(start.text) + 2), block: true, side: 1 }).range(end.to))
-    }
     if ((m.type === 'verified' && !m.note) || m.type === 'unknown') continue
     if (m.line + 1 > doc.lines) continue
     const start = lineOf(m.line + 1), end = lineOf((m.endLine ?? m.line) + 1)
@@ -282,7 +188,7 @@ function reasons(state: EditorState): DecorationSet {
 const reasonsField = StateField.define<DecorationSet>({
   create: reasons,
   update(value, tr: Transaction) {
-    const changed = tr.docChanged || tr.effects.some(e => e.is(setMarks) || e.is(setError) || e.is(toggleProof))
+    const changed = tr.docChanged || tr.effects.some(e => e.is(setMarks) || e.is(setError))
     return changed ? reasons(tr.state) : value
   },
   provide: f => EditorView.decorations.from(f),
@@ -619,25 +525,6 @@ const theme = EditorView.theme({
     fontSize: '0.72em', lineHeight: '1.5', padding: '0 0 0.35rem', textShadow: 'var(--ed-halo, none)',
     color: 'var(--ed-pending, #888)',
   },
-  '.mark.has-proof': { cursor: 'pointer' },
-  '.cm-reason.verified': { color: 'var(--ed-ok, #8ec88e)' },
-  '.cm-proof': {
-    fontSize: '0.78em', lineHeight: '1.5', padding: '0.1rem 0 0.5rem', textShadow: 'var(--ed-halo, none)',
-    color: 'var(--ed-ink, #c8c8e8)',
-  },
-  '.cm-proof ol': { margin: '0', paddingLeft: '2.2em' },
-  '.cm-proof li': { paddingLeft: '0.2em' },
-  '.cm-proof li::marker': { color: 'var(--ed-punct, #888)' },
-  '.cm-proof-fact': { fontFamily: 'var(--ed-font, monospace)', marginRight: '1.2em', whiteSpace: 'nowrap' },
-  '.cm-proof-why': {
-    fontFamily: 'var(--ed-prose-font, serif)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)', color: 'var(--ed-pending, #888)',
-  },
-  '.cm-proof-why a': { color: 'var(--ed-arg, currentColor)', textDecoration: 'underline dotted', textUnderlineOffset: '0.2em' },
-  '.cm-proof-side': {
-    font: 'inherit', fontFamily: 'var(--ed-prose-font, serif)', fontSizeAdjust: 'var(--ed-prose-adjust, 0.5)',
-    color: 'var(--ed-pending, #888)', background: 'none', border: 'none', padding: '0.2rem 0 0 0.4em', cursor: 'pointer',
-  },
-  '.cm-proof-side-list': { opacity: '0.8' },
   '.cm-reason.false, .cm-reason.alarm, .cm-reason.error': { color: 'var(--ed-bad, #e88e8e)' },
   '.cm-placeholder': { color: 'var(--ed-punct, #888)' },
   '.cm-tooltip': {
@@ -701,7 +588,7 @@ onMounted(() => {
         plainSpaces,
         keys,
         keymap.of([...defaultKeymap, ...historyKeymap]),
-        marksField, openProofsField, knownField, errorField, highlightField, highlightLinesField, reasonsField, pointer, signatureTooltip,
+        marksField, knownField, errorField, highlightField, highlightLinesField, reasonsField, pointer, signatureTooltip,
         markGutter, typesetter, theme,
         EditorView.lineWrapping,
         autocompletion({ override: [complete], icons: false }),
