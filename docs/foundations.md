@@ -233,6 +233,115 @@ sound and complete for ruler-and-compass geometry, through Tarski's axioms.
    would fix it, then turned to SMT solvers. Union-find, signed classes and symmetry breaking are
    such representations.
 
+## Sides: the inventory
+
+Every place the book works around sides of a line (November 2026, at 25aafce). It covers the
+chapters, *Beyond the book*, the planner and the docs. The book gets by in six ways. Then come what
+sides block, what the figure does, and what is not a sides question at all.
+
+### Six ways round
+
+1. **Opposite sides as a crossing.** a and d are on opposite sides of e-f when some m has
+   `between a m d` and `collinear e m f`. This is Tarski's definition, and book.md, *Sides of a line
+   without sides*, records it. Where it is used:
+   - I.27 and I.29, both axioms of chapter 3;
+   - the parallel through a point (I.31, `parallel-through`), whose crossing picks the far side;
+   - I.33 as a lemma;
+   - chapter 2's rule that a point across the line b-c is off a-b.
+
+   Each side fact costs a named point that a reader would not name. A construction has to produce
+   that point, and the lemma's statement carries it.
+2. **Same side as opposite sides twice:** a third point x across the line from both. Used by
+   corresponding angles, the angles on one side (I.29's third part) and both converses (I.28): four
+   lemmas of chapter 3 (book.md, *Same side, as opposite sides twice*).
+3. **Inside an angle as a point on a segment.** Angles add and take away only when the dividing
+   arm passes through a point of the segment a-c: chapter 2's two common-notion axioms. The arms rule
+   says "on the ray" as `between`. This is the most-used workaround. Every sum of angles in
+   chapter 2 goes through it, and it says less than "inside the angle", which E's angle transfer
+   axiom 2 gives through `same-side`.
+4. **"Outside" and "convex" as segments that cross.** Here two segments sharing a middle point
+   stand for a shape:
+   - the parallelogram's definition, whose crossing diagonals "follow from the parallels, by an
+     argument about sides the engine cannot make";
+   - its I.33 lemma and its diagonals lemmas;
+   - the windmill, whose squares stand outside the triangle, "said with the points where the
+     windmill's lines cross";
+   - the complements, and the rectangle made a square.
+
+   Elsewhere the crossing is the content and stays: vertical angles, crossing chords, the medians,
+   the inscribed square, the centroid, I.10.
+5. **Sides stated in lemmas, not in definitions.** A rectangle's two lemmas add x and n (d-a
+   extended past a, with x-c crossing a-b at n), because carrying the right angle across a-b needs
+   them (book.md, *Definitions stay simple; lemmas state the sides they need*). The square reuses
+   them.
+6. **Theorems taken as axioms because their proofs need sides**
+   ([consolidation.md](consolidation.md), *Axioms that are theorems in Euclid*):
+   - side-side-side (I.8) and angle-side-angle (I.26), in chapter 2;
+   - III.21 and its converse, in chapter 5, whose proof needs the centre's side of the chord and
+     halving;
+   - the shear (I.37) and the median (I.38), in chapter 4, whose proofs split on where the apexes
+     fall (sides, then a case split);
+   - I.29, whose proof needs a sum, and the same side within it.
+
+**Turns, chosen to need no sides.** Turns are not a workaround to remove: they are a good tool and
+stay. But several choices were made partly so that no side need be said:
+- the circle's angles (chapter 5);
+- similarity, as four axioms by turns (chapter 6: "the triangles may lie anyhow");
+- Pythagoras from a quarter turn (chapter 4: "a turn knows no sides");
+- the III.3 converse by quadrance ("whichever side of m they lie").
+
+With sides, Euclid's undirected forms become sayable beside them: III.20, III.21 proved, III.22 as
+supplementary angles.
+
+### What sides block
+
+- **III.20**, the angle at the centre: it waits for an undirected book with sides.
+- **The circumcentre on a perpendicular bisector** (*Beyond the book*): which side of the vesica's
+  points o lies decides the angle. Written out, with o between them, it proves at once.
+- **The nine-point circle's two order steps:** the right angle at k on c's side, and the
+  parallelogram a-f-d-e's diagonals crossing.
+- **I.39–40**, the converses of I.37: they need "same side", and are left out of chapter 4.
+- **Turns into equal angles**, a return bridge that needs orientation (roadmap, *Logic*).
+- **Concluding `right` from a quarter turn:** it needs a point past the vertex, on a known side.
+  That is existence as well as sides (ledger).
+
+### The figure
+
+- **The planner has no side word.** Order facts are not equations: they choose which intersection
+  to take and bound where a point may go (construction.ts). A side is decided by backtracking
+  against later order facts, otherwise by the first branch:
+  - the vesica's two triangles are on opposite sides only because "the clauses allow either";
+  - a chord placed from its midpoint is placed "on the side that gives the turn (tried, not
+    derived)";
+  - order facts on circles are only checked, not used to restrict sliders to arcs (roadmap).
+- **Numeric evidence samples both sides** wherever the hypotheses do not fix one. That is how the
+  missing crossings were found, and it should stay.
+- **What a side word would be to the figure.** It would be the first word of the plane that is a
+  region, not a curve. Its measure is the sign of a determinant. To the planner it is an order fact
+  like `between`: a branch chooser and a bound, not a locus. It draws nothing of its own.
+
+### Not sides
+
+- **Cases:** chapter 1's circumcentre is drawn, not proved, because x between c and d and x beyond
+  d are two lemmas that cannot be joined. E's trichotomy of `between` is a disjunction. Unit
+  propagation uses it only when two of its parts are known false, so joining cases still needs a
+  case split.
+- **Comparison:** angle-angle-side ("Euclid argues it by comparing sizes"): inequalities.
+- **Incidence of circles:** a line meets a circle at most twice (chapter 2, *Chapter 1's debts*).
+- **Book V:** the intercept theorem, componendo and dividendo.
+
+### Where it points
+
+- The six ways round meet one word (`opposite`, with `same-side` its pair) and two rules: E's Pasch
+  axiom 4, which gives the crossing when it is needed, and E's angle transfer axiom 2, which gives
+  "inside the angle".
+- Measure the order module against the six ways first, starting with the cheapest test of whether
+  it pays: chapter 3's four same-side lemmas restated with `same-side`, and chapter 2's angle
+  addition with "inside".
+- The blocked list is where the module would earn its keep.
+- The axioms of way 6 are the hardest. They also need case splits or superposition (*What it
+  teaches*, 5), so they are the last test, not the first.
+
 ## What next (proposed, not decided)
 
 1. **An order module, modelled on E's diagram axioms.**
@@ -242,8 +351,7 @@ sound and complete for ruler-and-compass geometry, through Tarski's axioms.
    - all said with points only ("on L" is collinear with the two points naming L).
 
    First experiment: E's same-side and Pasch axioms alone, on chapters 1–3, measuring how the work
-   changes and which workaround axioms become lemmas. Before it, an inventory of every place the
-   book works around sides.
+   changes and which workarounds go (*Sides: the inventory*).
 2. **Continuity as rules:** E's intersection axioms, so that construction checks prove existence.
 3. **Inequalities,** a later module (on the ledger).
 4. **The second geometry** then shares a sounder neutral core.

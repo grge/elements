@@ -16,8 +16,9 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
 1. **Foundations.** The book's axioms made sound enough to share with another geometry, and a second
    geometry to prove it. The analysis is in [foundations.md](foundations.md): where the axioms live,
    which geometries could share them, and System E mapped onto elements. In order:
-   1. **An inventory** of every place the book works around sides of a line: comments, ledger items,
-      axioms that are really theorems.
+   1. **An inventory** of every place the book works around sides of a line: done (November 2026;
+      foundations.md, *Sides: the inventory*). Six ways round, six things blocked; the planner treats
+      sides as it treats `between`.
    2. **The order module.** Built from System E's diagram axioms, said with points only:
       - sides of a line (`same-side`, `opposite`), with Pasch;
       - `inside` and `outside` for circles;
@@ -134,7 +135,8 @@ cannot be written honestly without them, and designed as a whole.
   existentials in heads, as provers such as ArgoCLP use), at the price of a lemma's meaning no longer
   being one least model. The one fork that changes what a lemma means.
 - **Sides of a line.** The figure knows which side a point is on; the logic does not, so every proof
-  across a line is told by a crossing point in its hypotheses. Options:
+  across a line is told by a crossing point in its hypotheses. Now *Next*, 1: the inventory and System E
+  are in foundations.md. Options as first weighed:
   - `same-side` and `opposite-side` with their own axioms, as `between` has, following the
     diagrammatic consequences of Avigad, Dean and Mumma's system E (2009). Tarski defines the same two
     relations by exactly our crossing. Much is Horn; Pasch and "one side, the other or the line" need
