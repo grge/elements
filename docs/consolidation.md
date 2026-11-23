@@ -1,7 +1,7 @@
 # Consolidation ledger
 
 What to revisit when the book is reorganised as a whole, at the end of the probe ([roadmap.md](roadmap.md),
-*Next*, *Consolidation*). While we work through the book, tools are added where chapters need them, so
+*Next*, *The reorganisation*). While we work through the book, tools are added where chapters need them, so
 names, placement and what is primitive stay provisional. Each entry says what, and why it is worth
 reconsidering; an entry leaves when it is settled. Newest at the end of each section.
 
