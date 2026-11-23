@@ -378,25 +378,43 @@ export function checkWrittenProof(
     for (const a of p.args) above.add(a)
   }
 
-  for (const { pred, line } of lemma.steps ?? []) {
-    const newPoints = [...new Set(pred.args.filter(a => !above.has(a)))]
-    if (newPoints.length) {
-      const construction: ConstructionCheck = options.construct?.(pred, drawn, newPoints)
-        ?? { ok: false, apart: false, determined: false, existence: 'witnessed', why: 'constructions are checked on figures, and there are none here' }
-      steps.push({ line, step: pred, result: construction.ok ? 'constructed' : 'refused', newPoints, construction })
-      if (construction.ok) { drawn.push(pred); addFacts(pred, !construction.apart) }
-      else for (const a of newPoints) { above.add(a); notApart.add(a) }
-      continue
-    }
-    const goal = toGroundPredicate(pred)
+  // Is the fact shown from what is known, with a step's budget: plain first, then under the convention.
+  const show = (goal: GroundPredicate): { proof: Proof | undefined; apart: boolean } | null => {
     const stepKb = withCited(kb, cited, goal)
     const attempt = (convention: boolean) => {
       const frontier = [...known, ...(convention ? nonDegeneracy(known, goal, notApart) : [])]
       const sat = saturate(stepKb, frontier, { goal, maxWork: stepWork, maxDerivations, provenance: true })
       return sat.holds(goal) ? sat.explain(goal, frontier) ?? undefined : null
     }
-    let proof = attempt(false), apart = false
-    if (proof === null && options.distinctNames) { proof = attempt(true); apart = proof !== null }
+    const plain = attempt(false)
+    if (plain !== null) return { proof: plain, apart: false }
+    const apart = options.distinctNames ? attempt(true) : null
+    return apart !== null ? { proof: apart, apart: true } : null
+  }
+  const refusal = (why: string): ConstructionCheck => ({ ok: false, apart: false, determined: false, existence: 'witnessed', why })
+
+  for (const { pred, line } of lemma.steps ?? []) {
+    const newPoints = [...new Set(pred.args.filter(a => !above.has(a)))]
+    if (newPoints.length) {
+      // "Let d be such that…" is sound only for a d the claim does not name (for any d, it says), and
+      // only if the step says nothing more of the points above than follows from them: its facts that
+      // name only those must be shown, and the figures check the rest (constructionStep.ts).
+      const inClaim = newPoints.filter(a => lemma.head.args.includes(a))
+      let construction: ConstructionCheck = inClaim.length
+        ? refusal(`${inClaim.join(', ')} ${inClaim.length === 1 ? 'is' : 'are'} in the claim: a construction cannot choose ${inClaim.length === 1 ? 'it' : 'them'}`)
+        : options.construct?.(pred, drawn, newPoints) ?? refusal('constructions are checked on figures, and there are none here')
+      if (construction.ok) {
+        const unshown = unfoldAll([pred]).filter(f => f.args.every(a => above.has(a))).find(f => !show(f))
+        if (unshown) construction = refusal(`it says ${unshown.name} ${unshown.args.join(' ')} of the points above, which is not shown from them`)
+      }
+      steps.push({ line, step: pred, result: construction.ok ? 'constructed' : 'refused', newPoints, construction })
+      if (construction.ok) { drawn.push(pred); addFacts(pred, !construction.apart) }
+      else for (const a of newPoints) { above.add(a); notApart.add(a) }
+      continue
+    }
+    const goal = toGroundPredicate(pred)
+    const found = show(goal)
+    const proof = found === null ? null : found.proof, apart = !!found?.apart
     steps.push({ line, step: pred, result: proof === null ? 'not-shown' : 'follows', ...(apart ? { apart } : {}), ...(proof ? { proof } : {}) })
     addFacts(pred, false)
   }

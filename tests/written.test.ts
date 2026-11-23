@@ -7,7 +7,7 @@ import { KnowledgeBase } from '../src/kb/inference'
 import { checkWrittenProof } from '../src/kb/checker'
 import { checkConstruction } from '../src/geometry/constructionStep'
 import { writtenVerdicts } from '../src/geometry/verdict'
-import { parseLemmas, parseSource } from '../src/language/parser'
+import { parseLemmas, parseRules, parseSource } from '../src/language/parser'
 import { proofView } from '../src/kb/proofView'
 import { bookRules } from './book'
 
@@ -129,5 +129,78 @@ describe('checking a written proof', () => {
     const view = proofView(cited.steps[0].proof!)
     expect(view.steps).toEqual([expect.objectContaining({ why: 'lemma', rule: '? eq-lines o a o b: right a b c, midpoint o a c' })])
     expect(cited.head.result).toBe('verified')
+  }, 60_000)
+})
+
+/**
+ * A construction is "let d be such that…": sound only if the claim does not name d, and if the step
+ * says nothing of the points above beyond where d is. Each of these once proved a false lemma, caught
+ * only by numeric evidence.
+ */
+describe('a construction may not add to what is known of the points above', () => {
+  // Double a-b to d, and on the way say that the angle at b is right.
+  const kbWith = new KnowledgeBase([...bookRules, ...parseRules(`
+trap a b c d:
+    right a b c
+    double a b d
+
+# Double a-b to d, and say that a-b-c is a triangle.
+tri a b c d:
+    triangle a b c
+    double a b d
+`)])
+  const checkWith = (text: string) => {
+    const lemma = parseLemmas(text)[0]
+    return checkWrittenProof(lemma, kbWith, {
+      consistent: () => true, strict: true, distinctNames: true,
+      construct: (s, above, np) => checkConstruction(kbWith, s, above, np),
+    })
+  }
+
+  it('refuses a step that also puts a condition on the points above', () => {
+    const r = checkWith(`? right a b c:
+    circle b a c
+    distinct a b
+    ? trap a b c d
+`)
+    expect(r.steps[0].result).toBe('refused')
+    expect(r.steps[0].construction!.why).toMatch(/a condition on the points above/)
+    expect(writtenVerdicts(r, null).head.type).not.toBe('verified')
+  }, 60_000)
+
+  it('refuses a step that says of the points above what is not shown of them', () => {
+    // Its new point is placed as it should be, but it also says that a-b-c is a triangle: no equation,
+    // so the figures do not see it; the logic asks for it, and it does not follow.
+    const r = checkWith(`? triangle a b c:
+    distinct a b
+    distinct b c
+    ? tri a b c d
+`)
+    expect(r.steps[0].result).toBe('refused')
+    expect(r.steps[0].construction!.why).toBe('it says triangle a b c of the points above, which is not shown from them')
+    expect(writtenVerdicts(r, null).head.type).not.toBe('verified')
+  }, 60_000)
+
+  it("refuses a step that chooses a point the claim is about (for any d, it says)", () => {
+    const r = check(`? eq-lines o b o d:
+    midpoint o a c
+    distinct b o
+    ? double b o d
+`)
+    expect(r.steps[0].result).toBe('refused')
+    expect(r.steps[0].construction!.why).toBe('d is in the claim: a construction cannot choose it')
+    expect(writtenVerdicts(r, null).head.type).not.toBe('verified')
+  }, 60_000)
+
+  it('a point on a circle of computed radius exists only as the figures witness it', () => {
+    // On the circle about a whose radius is the leg of a right triangle with hypotenuse e-f and leg
+    // c-d: there is none when c-d is the longer.
+    const r = check(`? distinct a c:
+    distinct a c
+    distinct c d
+    distinct e f
+    ? quad-sum p a c d e f
+`)
+    expect(r.steps[0]).toMatchObject({ result: 'constructed', construction: { existence: 'witnessed' } })
   }, 60_000)
 })

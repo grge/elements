@@ -410,7 +410,7 @@ function sameLocus(a: Locus, b: Locus): boolean {
 }
 
 /** The placed points a straight locus always passes through (none for a circle or a perpendicular bisector). */
-function pivots(l: Locus): string[] {
+export function pivots(l: Locus): string[] {
   switch (l.kind) {
     case 'line': return [...l.through]
     case 'parallel': return [l.through]
@@ -422,7 +422,7 @@ function pivots(l: Locus): string[] {
 }
 
 /** The placed point a circular locus is about, when it is about one (null otherwise). */
-function centre(l: Locus): string | null {
+export function centre(l: Locus): string | null {
   switch (l.kind) {
     case 'circle': case 'proportional': return l.center
     case 'quadrance': {
@@ -430,6 +430,25 @@ function centre(l: Locus): string | null {
       return to.size === 1 && l.terms.reduce((s, t) => s + t.sign, 0) !== 0 ? [...to][0] : null
     }
     default: return null
+  }
+}
+
+/**
+ * Does the locus exist whatever the placed points are (short of their coinciding)? A line through a
+ * point, or a circle about a placed point whose radius is a length of the figure, always does. A
+ * circle whose radius is computed may have none (a quadrance leg longer than its hypotenuse), and a
+ * circle through three points none when they are on a line: those exist only as figures witness them.
+ * Every kind must answer, so that a new kind is classified when it is added.
+ */
+export function locusAlwaysExists(l: Locus): boolean {
+  switch (l.kind) {
+    case 'line': case 'parallel': case 'perpendicular': case 'bisector': case 'angle': case 'angle-bisector':
+    case 'turned': case 'area': return true
+    case 'circle': case 'thales': case 'proportional': case 'apollonius': case 'seen': return true
+    // A difference of quadrances: a line. Otherwise a circle whose radius squared may be negative.
+    case 'quadrance': return l.terms.reduce((s, t) => s + t.sign, 0) === 0
+    case 'through': return false
+    default: { const unknown: never = l; return unknown }
   }
 }
 
@@ -453,6 +472,12 @@ export interface PlanOptions {
    * the planner's help (carried lengths, copied angles, perpendiculars, parallels, areas).
    */
   euclid?: boolean
+  /**
+   * Steps already taken, kept exactly as they are: their points come first, placed as these steps place
+   * them, and the plan places the rest after them. A written proof's construction is planned so, after
+   * the figure of what is above it, so that it can only place its new points (constructionStep.ts).
+   */
+  after?: readonly Step[]
 }
 
 /**
@@ -503,7 +528,8 @@ function coincidentLocus(cp: ConstructionPlan): string | null {
 function planOnce(model: ConstructionModel, options: PlanOptions, banned: ReadonlySet<string>): ConstructionPlan {
   const pts = model.points
   const n = pts.length
-  const forced = (options.free ?? []).filter(p => pts.includes(p))
+  const prefix = new Map((options.after ?? []).filter(s => pts.includes(s.point)).map(s => [s.point, s] as const))
+  const forced = [...prefix.keys(), ...(options.free ?? []).filter(p => pts.includes(p) && !prefix.has(p))]
   const index = new Map(pts.map((p, i) => [p, i]))
 
   type Cost = [number, number, number]
@@ -553,6 +579,8 @@ function planOnce(model: ConstructionModel, options: PlanOptions, banned: Readon
   // their own: they come from the facts, and every fact is checked.
   const steps: Step[] = []
   order.forEach((p, k) => {
+    const given = prefix.get(p)
+    if (given) { steps.push(given); return }
     const loci = lociFor(model, p, order.slice(0, k), banned, options.euclid)
     if (loci.length === 0) steps.push({ kind: 'free', point: p })
     else if (loci.length === 1) steps.push({ kind: 'on', point: p, locus: loci[0] })
