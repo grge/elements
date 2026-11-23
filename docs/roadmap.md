@@ -27,7 +27,7 @@ engine.md and review-notes.md. What to revisit is in the ledger, [consolidation.
       1. the strata spike: the windmill with the whole book's rules, and the first build's side rules
          with order split out. The decision point;
       2. the module analysis as a tool, with a test;
-      3. strata in the engine, with diagnostics; the windmill leaves the over-budget list;
+      3. strata in the engine, with diagnostics;
       4. a book as a set of modules, in the app, the tests and the bench;
       5. rules into theory modules, order first, and constructions into their own files.
    2. **The order module grows:** Pasch's other half, `inside`/`outside` for circles, negations as

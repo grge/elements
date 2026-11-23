@@ -483,8 +483,12 @@ the book.
   earlier words: equal ratios give `eq-lines`, and the intercept converse gives `parallel`. Then its
   ratio rules, wide and many in a figure of squares, parallels and right angles, take 42k of 70k
   derivations and spend the budget of work. Before sides it squeezed through (39.5k).
-  - It is left out of the suite as over budget (`tests/book.ts`, `overBudget`), not checked with
+  - It was left out of the suite as over budget (`tests/book.ts`, `overBudget`), not checked with
     fewer rules. Chapter scoping is not the fix.
+  - Most of it was `inside`. Angle addition mentioned it, which put it on a cycle through `triangle`,
+    so it was not read as a definition: its facts were stored and its clause fired. Said by its
+    definition there, as `right` is, the windmill takes 40,882 derivations with the whole book's
+    rules and proves; the book takes 220,216 against 259,744.
   - It is the first build's wall again, in another theory: a rule concluding a common word pulls a
     whole theory into every search that needs that word. The fix is modules that can be included
     and left out, and strata run independently, a theory's results flowing out without its
@@ -572,11 +576,9 @@ step* are done: the `false` option reverted, and the narrow experiment.
    - Each rule tagged with its file.
    - An experimental schedule: a pass per module, in the uses order, alternating until a round adds
      nothing.
-   - Two cases: the windmill with the whole book's rules, and the first build's side rules with order
-     split out by hand.
+   - Two cases: the windmill with the whole book's rules (it proves again, but chapter 6 still doubles
+     its work), and the first build's side rules with order split out by hand.
    - Measured on the whole book against one search: proved, derivations, work, rounds.
-   - Also `inside` made a definition again: angle addition says its two `same-side` facts, as rules
-     say `right`'s body.
    - The decision point. If strata pay, go on; if not, rethink.
 2. **The module analysis as a tool.** Ownership, uses and crossings, as a script, with a test that
    every word has one home and the uses graph has no cycle.

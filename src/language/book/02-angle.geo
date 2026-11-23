@@ -42,17 +42,23 @@ eq-angle a b c x b c: between b a x, distinct b a
 
 # Common notions 2 and 3, for angles: an arm b-x inside the angle a-b-c cuts it into a-b-x and x-b-c.
 # Angles cut into equal parts are equal (equals added to equals); and from equal angles, equal parts
-# taken away leave equal parts.
+# taken away leave equal parts. Inside is said by its definition, x on a's side of b-c and on c's side
+# of b-a, so that inside stays a definition (a clause for eq-angle that mentioned inside would make
+# inside depend on itself, through triangle, as right would).
 eq-angle a b c d e f:
-    inside x a b c
+    same-side x a b c
+    same-side x c b a
     eq-angle a b x d e y
     eq-angle x b c y e f
-    inside y d e f
+    same-side y d e f
+    same-side y f e d
 eq-angle x b c y e f:
-    inside x a b c
+    same-side x a b c
+    same-side x c b a
     eq-angle a b x d e y
     eq-angle a b c d e f
-    inside y d e f
+    same-side y d e f
+    same-side y f e d
 
 # ── triangles
 
