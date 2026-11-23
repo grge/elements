@@ -300,9 +300,16 @@ conjunction, and imposes none), or the freedom of a helper point (freedom like a
       The windmill's two lemmas ran past the 3 million budget (similarity by turns, componendo) and
       were left out of the suite; since signed classes, indexes and the head check (November 2026,
       *Cold start*, above) they prove again and are back in it.
-   2. The quarter and Apollonius revisited: how the engine could discover quadrance laws with
-      coefficients (they would bring the nine-point circle, Thales' converse, III.14 in Euclid's form).
-   3. An exploration of conics: what a chapter would need, before the reorganisation decides its shape.
+   2. **Another geometry, as a proof of concept** (decided November 2026, before the reorganisation).
+      One minimal geometry other than the Euclidean plane, with its figures drawn and a small set of
+      constructions, to force out the interface between the logic and a plane: what a geometry must
+      supply (points and how to sample them, each word's measure, loci and where they meet, how a
+      figure is drawn) and what stays the same (the logic, the book's language). With it, a list of
+      the geometries that interface could carry, and those it could not, and why. The reorganisation
+      then knows what is Euclid's and what is any plane's.
+   3. Moved after the reorganisation (November 2026): the quarter and Apollonius revisited (how the
+      engine could discover quadrance laws with coefficients; Thales' converse now proves written,
+      so III.14 and Ceva/Menelaus are what is left of the case); an exploration of conics.
    4. **Every word of the plane a construction: done (November 2026).** `quad-sum` is placed by the
       planner, the last that was not (`right` is placed through its definition). A point in one segment
       is on a circle about its other end, its radius a leg or hypotenuse; in both parts, on a circle
