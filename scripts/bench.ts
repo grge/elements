@@ -8,7 +8,8 @@
  * if it is proved, saturates again from the start looking for `false`, the second phase of a check.
  * (The checker skips that phase when `false` cannot be reached from the hypotheses' kinds of facts at
  * all; here it always runs, which makes chapter 1 a few seconds dearer than the checker.) Derivations
- * are counted in all, and those that added a fact. `--witness` checks as the app does: a figure of the
+ * are counted in all, and those that added a fact (searches by `Saturation`; a written proof's run on
+ * the core, and are not counted). `--witness` checks as the app does: a figure of the
  * hypotheses (evidence.ts) shows them consistent, and the search for `false` runs only without one.
  * Every lemma is checked with the whole book's rules, as the tests and the pages check it. Searches run in strata, as saturate() runs them (kb/modules.ts):
  * `--one-level` runs each as one search, for comparison. `--json` prints a line per lemma.
